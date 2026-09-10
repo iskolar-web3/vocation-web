@@ -52,6 +52,7 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 | [ADR-0014](ADR-0014-cost-model-and-nfrs.md) | Fixed-cost model and non-functional requirements | **Proposed** | 2026-09-08 |
 | [ADR-0015](ADR-0015-fold-idea-into-vocation.md) | `idea.md` folded into `VOCATION.md` | Accepted | 2026-09-08 |
 | [ADR-0016](ADR-0016-neon-postgres-not-rds.md) | Managed Postgres on Neon, not self-managed AWS RDS *(supersedes the DB host in 0003)* | Accepted | 2026-09-10 |
+| [ADR-0018](ADR-0018-response-envelope.md) | Response envelope: `{ message, data, meta }` | Accepted | 2026-09-10 |
 
 ## 1. Names & immutable identifiers (read first)
 
@@ -82,6 +83,18 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 | v1 scope is 17 features (ADR-0010) | Fixed cost ≈ ₱6,000–7,500/month — estimated, not quoted (ADR-0014); stale since the RDS→Neon move (ADR-0016) and unrecomputed | That batched coach payouts stay outside BSP/AMLA scope (ADR-0013) |
 
 ## 3. Pivots & decisions (newest first — cite ADR)
+
+### 2026-09-10 — Response envelope fixed at `{ message, data, meta }`
+- **Change:** `api-spec.md` specified `{ data, meta }` for lists and nested the error string inside
+  `error`; `AGENTS.md` and the `academy-web` pattern specified `{ message, data }` with a
+  top-level `message`. Both are now one shape: `{ message, data }`, plus `meta` on lists and
+  `error` on failures, with `message` always top-level and always displayable.
+- **Why:** the two repos share no build step (ADR-0011), so the spec is the only thing keeping the
+  handler and the Zod boundary parse in agreement. A disagreement about the wrapper surfaces at
+  integration, not at review. The error-shape half would have broken every error path silently.
+- **Recorded as:** [ADR-0018](ADR-0018-response-envelope.md).
+- **Propagation:** `api-spec.md` §Overview, §Error codes and API-001; `vocation-web/AGENTS.md`;
+  `implementation-plan.md`.
 
 ### 2026-09-10 — Database moves from AWS RDS to Neon
 - **Change:** Postgres host: **Multi-AZ RDS PostgreSQL → Neon** (managed, serverless, Postgres-wire

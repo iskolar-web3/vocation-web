@@ -61,9 +61,12 @@ Query, Tailwind 4, shadcn/ui, Biome, Vitest, pnpm.
 
 ## Conventions
 
-- **Data access:** every call goes through `apiFetch` — `{ message, data }` envelope,
+- **Data access:** every call goes through `apiFetch`. Envelope is `{ message, data }`, plus `meta`
+  on list responses and `error` on failures — [ADR-0018](./docs/adr/ADR-0018-response-envelope.md).
   `credentials: "include"`, and **Zod re-parsing at the boundary**. The client never trusts raw JSON.
-  Same pattern as `academy-web`.
+  Same pattern as `academy-web`, so `apiFetch` ports rather than gets rewritten.
+- **`message` is always top-level and always safe to display** — including on errors. Throw
+  `body.message`; read `body.error.code` for the machine value. Never surface `error.code` to a user.
 - **Server state:** TanStack Query. Components never call `apiFetch` directly; hooks do.
 - **Mobile-first.** Primary target is **375px**. Directory filters are a bottom drawer below 768px
   and a sidebar from 768px up — that is an acceptance criterion (F-002), not a preference.

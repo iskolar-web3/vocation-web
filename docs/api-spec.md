@@ -33,9 +33,19 @@
   It does not exist yet. See Q1.
 - **Money:** all amounts are integer **centavos** in the wire format (`price_centavos`), never
   floats. PHP only. The database stores `numeric(12,2)`; the boundary converts.
-- **Pagination:** `?page` (1-based) and `?per_page` (default 20, max 100). List responses carry
-  `{ data: [], meta: { page, per_page, total } }`. F-002 requires a result count, so `total` is
-  mandatory, not optional.
+- **Response envelope:** every response carries `{ message, data }`; list responses add `meta`.
+  Fixed by [ADR-0018](adr/ADR-0018-response-envelope.md).
+
+  ```json
+  { "message": "ok", "data": { } }
+  { "message": "ok", "data": [ ], "meta": { "page": 1, "per_page": 20, "total": 137 } }
+  ```
+
+  `message` is always present and always safe to display. `data` is the payload, or `null` on
+  error. `meta` appears on list responses only.
+- **Pagination:** `?page` (1-based) and `?per_page` (default 20, max 100). F-002 requires a result
+  count, so `meta.total` is mandatory on list responses, not optional. An empty result is `200`
+  with `data: []` and `meta.total: 0` — never `404`, never `500`.
 - **Timestamps:** RFC 3339 UTC.
 
 ## Authentication & authorization
@@ -81,7 +91,7 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
 - **Query:** `q` (role, company, field, location, requirements), `field`, `setup`
   (`remote|hybrid|onsite`), `pay` (`any|paid|unpaid`), `duration`, `sort`
   (`newest|deadline_soon|relevance`), `page`, `per_page`
-- **Response 200:** `{ data: [InternshipCard], meta: { page, per_page, total } }` where
+- **Response 200:** `{ message, data: [InternshipCard], meta: { page, per_page, total } }` where
   `InternshipCard` carries `slug`, `title`, `company: {name, slug, logo_url}`, `location`,
   `duration_weeks`, `is_paid`, `field`, `deadline` — exactly the card fields F-002 requires
 - **Auth:** none
@@ -243,8 +253,19 @@ No employer surface exists in v1. Listings are created by admin (API-071). Rows 
 
 ## Error codes
 
-Uniform body: `{ "error": { "code": "...", "message": "...", "details": {...}? } }`.
-`message` is safe to display; `details` is field-level for form errors.
+Same envelope as success, with `data: null` and an `error` object
+([ADR-0018](adr/ADR-0018-response-envelope.md)):
+
+```json
+{
+  "message": "That slot is no longer available.",
+  "error": { "code": "conflict", "details": { "slot_starts_at": "2026-09-20T09:00:00Z" } }
+}
+```
+
+**`message` is top-level, not nested inside `error`** — the client throws `body.message` directly.
+It is always safe to display. `error.code` is the stable machine value below; `error.details` is
+field-level for form errors.
 
 | HTTP | `code` | When |
 |------|--------|------|

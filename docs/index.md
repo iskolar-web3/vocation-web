@@ -128,6 +128,7 @@ elsewhere until that narrative is reconciled. Do not reconstruct a decision from
 | [ADR-0014](adr/ADR-0014-cost-model-and-nfrs.md) | Fixed-cost model and non-functional requirements | **Proposed** |
 | [ADR-0015](adr/ADR-0015-fold-idea-into-vocation.md) | `idea.md` folded into `VOCATION.md` | Accepted |
 | [ADR-0016](adr/ADR-0016-neon-postgres-not-rds.md) | Managed Postgres on Neon, not self-managed AWS RDS | Accepted |
+| [ADR-0018](adr/ADR-0018-response-envelope.md) | Response envelope: `{ message, data, meta }` | Accepted |
 
 The decision ledger (names, immutable ids, assumptions, pivots, rejected approaches) and the
 change-record log live in the same folder: [`adr/README.md`](adr/README.md) §1–§6.
