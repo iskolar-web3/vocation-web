@@ -4,7 +4,7 @@
 # Decision Register — iSkolar Vocation
 
 **Maintained by:** Alexandre Nevero (PM)
-**Last reconciled:** 2026-09-08
+**Last reconciled:** 2026-09-10
 **FMD version:** 4.6.2
 
 > **This one folder is the whole decision home.** By owner decision, FMD's three separate decision
@@ -38,7 +38,7 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 |-----|-------|--------|------|
 | [ADR-0001](ADR-0001-backend-language-go.md) | Go for the server API, against the charter's own prose | **Accepted, provisional** | 2026-09-07 |
 | [ADR-0002](ADR-0002-two-repo-split.md) | Two repositories with the API spec as the only seam | Accepted *(amended by 0011)* | 2026-09-07 |
-| [ADR-0003](ADR-0003-aws-postgres-not-supabase.md) | AWS with self-managed PostgreSQL, not Supabase or Azure | Accepted | 2026-09-07 |
+| [ADR-0003](ADR-0003-aws-postgres-not-supabase.md) | AWS with self-managed PostgreSQL, not Supabase or Azure | Accepted *(DB host superseded by 0016)* | 2026-09-07 |
 | [ADR-0004](ADR-0004-modular-monolith.md) | Modular monolith rather than services | Accepted | 2026-09-07 |
 | [ADR-0005](ADR-0005-paymongo-and-take-rate.md) | PayMongo, and the 5% take-rate exposure | **Proposed — parked by owner** | 2026-09-07 |
 | [ADR-0006](ADR-0006-store-no-applications.md) | Store no applications; apply by redirect | Accepted | 2026-09-07 |
@@ -51,6 +51,7 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 | [ADR-0013](ADR-0013-payout-ledger-and-payment-states.md) | Payout ledger, held balance, `payment_status` failure states | **Proposed — blocks Wave 4** | 2026-09-08 |
 | [ADR-0014](ADR-0014-cost-model-and-nfrs.md) | Fixed-cost model and non-functional requirements | **Proposed** | 2026-09-08 |
 | [ADR-0015](ADR-0015-fold-idea-into-vocation.md) | `idea.md` folded into `VOCATION.md` | Accepted | 2026-09-08 |
+| [ADR-0016](ADR-0016-neon-postgres-not-rds.md) | Managed Postgres on Neon, not self-managed AWS RDS *(supersedes the DB host in 0003)* | Accepted | 2026-09-10 |
 
 ## 1. Names & immutable identifiers (read first)
 
@@ -74,13 +75,29 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 | Two pillars: internship directory + coach marketplace | Backend is Go — charter §II tools list says Go, charter §I prose says Bun + Hono + TS. Owner stated Go | That students will pay for coaching. **The entire revenue model rests on this and nothing tests it** |
 | Platform stores no applications; apply is an outbound redirect | 5% take rate is viable — see ADR-0005; published PayMongo card fees make small sessions loss-making | Market size. No figure exists anywhere; the "hundreds of thousands" band in `VOCATION.md` §B5 is inferred, **not sourced** |
 | 5% platform commission; payout derived by subtraction (ADR-0007) | ~~Repo names~~ **confirmed** | That coach supply can be recruited ahead of student demand |
-| PayMongo is the gateway; cards + GCash + Maya + GrabPay | Specific AWS services (ECS Fargate, RDS, S3, CloudFront) — charter says only "AWS" and "Docker" | Retention windows in `erd.md`. Every one is an assumption |
-| PostgreSQL, AWS, Docker, React/TS/Vite/TanStack/Tailwind | Auth is self-implemented — the charter names no auth provider | That one developer can deliver four modules across two repos on the charter's milestones |
+| PayMongo is the gateway; cards + GCash + Maya + GrabPay | Specific AWS services (ECS Fargate, S3, CloudFront) — charter says only "AWS" and "Docker"; the database is **Neon**, not RDS ([ADR-0016](ADR-0016-neon-postgres-not-rds.md)) | Retention windows in `erd.md`. Every one is an assumption |
+| PostgreSQL, AWS, Docker, React/TS/Vite/TanStack/Tailwind | Auth is self-implemented — the charter names no auth provider; Postgres is hosted on Neon, one component off AWS (ADR-0016) | That one developer can deliver four modules across two repos on the charter's milestones |
 | Scope excludes scholarships, grants, full-time jobs | Milestone dates — three are in the past relative to the charter; the rest are TBD | "Blockchain components" as a real requirement |
 | Five-person team and their roles (charter §IV) | Rate limits in `api-spec.md` | That a coaching session can be delivered at all — no provider, no join path, no cancel path exists (ADR-0012) |
-| v1 scope is 17 features (ADR-0010) | Fixed AWS cost ≈ ₱6,000–7,500/month — estimated, not quoted (ADR-0014) | That batched coach payouts stay outside BSP/AMLA scope (ADR-0013) |
+| v1 scope is 17 features (ADR-0010) | Fixed cost ≈ ₱6,000–7,500/month — estimated, not quoted (ADR-0014); stale since the RDS→Neon move (ADR-0016) and unrecomputed | That batched coach payouts stay outside BSP/AMLA scope (ADR-0013) |
 
 ## 3. Pivots & decisions (newest first — cite ADR)
+
+### 2026-09-10 — Database moves from AWS RDS to Neon
+- **Change:** Postgres host: **Multi-AZ RDS PostgreSQL → Neon** (managed, serverless, Postgres-wire
+  compatible). The rest of the topology is unchanged — API on ECS Fargate, uploads on S3, client on
+  CloudFront, secrets in Secrets Manager (now holding the Neon connection string). Local dev still
+  uses Postgres in Docker Compose.
+- **Why:** cost and dev velocity. ADR-0014 put the all-AWS topology at ₱6,000–7,500/month before
+  traffic, with Multi-AZ RDS + the NAT gateway a large share; Neon's usage-based pricing scales to
+  near zero at idle. And there is no ops role to run RDS — Neon gives managed backups/PITR and
+  per-branch databases for preview environments with no protocol change (`pgx` unaffected).
+- **Recorded as:** [ADR-0016](ADR-0016-neon-postgres-not-rds.md). Supersedes the database-host
+  portion of [ADR-0003](ADR-0003-aws-postgres-not-supabase.md); the rest of 0003 stands.
+- **Propagation:** `system-design.md` (context + deployment diagrams, tech-choice and trade-off
+  tables, scaling), `prd.md` (Dependencies), `index.md` §3, `AGENTS.md` (architecture + stack
+  currency), `README.md`, `VOCATION.md` §B9. `ADR-0014` cost inputs left stale and flagged for
+  recompute; `ops.md` and `erd.md` retention items owed (data region, PITR window).
 
 ### 2026-09-08 — Engineering review: 22 findings, scope cut, five money fixes
 - **Change:** 25 features → **17** (8 deferred); the two unsatisfiable money CHECKs replaced by a
@@ -158,6 +175,7 @@ because two repositories cannot share a moving contract.
 | Bun + Hono + TypeScript API (charter §I prose) | Owner chose Go; charter §II tools list agrees | The single full-stack developer proves to be the binding constraint — a unified TS stack halves their context-switching. **This is a live risk, not a closed question** (ADR-0001) |
 | Microservices per module | One developer, four modules. Deploy and failure surface would multiply with no team to absorb it | Team grows past ~4 engineers, or one module needs independent scaling |
 | Supabase (Postgres + Auth + Storage) | Charter §II specifies AWS and PostgreSQL. The `Vocation.pptx` mention is superseded | AWS operational load proves unsustainable for a team with no ops role |
+| Self-managed RDS PostgreSQL on AWS (ADR-0003) | Multi-AZ RDS + the NAT gateway its private subnets need is a large share of a ₱6–7.5k/month fixed cost for a pre-launch platform, and there is no ops role to run it. Neon scales to zero and gives managed PITR + per-branch databases (ADR-0016) | AWS-wide consolidation becomes a hard requirement, or Neon's connection/latency model or data-region options prove unworkable |
 | Azure OpenAI / any LLM component | No AI feature exists in the charter or the 24 stories. The deck's "AI-powered matching" is not in scope | "Sort: relevance" (PRD Q5) is specified in a way that needs embeddings |
 | Collecting applications on-platform (an ATS) | Charter §II.1.c and BR-001/BR-014/BR-015 exclude it outright, and it is the business model (ADR-0006) | Never, without reversing ADR-0006 and re-deriving the revenue model |
 | Charging employers to post | Would require the ATS above; employers already have their own pipeline | Coaching revenue fails to cover cost and a second stream is needed |
@@ -191,8 +209,11 @@ Ranked by consequence, not by ease.
 5. **The 5% take rate may be structurally unprofitable on card payments.** Published PayMongo card
    fees (≈3.5% + ₱15) exceed a 5% take below ≈₱1,000 per session. **Parked by the owner.**
    ADR-0005, PRD Q8.
-6. **Fixed cost was never computed** — the chosen topology is roughly ₱6,000–7,500/month, implying
-   break-even at 300–600 paid sessions. [ADR-0014](ADR-0014-cost-model-and-nfrs.md).
+6. **Fixed cost was never computed** — the old all-RDS topology was roughly ₱6,000–7,500/month,
+   implying break-even at 300–600 paid sessions. The RDS→Neon move ([ADR-0016](ADR-0016-neon-postgres-not-rds.md))
+   removes the Multi-AZ RDS instance and shrinks the private-subnet/NAT-gateway footprint, so the
+   figure and the break-even count both need recomputing.
+   [ADR-0014](ADR-0014-cost-model-and-nfrs.md).
 7. **Chargeback after payout has no owner and no flow.** Nothing says what happens to money
    already credited to a coach. PRD Q7, Q10, EV-010 — folded into ADR-0013.
 8. **Coach payout mechanism is entirely unspecified.** `coach_payout` is recorded; nothing says how

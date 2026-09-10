@@ -53,8 +53,8 @@ contradiction, that is a bug in the docs — say so rather than picking one.
 | `F-###` | A feature | [`prd.md`](prd.md) |
 | `BR-###` | A business rule the system must enforce | [`prd.md`](prd.md) |
 | `UJ-###` | A user journey | [`prd.md`](prd.md) |
-| `S-###` | A screen | [`sitemap.md`](sitemap.md) |
-| `UF-###` / `EV-###` | A flow / a way it breaks | [`user-flow.md`](user-flow.md) |
+| `S-###` | A screen | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) |
+| `UF-###` / `EV-###` | A flow / a way it breaks | [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) |
 | `API-###` | An endpoint contract | [`api-spec.md`](api-spec.md) |
 | `ADR-####` / `CR-###` | A decision / a change to a locked doc | [`adr/`](adr/) |
 
@@ -81,9 +81,9 @@ are not records. The test: *would a future reader ask "why did we do it this way
 |---------|-----|--------------|------|
 | **Louigie** — Project Lead | [`adr/`](adr/) decisions, [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md), [`api-spec.md`](api-spec.md) contract | `prd.md`, `erd.md`, `sad.md` | `sitemap.md`, `user-flow.md` |
 | **Alexandre** — PM | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md), [`prd.md`](prd.md), [`index.md`](index.md), [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md), open questions everywhere | everything | — |
-| **Clarisse** (`jemslzr`) — Full Stack Developer | The code in both repos, and [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) task status | [`api-spec.md`](api-spec.md), [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [`sitemap.md`](sitemap.md), [`user-flow.md`](user-flow.md) | `prd.md` for `BR-###` |
+| **Clarisse** (`jemslzr`) — Full Stack Developer | The code in both repos, and [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) task status | [`api-spec.md`](api-spec.md), [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) | `prd.md` for `BR-###` |
 | **Emmanuel** — Security Engineer | `security-compliance` *(not yet written — yours to own)*, `erd.md` retention and classification | [`api-spec.md`](api-spec.md) auth, rate limits; `sitemap.md` §5 | `system-design.md` |
-| **John Richie** — Penetration Tester | Threat findings against [`sitemap.md`](sitemap.md) §5 and [`api-spec.md`](api-spec.md) | `user-flow.md` `EV-###`, `erd.md` classification | `prd.md` |
+| **John Richie** — Penetration Tester | Threat findings against [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) §5 and [`api-spec.md`](api-spec.md) | `user-flow.md` `EV-###`, `erd.md` classification | `prd.md` |
 
 Emmanuel and John Richie: two agents in [`sad.md`](sad.md) — `payments-auditor` and
 `privacy-auditor` — exist to enforce your concerns continuously rather than in one review at the

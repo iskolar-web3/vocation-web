@@ -77,7 +77,7 @@ replace them.
 - **Justification:** repeated-spawn — 30 screens across four role areas.
 - **Purpose:** implement `S-###` screens with the states, routes and access behaviour the sitemap
   specifies, using React + TS + TanStack Query + Tailwind (charter §II).
-- **Inputs:** [`sitemap.md`](sitemap.md), [`user-flow.md`](user-flow.md), `api-spec.md`, the
+- **Inputs:** [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md), `api-spec.md`, the
   generated TS client.
 - **Outputs:** components, routes, and tests.
 - **Guardrails (never):**

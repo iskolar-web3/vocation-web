@@ -4,7 +4,7 @@
 # Documentation Index — iSkolar Vocation
 
 **Maintained by:** Alexandre Nevero (PM)
-**Last updated:** 2026-09-08
+**Last updated:** 2026-09-10
 **FMD version:** 4.6.2
 
 <!--
@@ -34,10 +34,10 @@ everything else lives in `vocation-server`, and four are mirrored read-only into
 | What we build: features `F-###`, business rules `BR-###`, journeys `UJ-###`, acceptance criteria | [`prd.md`](prd.md) | server · mirrored | Owns the id spine. The workbook was the raw input; this is the home now |
 | How it is built: components, data flow, technology choices, deployment topology, scaling | [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) | server | The charter's "System Design" **and** "System Architecture", collapsed |
 | Entities · schema · constraints · indexes · privacy classification · retention | [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) | server | FMD's `data-model`, renamed. The charter's "System Model" |
-| Screens `S-###` · information architecture · routes · access zones · responsive variants | [`sitemap.md`](sitemap.md) | **web** | Static half of ux-maps |
-| Journeys `UF-###` · edge cases `EV-###` · instrumentation events | [`user-flow.md`](user-flow.md) | **web** | Dynamic half of ux-maps. The charter's "User Journey" |
+| Screens `S-###` · information architecture · routes · access zones · responsive variants | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) | **web** | Static half of ux-maps |
+| Journeys `UF-###` · edge cases `EV-###` · instrumentation events | [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) | **web** | Dynamic half of ux-maps. The charter's "User Journey" |
 | API contracts `API-###` · auth schemes · error codes · rate limits · versioning | [`api-spec.md`](api-spec.md) | server · mirrored | **The only coupling between the two repositories** |
-| Live execution state: `TASK-###`, dependencies, write scopes, status, wave gates | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | server | Markdown only. Trello mirrors it; the ledger is truth |
+| **Schedule** — milestone Gantt, sprint calendar, current sprint commitments, review responsibilities | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | server | Owns *when*. Live task state lives in **Shortcut**; Trello mirrors the five charter milestones. The `TASK-###` ledger was removed 2026-09-10 |
 | Build-time agent roster | [`sad.md`](sad.md) | server · mirrored | Materialises to `.claude/agents/*.md` |
 | How to get productive · which docs belong to whom · what is missing | [`onboarding.md`](onboarding.md) | server · mirrored | Points, never restates |
 | Code conventions · definition of done · stack currency · which `BR-###` governs which code area | [`../AGENTS.md`](../AGENTS.md) | both | Root agent guide. The rules table is an **index**, not a copy — the PRD wins |
@@ -63,17 +63,17 @@ See [`onboarding.md`](onboarding.md) for who owes each one.
 | Document | File | Status | Last updated |
 |---|---|---|---|
 | Root input (context + brief) | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md) | Draft | 2026-09-08 |
-| PRD | [`prd.md`](prd.md) | Draft | 2026-09-08 |
-| System Design (HLD) | [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) | Draft | 2026-09-07 |
+| PRD | [`prd.md`](prd.md) | Draft | 2026-09-10 |
+| System Design (HLD) | [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) | Draft | 2026-09-10 |
 | ERD | [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) | Draft | 2026-09-08 |
-| Sitemap | [`sitemap.md`](sitemap.md) | Draft | 2026-09-08 |
-| User Flow | [`user-flow.md`](user-flow.md) | Draft | 2026-09-08 |
+| Sitemap | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) | Draft | 2026-09-08 |
+| User Flow | [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) | Draft | 2026-09-08 |
 | API Spec | [`api-spec.md`](api-spec.md) | Draft | 2026-09-08 |
-| Implementation Plan | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | Draft | 2026-09-08 |
+| Implementation Plan | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | Draft | 2026-09-10 |
 | SAD (agent roster) | [`sad.md`](sad.md) | Draft | 2026-09-08 |
 | Onboarding | [`onboarding.md`](onboarding.md) | Draft | 2026-09-08 |
-| Decision Register | [`adr/README.md`](adr/README.md) | Draft | 2026-09-08 |
-| Agent guide | [`../AGENTS.md`](../AGENTS.md) | Draft | 2026-09-08 |
+| Decision Register | [`adr/README.md`](adr/README.md) | Draft | 2026-09-10 |
+| Agent guide | [`../AGENTS.md`](../AGENTS.md) | Draft | 2026-09-10 |
 
 **Every doc is `Draft`.** Nothing is Locked, so no `CR-###` is required to edit yet. Recommended
 lock order: `prd` → `erd` → `api-spec` → `sitemap` → `user-flow` → `system-design`
@@ -114,7 +114,7 @@ elsewhere until that narrative is reconciled. Do not reconstruct a decision from
 |---|---|---|
 | [ADR-0001](adr/ADR-0001-backend-language-go.md) | Go for the server API, against the charter's own prose | **Accepted, provisional** |
 | [ADR-0002](adr/ADR-0002-two-repo-split.md) | Two repositories, API spec as the only seam | Accepted *(amended by 0011)* |
-| [ADR-0003](adr/ADR-0003-aws-postgres-not-supabase.md) | AWS + self-managed PostgreSQL | Accepted |
+| [ADR-0003](adr/ADR-0003-aws-postgres-not-supabase.md) | AWS + self-managed PostgreSQL | Accepted *(DB host superseded by 0016)* |
 | [ADR-0004](adr/ADR-0004-modular-monolith.md) | Modular monolith rather than services | Accepted |
 | [ADR-0005](adr/ADR-0005-paymongo-and-take-rate.md) | PayMongo, and the 5% take-rate exposure | **Proposed — parked by owner** |
 | [ADR-0006](adr/ADR-0006-store-no-applications.md) | Store no applications; apply by redirect | Accepted |
@@ -127,6 +127,7 @@ elsewhere until that narrative is reconciled. Do not reconstruct a decision from
 | [ADR-0013](adr/ADR-0013-payout-ledger-and-payment-states.md) | Payout ledger, held balance, `payment_status` failure states | **Proposed — blocks Wave 4** |
 | [ADR-0014](adr/ADR-0014-cost-model-and-nfrs.md) | Fixed-cost model and non-functional requirements | **Proposed** |
 | [ADR-0015](adr/ADR-0015-fold-idea-into-vocation.md) | `idea.md` folded into `VOCATION.md` | Accepted |
+| [ADR-0016](adr/ADR-0016-neon-postgres-not-rds.md) | Managed Postgres on Neon, not self-managed AWS RDS | Accepted |
 
 The decision ledger (names, immutable ids, assumptions, pivots, rejected approaches) and the
 change-record log live in the same folder: [`adr/README.md`](adr/README.md) §1–§6.

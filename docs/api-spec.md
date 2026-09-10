@@ -49,7 +49,7 @@ Three distinct authentication schemes:
 | **Webhook signature** | `API-045` only | PayMongo signature header, verified before any state change. **Never a session** |
 
 Authorization is checked **server-side on every request**, per role and per record owner.
-The client's route guards are UX only ([`sitemap.md`](sitemap.md) §5).
+The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) §5).
 
 | Role scope | Meaning |
 |---|---|

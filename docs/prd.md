@@ -5,14 +5,14 @@
 
 **Project:** iSkolar Vocation
 **Maintained by:** Alexandre Nevero (Project Manager)
-**Last updated:** 2026-09-08
+**Last updated:** 2026-09-10
 **Status:** Draft
 **FMD version:** 4.6.2
 
 > **Purpose:** the WHAT, for the team. Primary build reference.
 > Traces back to: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md), `Vocation Project Charter.pdf`,
 > `Vocation User Stories.xlsx`. Traces forward to: [System Design](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md),
-> [Sitemap](sitemap.md), [User Flow](user-flow.md), [ERD](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [API Spec](api-spec.md).
+> [Sitemap](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [User Flow](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md), [ERD](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [API Spec](api-spec.md).
 >
 > **This doc owns the `F-###`, `UJ-###`, and `BR-###` spine.** Nothing else defines them.
 > The workbook is the raw input; from here on this PRD is the home. When they disagree, this wins
@@ -185,8 +185,8 @@ Three govern **deferred** features and are dormant in v1, kept for revival: **BR
 
 ## User flows
 
-Step-by-step flows live in [`user-flow.md`](user-flow.md) (`UF-###`), traversing the screens in
-[`sitemap.md`](sitemap.md) (`S-###`). Not restated here — see [`index.md`](index.md) §0.
+Step-by-step flows live in [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) (`UF-###`), traversing the screens in
+[`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) (`S-###`). Not restated here — see [`index.md`](index.md) §0.
 
 | Journey | Realised by |
 |---------|-------------|
@@ -293,10 +293,10 @@ Full reasoning: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/
 
 | Dependency | Used for | Failure mode |
 |------------|----------|--------------|
-| PostgreSQL | System of record | Outage → platform down |
+| Neon (managed PostgreSQL) | System of record ([ADR-0016](adr/ADR-0016-neon-postgres-not-rds.md)) | Provider outage → platform down, independently of an AWS region outage |
 | **PayMongo** | Paid booking collection, refunds, chargebacks (F-011, F-042) | Outage → paid bookings stall in `pending`; free bookings unaffected. Webhook loss → payment state diverges from reality. **The highest-consequence dependency** |
 | Google OAuth | Sign-in for all three roles (F-020, F-030, F-040) | Outage → Google sign-in fails; email/password unaffected |
-| AWS | Hosting, per charter §II | Region outage → platform down |
+| AWS | API, static-client and upload hosting, per charter §II (database is on Neon) | Region outage → platform down |
 | Employer external apply URLs | F-004 | Dead or changed URL → student hits a 404 on someone else's site. Needs link health checking, unspecified |
 | Object storage for uploads | Resumes (F-023), verification documents (F-043), logos and avatars | Outage → uploads and document review fail |
 
