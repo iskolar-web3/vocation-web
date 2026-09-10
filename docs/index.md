@@ -146,5 +146,5 @@ From [`adr/README.md`](adr/README.md) §6, ranked by consequence:
    the S-014–S-017 policy pages to be live. `implementation-plan.md` TASK-080.
 4. **Fixed cost may exceed plausible revenue for a long time** — roughly ₱6,000–7,500/month against
    ₱12.50 net per ₱500 e-wallet booking. [ADR-0014](adr/ADR-0014-cost-model-and-nfrs.md).
-5. **One developer, no designer, no QA**, and every review gate owned by two people with no build
-   tasks. `VOCATION.md` Q4; `implementation-plan.md` §4.
+5. **No designer and no QA**, and with two agent-assisted developers **review throughput is now the
+   binding constraint**, not dev-days. `VOCATION.md` Q4; `implementation-plan.md`.

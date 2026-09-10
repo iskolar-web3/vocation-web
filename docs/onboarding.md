@@ -11,7 +11,7 @@
 > **Purpose:** get a teammate or an AI agent productive in a few minutes. It **points**; it does
 > not restate. Every fact lives in one canonical doc — see [`index.md`](index.md) §0.
 >
-> **Read this if you are Louigie, Clarisse, Emmanuel, or John Richie** and wondering what these
+> **Read this if you are Jem, Jimuelle, Emmanuel, Louigie or John Richie** and wondering what these
 > documents are and which ones are yours.
 
 ## What this is
@@ -81,7 +81,8 @@ are not records. The test: *would a future reader ask "why did we do it this way
 |---------|-----|--------------|------|
 | **Louigie** — Project Lead | [`adr/`](adr/) decisions, [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md), [`api-spec.md`](api-spec.md) contract | `prd.md`, `erd.md`, `sad.md` | `sitemap.md`, `user-flow.md` |
 | **Alexandre** — PM | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md), [`prd.md`](prd.md), [`index.md`](index.md), [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md), open questions everywhere | everything | — |
-| **Clarisse** (`jemslzr`) — Full Stack Developer | The code in both repos, and [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) task status | [`api-spec.md`](api-spec.md), [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) | `prd.md` for `BR-###` |
+| **Jem** (`jemslzr`) — Frontend | `vocation-web`: screens, routes, `apiFetch` | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md), [`api-spec.md`](api-spec.md) | `prd.md` for `BR-###` |
+| **Jimuelle** (`Jimuelle07`) — Backend | `vocation-server`: Go, Neon, migrations | [`api-spec.md`](api-spec.md), [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) | `prd.md` for `BR-###` |
 | **Emmanuel** — Security Engineer | `security-compliance` *(not yet written — yours to own)*, `erd.md` retention and classification | [`api-spec.md`](api-spec.md) auth, rate limits; `sitemap.md` §5 | `system-design.md` |
 | **John Richie** — Penetration Tester | Threat findings against [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) §5 and [`api-spec.md`](api-spec.md) | `user-flow.md` `EV-###`, `erd.md` classification | `prd.md` |
 
@@ -91,9 +92,8 @@ end. They are read-only by design and report to you.
 
 ## Run it locally
 
-**Not yet runnable — no code exists.** Neither repository has been created. Charter §I specifies
-two: a client web app and a server API (names `vocation-web` / `vocation-server` are proposed, not
-confirmed — `adr/README.md` §1).
+**Not yet runnable — both repositories exist but hold only docs.** Scaffolding is Sprint 0; see
+[`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md).
 
 When they exist, this section owns the setup. Expected shape from charter §II:
 
@@ -129,7 +129,7 @@ vocation/
 │   ├── api-spec.md       API-### contracts — the seam between the two repos
 │   ├── sad.md           the build-time agent roster
 │   ├── onboarding.md    this file
-│   ├── implementation-plan.md   the live TASK-### ledger
+│   ├── implementation-plan.md   schedule, Gantt, current sprint
 │   └── adr/             decisions + ledger + change records
 ├── Vocation Project Charter.pdf    input
 ├── Vocation User Stories.xlsx      input (24 stories)

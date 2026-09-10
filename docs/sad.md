@@ -20,9 +20,10 @@
 
 Charter §IV names **one** Full Stack Developer against four modules and two repositories, plus a
 Security Engineer and a Penetration Tester with no build tasks assigned. The roster below is
-shaped by that: two builder agents to multiply the single developer, and three read-only
-guardrails that let the two security roles enforce their concerns continuously instead of in a
-review at the end.
+shaped by that: two builder agents — one per repo, now matching Jimuelle on backend and Jem on
+frontend — and read-only guardrails that let the security roles enforce their concerns
+continuously instead of in a review at the end. With both devs agent-assisted, the auditors matter
+more, not less: review throughput is the binding constraint.
 
 Five agents is the top of the 3–6 range, deliberately: two of the five humans are security roles
 with no build tasks, and these agents are how they participate in every PR rather than in one
