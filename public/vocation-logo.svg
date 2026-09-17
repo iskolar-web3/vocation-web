@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="vocationGrad" x1="10" y1="10" x2="110" y2="110" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3f58b2"/>
+      <stop offset="50%" stop-color="#607ef2"/>
+      <stop offset="100%" stop-color="#021F53"/>
+    </linearGradient>
+    <linearGradient id="honeyGrad" x1="40" y1="30" x2="80" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffb833"/>
+      <stop offset="100%" stop-color="#ff9b00"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#021F53" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Background Shield Shape -->
+  <rect x="10" y="10" width="100" height="100" rx="28" fill="url(#vocationGrad)" filter="url(#glow)"/>
+
+  <!-- Compass / Vocation Geometry -->
+  <path d="M60 26 L73 47 L94 60 L73 73 L60 94 L47 73 L26 60 L47 47 Z" fill="#ffffff" fill-opacity="0.16"/>
+  
+  <!-- Central Graduation Cap & Opportunity Spark -->
+  <path d="M60 32 L88 46 L60 60 L32 46 Z" fill="#ffffff"/>
+  <path d="M42 54 L42 72 C42 80 78 80 78 72 L78 54 L60 63 Z" fill="#f0f7ff" fill-opacity="0.95"/>
+  <path d="M88 46 L94 66 L91 67 L86 52 Z" fill="url(#honeyGrad)"/>
+  
+  <!-- Opportunity Star Spark -->
+  <circle cx="60" cy="46" r="4.5" fill="url(#honeyGrad)"/>
+  <path d="M60 66 L64 74 L72 78 L64 82 L60 90 L56 82 L48 78 L56 74 Z" fill="url(#honeyGrad)"/>
+</svg>

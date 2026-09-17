@@ -1,0 +1,208 @@
+@import "tailwindcss";
+
+@theme {
+  --color-honey: #ff9b00;
+  --color-cyan-blue: #607ef2;
+  --color-sapphire: #3f58b2;
+  --color-midnight: #021F53;
+  --color-lightblue: #608bff;
+  --color-deep: #002774;
+  --color-ice: #f0f7ff;
+  --color-ink: #021F53;
+  --color-ink-soft: #2c3f77;
+
+  --font-display: "Bree Serif", Georgia, serif;
+  --font-headline: "Amaranth", sans-serif;
+  --font-accent: "Amaranth", sans-serif;
+  --font-body: "Montserrat", sans-serif;
+  --font-sans: "Montserrat", sans-serif;
+
+  --radius-pill: 9999px;
+  --radius-card: 24px;
+}
+
+:root {
+  --honey: #ff9b00;
+  --cyan-blue: #607ef2;
+  --sapphire: #3f58b2;
+  --midnight: #021F53;
+  --lightblue: #608bff;
+  --deep: #002774;
+  --ice: #f0f7ff;
+  --ink: #021F53;
+  --ink-soft: #2c3f77;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--ice);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+h3, h4, h5, h6 {
+  font-family: var(--font-headline);
+  letter-spacing: -0.01em;
+}
+
+/* Halftone dot texture from brandkit */
+.dots-pattern {
+  background-image: radial-gradient(rgba(96, 126, 242, 0.18) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+/* Glass pill capsule header treatment */
+.pill-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  color: var(--sapphire);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(240, 247, 255, 0.85));
+  border: 1px solid rgba(96, 126, 242, 0.28);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.95), inset 0 -2px 6px rgba(96, 126, 242, 0.12), 0 8px 20px rgba(63, 88, 178, 0.08);
+  border-radius: 9999px;
+  padding: 0.35rem 1.15rem;
+  letter-spacing: 0.03em;
+}
+
+/* Refined Unslop Card Shadows */
+.shadow-soft {
+  box-shadow: 0 4px 20px -2px rgba(2, 31, 83, 0.06), 0 2px 6px -1px rgba(2, 31, 83, 0.04);
+}
+
+.shadow-lift {
+  box-shadow: 0 16px 36px -4px rgba(2, 31, 83, 0.12), 0 6px 16px -2px rgba(96, 126, 242, 0.16);
+}
+
+/* Animation Utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f0f7ff;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Subtle blueprint grid for technical polish */
+.grid-subtle {
+  background-image: linear-gradient(to right, rgba(96, 126, 242, 0.07) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(96, 126, 242, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Tactile Card with crisp layered depth */
+.tactile-card {
+  background: #ffffff;
+  border: 1px solid rgba(2, 31, 83, 0.08);
+  box-shadow: 0 1px 3px rgba(2, 31, 83, 0.04), 0 8px 24px -4px rgba(2, 31, 83, 0.06);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tactile-card:hover {
+  border-color: rgba(63, 88, 178, 0.28);
+  box-shadow: 0 4px 12px rgba(2, 31, 83, 0.06), 0 16px 32px -6px rgba(2, 31, 83, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Boarding pass ticket perforation */
+.ticket-perforation {
+  position: relative;
+  border-right: 2px dashed rgba(2, 31, 83, 0.14);
+}
+
+.ticket-notch-top {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--ice);
+}
+
+.ticket-notch-bottom {
+  position: absolute;
+  bottom: -10px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--ice);
+}
+
+/* Linear Stream Row Item */
+.stream-row {
+  background: #ffffff;
+  border: 1px solid rgba(2, 31, 83, 0.07);
+  transition: all 0.18s ease;
+}
+
+.stream-row:hover {
+  background: #fbfdff;
+  border-color: rgba(96, 126, 242, 0.4);
+  box-shadow: 0 4px 16px -2px rgba(2, 31, 83, 0.08);
+}
+
+.stream-row-active {
+  background: #f0f7ff !important;
+  border-color: #3f58b2 !important;
+  box-shadow: 0 0 0 1.5px #3f58b2, 0 8px 20px -4px rgba(63, 88, 178, 0.16) !important;
+}
+
+/* Micro-badge stamps */
+.stamp-badge {
+  font-family: var(--font-headline);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
