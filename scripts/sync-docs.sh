@@ -22,9 +22,10 @@ MIRRORED=(
   docs/index.md
   docs/onboarding.md
   docs/sad.md
+  docs/methods.md
 )
 
-SERVER_ONLY=(VOCATION.md erd.md system-design.md implementation-plan.md)
+SERVER_ONLY=(VOCATION.md erd.md system-design.md implementation-plan.md ops.md)
 
 BANNER='<!-- MIRRORED from iskolar-web3/vocation-server. Do not edit here.
      Edit upstream, then run scripts/sync-docs.sh. -->'

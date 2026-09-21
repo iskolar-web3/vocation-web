@@ -97,8 +97,9 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
 - **Auth:** none
 - **Errors:** `422` on an unknown enum value; never `500` on an empty result — an empty page is
   `200` with `total: 0` so the client can render its empty state
-- **Note:** `sort=relevance` is accepted but **undefined** (PRD Q5). Until defined it must not
-  silently alias `newest` — return `422` rather than lie about ordering
+- **Note:** `sort=relevance` (PRD Q5, closed) ranks on `ts_rank` against `q`. With no `q`, there is
+  nothing to rank against, so the server falls back to `newest` rather than `422` — a client that
+  always sends `sort=relevance` shouldn't have to special-case an empty search box
 
 #### API-003 — `POST /internships/:id/apply-click` — record the outbound click
 
@@ -198,6 +199,9 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
 | ID | Method / path | Serves | Auth | Notes |
 |----|---------------|--------|------|-------|
 | API-043 | `POST /bookings/:id/review` | F-013 | owner (student) | `{ rating: 1-5, body? }`. `409` if already reviewed or the booking is not `completed` (BR-010). Recomputes the coach aggregate **in the same transaction** (BR-011) |
+| API-046 | `POST /bookings/:id/cancel` | F-022 | owner (student/coach) | Cancels the session. Trigger full refund if cancelled by coach, or by student > 24h prior (ADR-0012) |
+| API-047 | `POST /bookings/:id/complete` | F-022 | owner (student/coach) | Marks the session `completed`. Auto-completes 24h post-session if not called (ADR-0012) |
+| API-048 | `PATCH /bookings/:id` | F-022 | owner (coach) | Allows the coach to provide a `join_url` if not using their default |
 | ~~API-044~~ | ~~`POST /programs/:id/enroll`~~ | F-012 | — | **Deferred** (ADR-0010). Payment behaviour was undefined anyway — ERD Q5 |
 
 ### Employer — **all Deferred (ADR-0010)**
@@ -218,7 +222,7 @@ No employer surface exists in v1. Listings are created by admin (API-071). Rows 
 | ID | Method / path | Serves | Auth | Notes |
 |----|---------------|--------|------|-------|
 | API-060 | `POST /me/coach-profile` | F-040 | coach | Onboarding: bio, expertise, session types, pricing |
-| API-061 | `PATCH /me/coach-profile` | F-041 | owner | `verification_status` not writable |
+| API-061 | `PATCH /me/coach-profile` | F-041 | owner | Partial update: `display_name`, `headline`, `bio`, `experience`, `languages`, `skills`, `default_join_url` — any field omitted is left unchanged. `slug`, `price_type` and `verification_status` are not writable here (`slug` and `price_type` are set once at onboarding via API-060; `verification_status` is never writable, F-043 deferred) |
 | API-067 | `POST /me/session-types` · `PATCH /me/session-types/:id` | F-041 | owner | Free/paid and rate. A price change never affects existing bookings ([`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md)) |
 | API-062 | `GET /me/availability` · `PUT /me/availability` | F-041 | owner | `422` on removing a slot that has a booking. Backed by an `ON DELETE RESTRICT` FK, so the database refuses it even if the handler is bypassed (ADR-0009) |
 | API-063 | `GET /me/sessions` | F-041 | coach | `?when=upcoming\|past` |
@@ -230,6 +234,7 @@ No employer surface exists in v1. Listings are created by admin (API-071). Rows 
 
 | ID | Method / path | Serves | Auth | Notes |
 |----|---------------|--------|------|-------|
+| API-077 | `POST /admin/companies` | F-050 | admin | **Create a company.** Prerequisite for API-071 — v1 has no employer signup, so admin must be able to create the `company` row an internship's `company_id` points at. `owner_account_id` is always left null (ADR-0019, ADR-0010) |
 | API-070 | `GET /admin/internships` | F-050 | admin | `?status=`. All statuses, since admin owns the full lifecycle in v1 |
 | API-071 | `POST /admin/internships` | F-050 | admin | **Create a listing.** Admin is trusted, so it is written `status=open` directly — no moderation step exists when admin is the author. Requires `external_apply_url` |
 | API-075 | `PATCH /admin/internships/:id` | F-050 | admin | Edit any field. Does **not** reset to `pending` — BR-005 governed employer resubmission, which is deferred |
@@ -246,6 +251,14 @@ No employer surface exists in v1. Listings are created by admin (API-071). Rows 
 - **Request:** `{ purpose: "resume"|"avatar"|"company_logo", content_type, size_bytes }`
   *(`verification_document` deferred with F-043 — ADR-0010)*
 - **Response 201:** `{ upload_url, object_key, expires_at }`
+- **Per-purpose caps and allowed content types** ([ADR-0021](adr/ADR-0021-student-feature-slice-decisions.md)):
+
+  | Purpose | Size cap | Content types |
+  |---|---|---|
+  | `resume` | 10 MB | `application/pdf` |
+  | `avatar` | 5 MB | `image/jpeg`, `image/png`, `image/webp` |
+  | `company_logo` | 5 MB | `image/jpeg`, `image/png`, `image/webp` |
+
 - **Errors:** `413` over the per-purpose size cap · `415` disallowed content type
 - **Note:** bytes go **straight to object storage**, never through the API. `resume` objects land in
   a private prefix, are never public-read, and carry the retention policy in [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) —
@@ -318,11 +331,11 @@ and the Security Engineer owns the final numbers.
 | # | Question | Blocks | Owner | Needed by |
 |---|----------|--------|-------|-----------|
 | Q1 | `openapi.yaml` does not exist. Without it the two repos share only prose, and drift is a matter of time | both repos | Project Lead | before M3 |
-| Q2 | `sort=relevance` (API-001) is undefined. Returning `422` is the honest stopgap; what should it actually rank on? PRD Q5 | API-001 | PM | before F-002 |
+| Q2 | ~~`sort=relevance` (API-001) is undefined. Returning `422` is the honest stopgap; what should it actually rank on?~~ **Answered:** `ts_rank(search_tsv, plainto_tsquery(q))`; falls back to `newest` with no `q`. PRD Q5 | API-001 | — | closed 2026-09-18 |
 | Q3 | ~~Does API-044 create a PayMongo intent for priced programs?~~ **Moot for v1** — F-012 deferred | API-044 | PM | if F-012 revives |
 | Q4 | Which endpoint sets `completed`, and who may call it? Nothing in the charter or workbook says. PRD Q9 | API-043, API-064 | PM | before F-013 |
 | Q5 | Is there a coach payout endpoint at all, or is disbursement manual and out-of-band? PRD Q10 | API-064 | PM | before coach onboarding |
 | Q6 | Session cookies vs bearer tokens: cookies assume the client is same-site or on a configured CORS origin. Confirm the deployed domain topology | all authed endpoints | Project Lead | before M3 |
 | Q7 | Refund initiation: an admin endpoint, PayMongo dashboard only, or both? PRD Q7 | API-045 | PM + Security Engineer | before payments launch |
-| Q8 | **No endpoint produces `booking.join_url`, and none sets `cancelled`.** A confirmed booking currently cannot be attended or cancelled. [ADR-0012](adr/ADR-0012-session-delivery-model.md) | API-041, API-037 | PM + Project Lead | **blocks Wave 3** |
+| Q8 | ~~**No endpoint produces `booking.join_url`, and none sets `cancelled`.**~~ **Answered: ADR-0012** (Coach provides link, cancellation paths added) | API-041, API-037 | — | closed 2026-09-11 |
 | Q9 | **No payout or ledger endpoints exist.** `GET /me/earnings` sums bookings rather than reading a balance, and there is no batch payout operation. [ADR-0013](adr/ADR-0013-payout-ledger-and-payment-states.md) | API-064 | Emmanuel + PM | **blocks Wave 4** |

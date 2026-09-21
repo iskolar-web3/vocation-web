@@ -3,8 +3,8 @@
 
 # ADR-0012 — Session delivery, cancellation, and reschedule model
 
-- **Date:** 2026-09-08
-- **Status:** **Proposed — blocks Wave 3**
+- **Date:** 2026-09-11
+- **Status:** **Accepted**
 
 ## Context
 
@@ -42,19 +42,17 @@ whether the thing being refunded was delivered. This is not an edge case; it is 
 
 ## Decision
 
-**Not yet made.** This ADR is `Proposed` and blocks Wave 3.
+**Option 1 is accepted for v1.**
+Coaches will provide a join link (e.g., Google Meet, Zoom) when confirming the booking or by setting a default link in their profile.
 
-Working recommendation is **option 1 for v1**, on the grounds that it needs no vendor and no spend
-while paid conversion is still unproven, and that option 2 remains available later without
-re-deciding anything else. Whichever is chosen, the same three things are owed: a producer for
-`join_url`, a cancel endpoint with a defined refund consequence, and a rule for who sets
-`completed`.
+**Rules established:**
+1. **Producer for `join_url`:** The coach provides this either on their profile (default) or upon confirmation.
+2. **Cancellation window and refunds:** Students can cancel up to 24 hours before the session start time for a full refund. Coaches can cancel at any time prior to the session, which automatically triggers a full refund.
+3. **Completion (`completed` status):** The session is marked `completed` manually by either party after the session time. If neither party acts, it auto-completes 24 hours after the scheduled end time to ensure coaches get paid. Disputes must be raised within this 24-hour window.
 
 ## Consequences
 
-- **Whatever is chosen:** `erd.md`, `api-spec.md`, `sitemap.md` and `user-flow.md` all gain a
-  cancellation path, and PRD Q9 (`completed`) is answered as a side effect.
-- **If left unresolved:** Wave 3 ships a marketplace that takes bookings it cannot deliver and cannot
-  cancel. Wave 4 then layers payment on top, making every unresolved case a money dispute.
-- **Owed before Wave 3:** pick an option; define the cancellation window and its refund consequence;
-  name who sets `completed`.
+- `erd.md`, `api-spec.md`, `sitemap.md`, and `user-flow.md` must be updated to include the cancellation path.
+- The refund policy based on the 24-hour window must be enforced on the backend.
+- A background job or chron task must be introduced to auto-complete sessions 24 hours post-schedule.
+- Sprint 2 (Bookings) is unblocked and can proceed.
