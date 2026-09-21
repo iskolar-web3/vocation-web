@@ -43,11 +43,24 @@ See [ADR-0011](./docs/adr/ADR-0011-spec-sync-per-repo-ownership.md).
 
 ## Living plan
 
-`TASK-###` state lives in
+Live task state lives in **GitHub Issues** and the **Vocation Delivery** project. The schedule
+lives in
 [vocation-server/docs/implementation-plan.md](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md).
-Trello mirrors it; the ledger wins. Branch `task/TASK-###-short-slug`.
+Trello and Shortcut are retired for this project, and the `TASK-###` ledger was removed on
+2026-09-10. Branch `task/<issue-number>-short-slug`.
 
-Web-side scaffolding is `TASK-005`; `apiFetch` is `TASK-006`.
+### Every PR closes an issue
+
+**No work without an issue, and no PR without a linked issue.** The board is only as honest as the
+links into it.
+
+- Put a **closing keyword** in the PR description, not just the title: `Closes #17` · `Fixes #23`.
+  A bare `#17` links but **does not close**, and leaves the board stale.
+- Cross-repo work uses the full reference: `Closes iskolar-web3/vocation-server#17`.
+- Closing several issues means repeating the keyword: `Closes #18, closes #19`.
+- No issue for what you are about to do? Open one, put it in the sprint milestone, then branch.
+- Work that genuinely should not close its issue says `Part of #21`, and the issue stays open with
+  a comment on what moved.
 
 ## Build & run
 
@@ -90,12 +103,14 @@ Rule text lives in [`docs/prd.md`](./docs/prd.md) §Business rules. This is an i
 
 ## Definition of done
 
+- **CI is green.** Not "it built locally" — the check on the PR.
+- **The PR closes its issue** with a closing keyword (`Closes #NN`) in the description.
 - Build passes; Biome clean; Vitest green.
 - The screen matches its `S-###` row, every declared state renders, and it works at **375px**.
 - The flow's `EV-###` breaks are handled.
 - Access rules are re-checked server-side — a client guard alone is not done.
 - No mirrored doc was edited.
-- PR states the `TASK-###`, the `F-###` served, and docs impact (`none` is valid).
+- PR states the `F-###` served and docs impact (`none` is valid).
 
 ## References
 

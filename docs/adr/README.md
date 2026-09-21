@@ -52,7 +52,10 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 | [ADR-0014](ADR-0014-cost-model-and-nfrs.md) | Fixed-cost model and non-functional requirements | **Proposed** | 2026-09-08 |
 | [ADR-0015](ADR-0015-fold-idea-into-vocation.md) | `idea.md` folded into `VOCATION.md` | Accepted | 2026-09-08 |
 | [ADR-0016](ADR-0016-neon-postgres-not-rds.md) | Managed Postgres on Neon, not self-managed AWS RDS *(supersedes the DB host in 0003)* | Accepted | 2026-09-10 |
+| [ADR-0017](ADR-0017-jia-ingestion-pull-and-store.md) | Jia ingestion: pull-and-store, not live proxy | Accepted | 2026-09-13 |
 | [ADR-0018](ADR-0018-response-envelope.md) | Response envelope: `{ message, data, meta }` | Accepted | 2026-09-10 |
+| [ADR-0019](ADR-0019-defer-company-owner-fk.md) | `company.owner_account_id`: nullable, no FK, until `iam` lands | Accepted | 2026-09-11 |
+| [ADR-0020](ADR-0020-sprint1-schema-additions.md) | Sprint 1 schema additions: `session`, deferred `review.booking_id`, coach timestamps | Accepted | 2026-09-11 |
 
 ## 1. Names & immutable identifiers (read first)
 
@@ -83,6 +86,38 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 | v1 scope is 17 features (ADR-0010) | Fixed cost ≈ ₱6,000–7,500/month — estimated, not quoted (ADR-0014); stale since the RDS→Neon move (ADR-0016) and unrecomputed | That batched coach payouts stay outside BSP/AMLA scope (ADR-0013) |
 
 ## 3. Pivots & decisions (newest first — cite ADR)
+
+### 2026-09-13 — Jia ingestion decision recorded as ADR-0017
+- **Change:** the ingest-not-proxy model `implementation-plan.md` already described in prose
+  ("Jia: ingest, do not proxy") is now a numbered ADR, written at the point the ingestion code
+  (`internal/internships/jia.go`, migration 0008, `cmd/jiasync`) actually landed. Five docs had
+  cited ADR-0017 by number since Sprint 0 without the file ever existing.
+- **Why:** a decision referenced but never recorded is a gap the moment anyone follows the
+  citation. `onboarding.md`'s rule — chat and Trello comments are not records — applies here too.
+- **Recorded as:** [ADR-0017](ADR-0017-jia-ingestion-pull-and-store.md).
+- **Propagation:** `index.md` §3; this file's §0 index.
+
+### 2026-09-11 — Sprint 1 schema: `session` table added, `review.booking_id` deferred, `company` FK closed
+- **Change:** `erd.md` gains a `session` entity (server-side sessions, keyed by token hash) that
+  wasn't previously modelled; `review.booking_id` ships nullable with no FK ahead of Sprint 2's
+  `booking` table; `coach_profile`/`session_type` gain `created_at`/`updated_at`; migration 0005
+  finally adds `company.owner_account_id`'s FK now that `account` exists.
+- **Why:** `iam` and the coaching read path (F-013's `GET /coaches/:slug/reviews`) are in scope this
+  sprint, `booking` is not — the same shape of problem ADR-0019 already accepted for
+  `company.owner_account_id`.
+- **Recorded as:** [ADR-0020](ADR-0020-sprint1-schema-additions.md).
+- **Propagation:** `erd.md` (session entity, coach timestamp columns, review.booking_id note);
+  migrations 0002–0005.
+
+### 2026-09-11 — `company.owner_account_id` ships nullable, no FK, in migration 0001
+- **Change:** `erd.md`'s `NOT NULL` + `FK → account` on `company.owner_account_id` is not enforced
+  in migration 0001 — the column is nullable with no FK.
+- **Why:** migration 0001 is scoped to `company` and `internship` only (`account` lands with `iam`
+  in Sprint 1), and ADR-0010 already removed employer self-serve from v1, so no employer account is
+  guaranteed to exist to own a `company` row.
+- **Recorded as:** [ADR-0019](ADR-0019-defer-company-owner-fk.md).
+- **Propagation:** owed — a Sprint 1 migration adds the FK once `account` exists, or `erd.md` is
+  amended if admin-authored companies turn out to be the permanent v1 answer.
 
 ### 2026-09-10 — Response envelope fixed at `{ message, data, meta }`
 - **Change:** `api-spec.md` specified `{ data, meta }` for lists and nested the error string inside
