@@ -4,7 +4,7 @@
 # Documentation Index — iSkolar Vocation
 
 **Maintained by:** Alexandre Nevero (PM)
-**Last updated:** 2026-09-10
+**Last updated:** 2026-09-21
 **FMD version:** 4.6.2
 
 <!--
@@ -37,10 +37,12 @@ everything else lives in `vocation-server`, and four are mirrored read-only into
 | Screens `S-###` · information architecture · routes · access zones · responsive variants | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) | **web** | Static half of ux-maps |
 | Journeys `UF-###` · edge cases `EV-###` · instrumentation events | [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) | **web** | Dynamic half of ux-maps. The charter's "User Journey" |
 | API contracts `API-###` · auth schemes · error codes · rate limits · versioning | [`api-spec.md`](api-spec.md) | server · mirrored | **The only coupling between the two repositories** |
-| **Schedule** — milestone Gantt, sprint calendar, current sprint commitments, review responsibilities | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | server | Owns *when*. Live task state lives in **Shortcut**; Trello mirrors the five charter milestones. The `TASK-###` ledger was removed 2026-09-10 |
+| **Schedule** — milestone Gantt, sprint calendar, current sprint commitments, review responsibilities | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | server | Owns *when*. Live task state lives in **GitHub Issues + the `Vocation Delivery` Project** (re-homed 2026-09-21; Trello and Shortcut retired for this project). The `TASK-###` ledger was removed 2026-09-10 |
 | Build-time agent roster | [`sad.md`](sad.md) | server · mirrored | Materialises to `.claude/agents/*.md` |
 | How to get productive · which docs belong to whom · what is missing | [`onboarding.md`](onboarding.md) | server · mirrored | Points, never restates |
 | Code conventions · definition of done · stack currency · which `BR-###` governs which code area | [`../AGENTS.md`](../AGENTS.md) | both | Root agent guide. The rules table is an **index**, not a copy — the PRD wins |
+| Every computed number — equation, inputs, rounding | [`methods.md`](methods.md) | server · mirrored | `platform_fee`, `coach_payout`, `rating_avg`, `completeness_pct`, refund and completion windows. Also records the equations that **do not exist yet** |
+| Deploy · secrets · migrations · workers · monitoring · incidents · backup | [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/ops.md) | server | Operating the system. Deployment *topology* stays in `system-design.md` |
 
 **The rule:** a fact lives in its canonical doc; everything else links to it. Do not restate.
 
@@ -51,9 +53,7 @@ These are **not** owned by anything yet. Do not assume a fact in one of these ar
 | Concern | Would be owned by | Status |
 |---|---|---|
 | Tests · cases · traceability `F-###` → test | `qa-test-plan.md` | **Not generated.** The eng review mapped **48 paths at 0% coverage**, and the workbook's per-criterion Passed/Failed tracker still has nowhere to live. Largest gap in the suite |
-| Every computed number (equation + inputs) | `methods.md` | **Not generated.** `platform_fee`, `coach_payout`, `rating_avg` and `completeness_pct` all lack an equation home |
 | Security · authz model · threat model · RA 10173 compliance | `security-compliance.md` | **Not generated.** Student resumes are sensitive personal information |
-| Deploy · secrets · monitoring · incidents · backup | `ops.md` | **Not generated**, for a system that will hold payment records |
 | UI tokens · components · visual states | `design-system.md` | **Not generated.** No named designer against charter M2 |
 
 See [`onboarding.md`](onboarding.md) for who owes each one.
@@ -72,6 +72,8 @@ See [`onboarding.md`](onboarding.md) for who owes each one.
 | Implementation Plan | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | Draft | 2026-09-10 |
 | SAD (agent roster) | [`sad.md`](sad.md) | Draft | 2026-09-08 |
 | Onboarding | [`onboarding.md`](onboarding.md) | Draft | 2026-09-08 |
+| Methods (equations) | [`methods.md`](methods.md) | Draft | 2026-09-21 |
+| Ops | [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/ops.md) | Draft | 2026-09-21 |
 | Decision Register | [`adr/README.md`](adr/README.md) | Draft | 2026-09-10 |
 | Agent guide | [`../AGENTS.md`](../AGENTS.md) | Draft | 2026-09-10 |
 
@@ -96,9 +98,10 @@ lock order: `prd` → `erd` → `api-spec` → `sitemap` → `user-flow` → `sy
 - [ ] **Network-exposed surfaces declare auth/authz** — partial. `api-spec.md` and `sitemap.md` §5
       name the schemes and enforcement points, but no `security-compliance` doc owns the threat model
       or the RA 10173 position.
-- [ ] **Displayed numbers cite equations** — ✗ no `methods.md`. The commission split is money and has
-      no equation home, though [ADR-0007](adr/ADR-0007-money-split-derived-by-subtraction.md) now
-      pins the derivation.
+- [x] **Displayed numbers cite equations** — [`methods.md`](methods.md) generated 2026-09-21 and owns
+      `platform_fee`, `coach_payout`, `rating_avg`, `completeness_pct` and the refund/completion
+      windows. It also records the equations that **still do not exist** — chiefly platform *net*
+      revenue per booking, which is blocked on [ADR-0005](adr/ADR-0005-paymongo-and-take-rate.md).
 - [x] Every `S-###` serves an `F-###`; every `UF-###` step cites an existing `S-###`; every
       `API-###` names the `F-###` it serves. Deferred rows are marked, not orphaned.
 - [ ] **`openapi.yaml` exists** — ✗. Two repositories are coupled by prose alone until TASK-011.
@@ -128,7 +131,12 @@ elsewhere until that narrative is reconciled. Do not reconstruct a decision from
 | [ADR-0014](adr/ADR-0014-cost-model-and-nfrs.md) | Fixed-cost model and non-functional requirements | **Proposed** |
 | [ADR-0015](adr/ADR-0015-fold-idea-into-vocation.md) | `idea.md` folded into `VOCATION.md` | Accepted |
 | [ADR-0016](adr/ADR-0016-neon-postgres-not-rds.md) | Managed Postgres on Neon, not self-managed AWS RDS | Accepted |
+| [ADR-0017](adr/ADR-0017-jia-ingestion-pull-and-store.md) | Jia ingestion: pull-and-store, not live proxy | Accepted |
 | [ADR-0018](adr/ADR-0018-response-envelope.md) | Response envelope: `{ message, data, meta }` | Accepted |
+| [ADR-0019](adr/ADR-0019-defer-company-owner-fk.md) | `company.owner_account_id`: nullable, no FK, until `iam` lands | Accepted |
+| [ADR-0020](adr/ADR-0020-sprint1-schema-additions.md) | Sprint 1 schema additions: `session`, deferred `review.booking_id`, coach timestamps | Accepted |
+| [ADR-0021](adr/ADR-0021-student-feature-slice-decisions.md) | Student slice: `skills` column, `completeness_pct` equation, notification topic names, upload caps, no new AWS SDK dependency | Accepted |
+| [ADR-0022](adr/ADR-0022-ledger-foundation-schema.md) | Ledger foundation schema (`ledger_entry`, `payout_batch`) — adopts ADR-0013 Option 1's shape only, not its blocked decision | Accepted |
 
 The decision ledger (names, immutable ids, assumptions, pivots, rejected approaches) and the
 change-record log live in the same folder: [`adr/README.md`](adr/README.md) §1–§6.
