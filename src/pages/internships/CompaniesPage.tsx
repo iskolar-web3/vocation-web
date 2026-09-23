@@ -38,7 +38,7 @@ export const CompaniesPage: React.FC<CompaniesPageProps> = ({ navigate }) => {
       <div className="bg-gradient-to-r from-[#021F53] to-[#3f58b2] rounded-3xl p-6 sm:p-10 text-white shadow-soft space-y-3">
         <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
           <Building className="w-3.5 h-3.5" />
-          <span>Employer Catalog (S-006)</span>
+          <span>Employer Catalog</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold font-display">
           Partner Companies &amp; Organizations

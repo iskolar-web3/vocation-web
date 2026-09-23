@@ -59,7 +59,7 @@ export const InternshipFilters: React.FC<InternshipFiltersProps> = ({
   ];
 
   return (
-    <div className={`space-y-6 ${isMobileDrawer ? '' : 'bg-white rounded-3xl p-6 border border-[#3f58b2]/10 shadow-soft sticky top-24'}`}>
+    <div className={`space-y-6 ${isMobileDrawer ? '' : 'bg-white rounded-3xl p-6 border border-[#3f58b2]/10 shadow-soft'}`}>
       {/* Search Header */}
       {!isMobileDrawer && (
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">

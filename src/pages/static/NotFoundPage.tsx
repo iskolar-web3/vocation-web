@@ -13,7 +13,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ navigate }) => {
       </div>
       <h1 className="text-3xl font-bold text-[#021F53] font-display">404 — Page Not Found</h1>
       <p className="text-xs sm:text-sm text-[#2c3f77] leading-relaxed">
-        The page you are looking for does not exist, or the listing has been withdrawn (BR-003, BR-006).
+        The page you are looking for does not exist, or the listing has been withdrawn.
       </p>
       <button
         onClick={() => navigate('/')}

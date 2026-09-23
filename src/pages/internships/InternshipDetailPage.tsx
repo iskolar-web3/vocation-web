@@ -52,7 +52,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
       <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
         <h2 className="text-2xl font-bold text-[#021F53]">Internship Not Found</h2>
         <p className="text-sm text-slate-500">
-          This listing may have been closed, withdrawn, or does not exist (BR-003, BR-006).
+          This listing may have been closed, withdrawn, or is no longer available.
         </p>
         <button
           type="button"
@@ -275,7 +275,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
           {/* Outbound Notice (BR-001) */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-soft space-y-3">
             <h3 className="text-sm font-bold text-[#021F53] font-headline">
-              Official Outbound Gateway (BR-001)
+              Official Outbound Gateway
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
               iSkolar Vocation maintains zero student resumes on its servers. You will apply directly on {internship.company.name}'s careers site.

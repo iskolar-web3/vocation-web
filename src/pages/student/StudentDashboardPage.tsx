@@ -56,7 +56,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
         <div className="space-y-1.5 relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-[11px] font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
             <GraduationCap className="w-3.5 h-3.5 text-[#ff9b00]" />
-            <span>Student Command Dashboard (S-021)</span>
+            <span>Student Command Dashboard</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-display">
             Welcome back, {firstName}

@@ -68,7 +68,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 bg-white/10 px-2.5 py-0.5 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
               <Award className="w-3.5 h-3.5" />
-              <span>Coach Portal (S-041)</span>
+              <span>Coach Portal</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold font-display">
               {coach.name}
@@ -91,7 +91,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         {[
           { id: 'sessions', label: 'Booked Sessions', count: bookings.length },
-          { id: 'earnings', label: 'Earnings & Payouts (BR-008)', count: `${formatPHP(totalEarnedCentavos)}` },
+          { id: 'earnings', label: 'Earnings & Payouts', count: `${formatPHP(totalEarnedCentavos)}` },
         ].map((tab) => (
           <button
             key={tab.id}

@@ -19,18 +19,18 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
 
       {page === 'terms' && (
         <div className="bg-white rounded-3xl p-8 sm:p-12 border border-[#3f58b2]/10 shadow-soft space-y-6">
-          <h1 className="text-3xl font-bold text-[#021F53] font-display">Terms of Service (S-014)</h1>
+          <h1 className="text-3xl font-bold text-[#021F53] font-display">Terms of Service</h1>
           <p className="text-xs text-slate-500">Effective Date: September 2026</p>
 
           <div className="space-y-4 text-sm text-[#2c3f77] leading-relaxed">
-            <h3 className="font-bold text-base text-[#021F53]">1. Platform Scope & Outbound Application Model</h3>
+            <h3 className="font-bold text-base text-[#021F53]">1. Platform Scope &amp; Outbound Application Model</h3>
             <p>
-              iSkolar Vocation connects Filipino college students with internship discovery and 1-on-1 career coaching. <strong>In accordance with Rule BR-001, iSkolar Vocation does not store student resumes, cover letters, or job applications.</strong> All applications are completed via outbound redirection to the employer's official recruitment portal.
+              iSkolar Vocation connects Filipino college students with internship discovery and 1-on-1 career coaching. <strong>iSkolar Vocation does not store student resumes, cover letters, or job applications on its servers.</strong> All applications are completed via outbound redirection to the employer's official recruitment portal.
             </p>
 
-            <h3 className="font-bold text-base text-[#021F53]">2. Coaching Marketplace & Payments</h3>
+            <h3 className="font-bold text-base text-[#021F53]">2. Coaching Marketplace &amp; Payments</h3>
             <p>
-              Paid coaching sessions are processed securely through our payment partner, PayMongo Philippines. The platform retains a 5% commission on paid sessions, with 95% disbursed to the verified coach (BR-008).
+              Paid coaching sessions are processed securely through our payment partner, PayMongo Philippines. The platform retains a 5% commission on paid sessions, with 95% disbursed to the verified coach.
             </p>
 
             <h3 className="font-bold text-base text-[#021F53]">3. Student Conduct</h3>
@@ -43,7 +43,7 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
 
       {page === 'privacy' && (
         <div className="bg-white rounded-3xl p-8 sm:p-12 border border-[#3f58b2]/10 shadow-soft space-y-6">
-          <h1 className="text-3xl font-bold text-[#021F53] font-display">Privacy Policy (S-015)</h1>
+          <h1 className="text-3xl font-bold text-[#021F53] font-display">Privacy Policy</h1>
           <p className="text-xs text-slate-500">Compliant with Philippine Republic Act No. 10173 (Data Privacy Act of 2012)</p>
 
           <div className="space-y-4 text-sm text-[#2c3f77] leading-relaxed">
@@ -59,7 +59,7 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
 
             <h3 className="font-bold text-base text-[#021F53]">3. Review Transparency</h3>
             <p>
-              In accordance with BR-011, coaching session ratings and reviews are displayed publicly with the student's first name only to protect student privacy.
+              Coaching session ratings and reviews are displayed publicly with the student's first name only to protect student privacy.
             </p>
           </div>
         </div>
@@ -67,7 +67,7 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
 
       {page === 'refunds' && (
         <div className="bg-white rounded-3xl p-8 sm:p-12 border border-[#3f58b2]/10 shadow-soft space-y-6">
-          <h1 className="text-3xl font-bold text-[#021F53] font-display">Refund & Cancellation Policy (S-016)</h1>
+          <h1 className="text-3xl font-bold text-[#021F53] font-display">Refund &amp; Cancellation Policy</h1>
           <p className="text-xs text-slate-500">Required for PayMongo Marketplace Gateway</p>
 
           <div className="space-y-4 text-sm text-[#2c3f77] leading-relaxed">
@@ -86,7 +86,7 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
 
       {page === 'contact' && (
         <div className="bg-white rounded-3xl p-8 sm:p-12 border border-[#3f58b2]/10 shadow-soft space-y-6">
-          <h1 className="text-3xl font-bold text-[#021F53] font-display">Contact Us (S-017)</h1>
+          <h1 className="text-3xl font-bold text-[#021F53] font-display">Contact Us</h1>
           <p className="text-xs text-slate-500">We are here to support students, coaches, and university partners.</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">

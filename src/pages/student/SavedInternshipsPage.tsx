@@ -26,7 +26,7 @@ export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navi
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
-            Saved Internships (S-022)
+            Saved Internships
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Your bookmarked opportunities and upcoming application deadlines.

@@ -115,7 +115,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
-            Student Profile &amp; Settings (S-024, S-025)
+            Student Profile &amp; Settings
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Update your academic details, target OJT hours, and notification preferences.
@@ -134,7 +134,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>Profile (S-024)</span>
+            <span>Profile</span>
           </button>
           <button
             type="button"
@@ -146,7 +146,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
             }`}
           >
             <Settings className="w-3.5 h-3.5" />
-            <span>Settings (S-025)</span>
+            <span>Settings</span>
           </button>
         </div>
       </div>
@@ -322,7 +322,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>Save Profile (API-031)</span>
+              <span>Save Profile</span>
             </button>
           </div>
         </form>
@@ -380,7 +380,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>Update Settings (API-038)</span>
+              <span>Update Settings</span>
             </button>
           </div>
         </form>

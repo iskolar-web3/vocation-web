@@ -35,7 +35,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
             </p>
             <div className="pt-2 flex items-center gap-2 text-xs text-[#ff9b00] font-semibold">
               <ShieldCheck className="w-4 h-4 text-[#ff9b00]" />
-              <span>Outbound Direct Apply · No Stored Applications (BR-001)</span>
+              <span>Outbound Direct Apply · Verified Official Portals</span>
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
                   onClick={() => navigate('/terms')}
                   className="hover:text-white transition-colors"
                 >
-                  Terms of Service (S-014)
+                  Terms of Service
                 </button>
               </li>
               <li>
@@ -140,7 +140,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
                   onClick={() => navigate('/privacy')}
                   className="hover:text-white transition-colors"
                 >
-                  Privacy Policy (S-015)
+                  Privacy Policy
                 </button>
               </li>
               <li>
@@ -148,7 +148,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
                   onClick={() => navigate('/refunds')}
                   className="hover:text-white transition-colors"
                 >
-                  Refund Policy (S-016)
+                  Refund Policy
                 </button>
               </li>
               <li>
@@ -156,7 +156,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
                   onClick={() => navigate('/contact')}
                   className="hover:text-white transition-colors"
                 >
-                  Contact Us (S-017)
+                  Contact Us
                 </button>
               </li>
             </ul>

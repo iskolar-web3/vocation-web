@@ -123,7 +123,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
             Find High-Impact Internships in the Philippines
           </h1>
           <p className="text-xs sm:text-sm text-slate-200 max-w-2xl leading-relaxed">
-            Curated practicum and OJT opportunities with verified monthly allowances, flexible setups, and direct outbound application links (BR-001).
+            Curated practicum and OJT opportunities with verified monthly allowances, flexible setups, and direct outbound application links.
           </p>
 
           <div className="relative pt-2 max-w-2xl">
@@ -167,8 +167,8 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
 
       {/* Main Content Area */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-        {/* Desktop Sidebar Filters */}
-        <aside className="hidden md:block md:col-span-4 lg:col-span-3 space-y-6">
+        {/* Desktop Sidebar Filters (Frozen Sidebar) */}
+        <aside className="hidden md:block md:col-span-4 lg:col-span-3 space-y-6 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
           <InternshipFilters
             filters={filters}
             setFilters={setFilters}

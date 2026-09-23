@@ -55,7 +55,7 @@ export const StudentBookingsPage: React.FC<StudentBookingsPageProps> = ({ naviga
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
-            My Coaching Sessions (S-023)
+            My Coaching Sessions
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Manage your scheduled mock interviews, resume audits, and join video calls in Asia/Manila time.

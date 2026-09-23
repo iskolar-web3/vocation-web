@@ -182,7 +182,7 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
             </span>
           </div>
           <span className="text-xs text-slate-500 hidden sm:inline">
-            BR-011: Public reviews display student first name only
+            Public reviews display student first name only
           </span>
         </div>
 

@@ -112,7 +112,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
           <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] flex items-center justify-between">
             <span>Feedback &amp; Review (Optional)</span>
             <span className="text-[11px] text-[#ff9b00] font-normal">
-              BR-011: Displays with student first name only
+              Displays with student first name only
             </span>
           </label>
           <div className="relative">

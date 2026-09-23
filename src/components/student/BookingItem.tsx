@@ -135,7 +135,7 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
             className="px-4 py-2 rounded-xl text-xs font-bold text-[#021F53] bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Star className="w-3.5 h-3.5 fill-[#ff9b00] text-[#ff9b00]" />
-            <span>Rate This Session (BR-010)</span>
+            <span>Rate This Session</span>
           </button>
         )}
 

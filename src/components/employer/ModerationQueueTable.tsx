@@ -58,7 +58,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
             <Ban className="w-3.5 h-3.5 text-slate-500" />
-            <span>Withdrawn (BR-006)</span>
+            <span>Withdrawn</span>
           </span>
         );
     }
@@ -153,7 +153,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                             onClick={() => setWithdrawModalItem(item)}
                             className="px-3 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg border border-rose-200 hover:bg-rose-100 text-[11px] cursor-pointer"
                           >
-                            Withdraw (API-076)
+                            Withdraw
                           </button>
                         )}
                       </div>
@@ -175,7 +175,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-600">
-            Are you sure you want to withdraw <strong>{withdrawModalItem?.title}</strong>? It will immediately become non-public and return 404 (BR-003, BR-006).
+            Are you sure you want to withdraw <strong>{withdrawModalItem?.title}</strong>? It will immediately be removed from the public directory.
           </p>
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
             <button

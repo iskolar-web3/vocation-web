@@ -31,7 +31,7 @@ export const CoachingHubPage: React.FC<CoachingHubPageProps> = ({ navigate }) =>
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
             <Award className="w-3.5 h-3.5 text-[#ff9b00]" />
-            <span>1-on-1 Mentorship &amp; Interview Flight Deck (S-008)</span>
+            <span>1-on-1 Career Mentorship &amp; Interview Preparation</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-bold font-display leading-tight">

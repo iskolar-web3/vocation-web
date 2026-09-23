@@ -59,7 +59,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
             <Award className="w-3.5 h-3.5 text-[#ff9b00]" />
-            <span>Find a Coach Directory (S-009)</span>
+            <span>Find a Coach Directory</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
             Book 1-on-1 Coaching with Industry Leaders
