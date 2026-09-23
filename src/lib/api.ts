@@ -1,7 +1,7 @@
 import { ApiResponse, PaginationMeta } from '../types/api';
 import { handleDevMockRequest } from './devMock';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/v1';
+const LIVE_API_URL = import.meta.env.VITE_API_URL;
 
 export class ApiError extends Error {
   public status: number;
@@ -33,9 +33,28 @@ export async function apiFetch<T>(
 ): Promise<ApiFetchResult<T>> {
   const { params, headers, ...customConfig } = options;
 
+  // 1. In standalone development (no external backend URL configured), resolve with dev mock engine directly
+  if (!LIVE_API_URL) {
+    const parsedBody = customConfig.body
+      ? typeof customConfig.body === 'string'
+        ? JSON.parse(customConfig.body)
+        : customConfig.body
+      : undefined;
+    const mock = await handleDevMockRequest<T>(
+      endpoint,
+      customConfig.method || 'GET',
+      parsedBody,
+      params
+    );
+    if (mock) {
+      return mock;
+    }
+  }
+
+  // 2. Connect to live backend API
   let url = endpoint.startsWith('http')
     ? endpoint
-    : `${BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    : `${LIVE_API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
   if (params) {
     const searchParams = new URLSearchParams();
@@ -68,24 +87,6 @@ export async function apiFetch<T>(
   try {
     const response = await fetch(url, config);
 
-    // If local dev proxy responds with 502/504 because no backend server is on port 8080
-    if ((response.status === 502 || response.status === 504 || response.status === 404) && !import.meta.env.VITE_API_URL) {
-      const parsedBody = config.body
-        ? typeof config.body === 'string'
-          ? JSON.parse(config.body)
-          : config.body
-        : undefined;
-      const mock = await handleDevMockRequest<T>(
-        endpoint,
-        config.method || 'GET',
-        parsedBody,
-        params
-      );
-      if (mock) {
-        return mock;
-      }
-    }
-
     let payload: ApiResponse<T>;
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
@@ -117,7 +118,7 @@ export async function apiFetch<T>(
       throw error;
     }
 
-    // Network / offline fallback in dev mode
+    // Network / offline fallback if live server is unreachable
     try {
       const parsedBody = config.body
         ? typeof config.body === 'string'
@@ -134,7 +135,7 @@ export async function apiFetch<T>(
         return mock;
       }
     } catch {
-      // ignore mock parsing errors
+      // ignore
     }
 
     const message = error instanceof Error ? error.message : 'Network error';
