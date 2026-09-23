@@ -4,29 +4,26 @@ import {
   MapPin,
   Clock,
   Coins,
-  ShieldCheck,
   ExternalLink,
   CheckCircle2,
-  Share2,
   Bookmark,
   Calendar,
   Sparkles,
   ArrowRight,
   GraduationCap,
-  Users,
   Briefcase,
-  AlertCircle,
   Copy,
   Check,
 } from 'lucide-react';
-import { Internship, Coach } from '../../types';
+import { InternshipCard as InternshipCardType, InternshipDetail, CoachCard as CoachCardType, CoachDetail } from '../../types/api';
 import { formatPesos, formatDate, getTimeRemaining } from '../../lib/utils';
-import { useData } from '../../context/DataContext';
+import { useSavedInternships, useSaveInternship, useUnsaveInternship, useCoaches } from '../../services/queries';
+import { useAuth } from '../../context/AuthContext';
 
 interface InternshipDossierProps {
-  internship: Internship;
-  onApply: (internship: Internship) => void;
-  onBookCoach?: (coach: Coach) => void;
+  internship: InternshipDetail | InternshipCardType;
+  onApply: (internship: InternshipDetail | InternshipCardType) => void;
+  onBookCoach?: (coach: CoachCardType | CoachDetail) => void;
   isCompact?: boolean;
 }
 
@@ -36,16 +33,22 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   onBookCoach,
   isCompact = false,
 }) => {
-  const { coaches } = useData();
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const { data: savedList = [] } = useSavedInternships();
+  const saveMutation = useSaveInternship();
+  const unsaveMutation = useUnsaveInternship();
+  const { data: coachesData } = useCoaches();
 
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const isSaved = savedList.some((item) => item.id === internship.id);
   const { days, isExpired } = getTimeRemaining(internship.deadline);
 
   // Find coaches specialized in this internship's field
+  const coaches = coachesData?.items || [];
   const matchingCoaches = coaches
     .filter((c) =>
-      c.expertise.some(
+      (c.expertise || []).some(
         (exp: string) =>
           exp.toLowerCase().includes(internship.field.toLowerCase()) ||
           internship.field.toLowerCase().includes(exp.toLowerCase())
@@ -59,6 +62,21 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleToggleSave = () => {
+    if (!isAuthenticated) return;
+    if (isSaved) {
+      unsaveMutation.mutate(internship.id);
+    } else {
+      saveMutation.mutate(internship.id);
+    }
+  };
+
+  const detail = internship as Partial<InternshipDetail>;
+  const responsibilities = detail.responsibilities || [];
+  const requirements = detail.requirements || [];
+  const perks = detail.perks || [];
+  const description = detail.description || '';
+
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-soft overflow-hidden sticky top-24 space-y-6">
       {/* Dossier Header Banner */}
@@ -71,7 +89,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
               <span className="stamp-badge bg-white/15 text-[#ff9b00] border border-white/20">
                 {internship.field}
               </span>
-              {internship.isPaid ? (
+              {internship.is_paid ? (
                 <span className="stamp-badge bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                   Paid Allowance
                 </span>
@@ -93,152 +111,150 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setIsSaved(!isSaved)}
+                onClick={handleToggleSave}
                 title="Save role to checklist"
                 className={`p-2 rounded-xl transition-all cursor-pointer ${
                   isSaved ? 'bg-[#ff9b00] text-[#021F53]' : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
               >
-                <Bookmark className="w-4 h-4" />
+                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
               </button>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <h2 className="text-xl sm:text-2xl font-bold font-display text-white leading-snug">
+          <div>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+              {internship.company.name}
+            </span>
+            <h2 className="text-xl sm:text-2xl font-bold font-display leading-tight">
               {internship.title}
             </h2>
-            <div className="flex items-center gap-2 text-slate-300 text-xs sm:text-sm">
-              <span className="font-semibold text-white">{internship.company.name}</span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-[#ff9b00]" />
-                {internship.company.location}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-xs">
+            <div>
+              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Setup</span>
+              <span className="font-bold capitalize">{internship.work_setup}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Duration</span>
+              <span className="font-bold">{internship.duration_weeks} Weeks</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Allowance</span>
+              <span className="font-bold text-[#ff9b00]">
+                {internship.is_paid && internship.stipend_amount
+                  ? `${formatPesos(internship.stipend_amount)}/${internship.stipend_period || 'mo'}`
+                  : 'Unpaid'}
               </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Deadline</span>
+              <span className="font-bold">{formatDate(internship.deadline)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Dossier Body Content */}
-      <div className="p-6 pt-0 space-y-6">
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Compensation</span>
-            <span className="text-xs sm:text-sm font-bold text-emerald-700 block mt-0.5">
-              {internship.isPaid && internship.stipendAmount ? formatPesos(internship.stipendAmount) + '/mo' : 'For Academic Credit'}
+      <div className="p-6 space-y-6">
+        {/* Outbound CTA Box (BR-001, BR-002: outbound application notice) */}
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <span className="text-xs font-bold text-amber-950 block">Official Application Gateway</span>
+            <span className="text-[11px] text-amber-900 leading-relaxed block">
+              Apply directly on {internship.company.name}'s careers portal. iSkolar stores 0 student resumes.
             </span>
           </div>
-
-          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">OJT Credit</span>
-            <span className="text-xs sm:text-sm font-bold text-[#3f58b2] block mt-0.5">
-              {internship.ojtHours ? `${internship.ojtHours} hrs verified` : 'CHED Accredited'}
-            </span>
-          </div>
-
-          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 col-span-2 sm:col-span-1">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Work Setup</span>
-            <span className="text-xs sm:text-sm font-bold text-[#021F53] block mt-0.5 capitalize">
-              {internship.workSetup}
-            </span>
-          </div>
-        </div>
-
-        {/* Role Overview */}
-        <div className="space-y-2">
-          <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Role Overview</h4>
-          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-            {internship.description}
-          </p>
-        </div>
-
-        {/* Requirements & Competencies */}
-        <div className="space-y-2.5">
-          <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Candidate Requirements</h4>
-          <div className="space-y-1.5">
-            {internship.requirements.map((req, index) => (
-              <div key={index} className="flex items-start gap-2 text-xs text-slate-700 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#3f58b2] flex-shrink-0 mt-0.5" />
-                <span>{req}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Application Status & Deadline Strip */}
-        <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-amber-900">
-            <Calendar className="w-4 h-4 text-[#ff9b00] flex-shrink-0" />
-            <span>
-              {isExpired
-                ? 'Application closed'
-                : `Deadline: ${formatDate(internship.deadline)} (${days}d left)`}
-            </span>
-          </div>
-          <span className="font-bold text-[#021F53] uppercase tracking-wider text-[10px] bg-white px-2 py-0.5 rounded-md border border-amber-200">
-            Outbound Direct
-          </span>
-        </div>
-
-        {/* Outbound Action CTA (BR-001) */}
-        <div className="space-y-2 pt-2">
           <button
             type="button"
             onClick={() => onApply(internship)}
-            disabled={isExpired}
-            className="w-full py-3.5 px-6 bg-[#021F53] hover:bg-[#3f58b2] text-white font-bold text-sm rounded-2xl transition-all shadow-soft flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="px-6 py-3 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-1.5 flex-shrink-0 cursor-pointer"
           >
-            <span>Apply Directly on Company Portal</span>
-            <ExternalLink className="w-4 h-4 text-[#ff9b00] group-hover:translate-x-0.5 transition-transform" />
+            <span>Apply on Company Site</span>
+            <ExternalLink className="w-3.5 h-3.5" />
           </button>
-          <p className="text-[11px] text-center text-slate-600">
-            Zero files stored on iSkolar. You will be redirected safely with click tracking.
-          </p>
         </div>
 
-        {/* Paired Coach Matcher Strip */}
-        {matchingCoaches.length > 0 && onBookCoach && (
-          <div className="pt-4 border-t border-slate-100 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#021F53] flex items-center gap-1.5 font-headline">
-                <Sparkles className="w-3.5 h-3.5 text-[#ff9b00]" />
-                <span>Prepare for this Interview</span>
-              </span>
-              <span className="text-[11px] text-slate-600">Verified Practitioners</span>
-            </div>
+        {/* Description & Requirements */}
+        {description && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
+              Role Overview
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
+              {description}
+            </p>
+          </div>
+        )}
 
+        {responsibilities.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
+              Key Responsibilities
+            </h4>
+            <ul className="space-y-1.5">
+              {responsibilities.map((resp, i) => (
+                <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <span>{resp}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {requirements.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
+              Qualifications &amp; Requirements
+            </h4>
+            <ul className="space-y-1.5">
+              {requirements.map((req, i) => (
+                <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#3f58b2] shrink-0 mt-1.5" />
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Cross-sell 1-on-1 Mentorship */}
+        {matchingCoaches.length > 0 && (
+          <div className="p-4 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/20 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#3f58b2]">
+              <Sparkles className="w-4 h-4 text-[#ff9b00]" />
+              <span>Prepare for {internship.company.name}'s Interview</span>
+            </div>
+            <p className="text-[11px] text-slate-600">
+              Book a 1-on-1 mock interview with industry mentors specializing in {internship.field}:
+            </p>
             <div className="space-y-2">
-              {matchingCoaches.map((coach) => (
+              {matchingCoaches.map((c) => (
                 <div
-                  key={coach.id}
-                  className="p-3 rounded-2xl bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-[#3f58b2]/40 transition-all flex items-center justify-between gap-3"
+                  key={c.id}
+                  className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <img
-                      src={coach.avatar}
-                      alt={coach.name}
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200 flex-shrink-0"
+                      src={c.avatar_url}
+                      alt={c.name}
+                      className="w-8 h-8 rounded-lg object-cover"
                     />
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-800 truncate">{coach.name}</span>
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#3f58b2] flex-shrink-0" />
-                      </div>
-                      <span className="text-[11px] text-slate-600 truncate block">
-                        {coach.currentRole} at {coach.company}
-                      </span>
+                      <span className="text-xs font-bold text-[#021F53] truncate block">{c.name}</span>
+                      <span className="text-[10px] text-slate-500 truncate block">{c.headline}</span>
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onBookCoach(coach)}
-                    className="px-3 py-1.5 bg-white hover:bg-[#3f58b2] hover:text-white text-[#021F53] font-bold text-xs rounded-xl border border-slate-200 hover:border-transparent transition-all shadow-2xs flex-shrink-0 cursor-pointer"
-                  >
-                    Book Practice
-                  </button>
+                  {onBookCoach && (
+                    <button
+                      type="button"
+                      onClick={() => onBookCoach(c)}
+                      className="px-3 py-1 bg-[#021F53] text-white text-[11px] font-bold rounded-lg hover:bg-[#3f58b2] transition-colors cursor-pointer"
+                    >
+                      Book
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

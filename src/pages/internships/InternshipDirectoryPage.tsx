@@ -1,31 +1,25 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Search,
-  Filter,
   SlidersHorizontal,
   Briefcase,
-  Sparkles,
-  RotateCcw,
-  CheckCircle2,
   LayoutList,
   LayoutGrid,
   Columns2,
-  MapPin,
-  ArrowUpDown,
   Calculator,
-  ChevronRight,
-  BookOpen,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
-import { useData } from '../../context/DataContext';
+import { useInternships, useCoach } from '../../services/queries';
 import { InternshipCard } from '../../components/internships/InternshipCard';
 import { InternshipFilters, FilterState } from '../../components/internships/InternshipFilters';
 import { InternshipDossier } from '../../components/internships/InternshipDossier';
 import { OjtCalculatorWidget } from '../../components/internships/OjtCalculatorWidget';
 import { Drawer } from '../../components/common/Drawer';
+import { Modal } from '../../components/common/Modal';
 import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
 import { BookingDialog } from '../../components/coaching/BookingDialog';
-import { PayMongoModal } from '../../components/common/PayMongoModal';
-import { Internship, Coach, Booking } from '../../types';
+import { InternshipCard as InternshipCardType, InternshipDetail, CoachCard as CoachCardType, CoachDetail } from '../../types/api';
 
 interface InternshipDirectoryPageProps {
   navigate: (path: string) => void;
@@ -40,8 +34,6 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
   initialField = '',
   initialSetup = 'all',
 }) => {
-  const { internships } = useData();
-
   const [filters, setFilters] = useState<FilterState>({
     q: initialQuery,
     field: initialField,
@@ -54,80 +46,22 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
   const [viewMode, setViewMode] = useState<'split' | 'row' | 'grid'>('split');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
-  const [selectedInternship, setSelectedInternship] = useState<Internship | null>(null);
-  const [activeDossierRole, setActiveDossierRole] = useState<Internship | null>(null);
-  const [bookingCoach, setBookingCoach] = useState<Coach | null>(null);
-  const [activePayMongoBooking, setActivePayMongoBooking] = useState<Booking | null>(null);
+  const [selectedInternship, setSelectedInternship] = useState<InternshipCardType | InternshipDetail | null>(null);
+  const [activeDossierRole, setActiveDossierRole] = useState<InternshipCardType | InternshipDetail | null>(null);
+  const [bookingCoach, setBookingCoach] = useState<CoachCardType | CoachDetail | null>(null);
 
-  // Filter only 'open' postings for public directory (BR-003)
-  const openPostings = useMemo(() => {
-    return internships.filter((i) => i.status === 'open');
-  }, [internships]);
+  const { data, isLoading, error } = useInternships({
+    q: filters.q || undefined,
+    field: filters.field || undefined,
+    setup: filters.setup !== 'all' ? filters.setup : undefined,
+    pay: filters.pay !== 'all' ? filters.pay : undefined,
+    sort: filters.sort !== 'newest' ? filters.sort : undefined,
+  });
 
-  const filteredInternships = useMemo(() => {
-    return openPostings
-      .filter((item) => {
-        // Query search
-        if (filters.q.trim()) {
-          const query = filters.q.toLowerCase();
-          const matchesTitle = item.title.toLowerCase().includes(query);
-          const matchesCompany = item.company.name.toLowerCase().includes(query);
-          const matchesField = item.field.toLowerCase().includes(query);
-          const matchesLocation = item.company.location.toLowerCase().includes(query);
-          const matchesReqs = item.requirements.some((r) => r.toLowerCase().includes(query));
-          if (!matchesTitle && !matchesCompany && !matchesField && !matchesLocation && !matchesReqs) {
-            return false;
-          }
-        }
+  const internships = data?.items || [];
+  const currentDossierRole = activeDossierRole || internships[0] || null;
 
-        // Field filter
-        if (filters.field && item.field !== filters.field) {
-          return false;
-        }
-
-        // Work setup
-        if (filters.setup !== 'all' && item.workSetup !== filters.setup) {
-          return false;
-        }
-
-        // Compensation
-        if (filters.pay === 'paid' && !item.isPaid) {
-          return false;
-        }
-        if (filters.pay === 'unpaid' && item.isPaid) {
-          return false;
-        }
-
-        // OJT hours
-        if (filters.minOjtHours !== 'all') {
-          const minHours = parseInt(filters.minOjtHours, 10);
-          if (!item.ojtHours || item.ojtHours < minHours) {
-            return false;
-          }
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (filters.sort === 'newest') {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-        if (filters.sort === 'deadline_soon') {
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-        }
-        if (filters.sort === 'highest_stipend') {
-          const aStipend = a.stipendAmount || 0;
-          const bStipend = b.stipendAmount || 0;
-          return bStipend - aStipend;
-        }
-        return 0;
-      });
-  }, [openPostings, filters]);
-
-  // Set active dossier role default if not set
-  const currentDossierRole = activeDossierRole || filteredInternships[0] || null;
-
-  const handleResetFilters = () => {
+  const handleReset = () => {
     setFilters({
       q: '',
       field: '',
@@ -138,125 +72,102 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
     });
   };
 
-  const hasActiveFilters =
-    !!filters.q ||
-    !!filters.field ||
-    filters.setup !== 'all' ||
-    filters.pay !== 'all' ||
-    filters.minOjtHours !== 'all';
-
-  const quickFieldTabs = [
+  const quickFieldPills = [
     { label: 'All Roles', value: '' },
-    { label: 'Software', value: 'Software Engineering' },
-    { label: 'UI/UX', value: 'UI/UX Design' },
-    { label: 'Data & AI', value: 'Data & AI' },
-    { label: 'Business', value: 'Business & Growth' },
-    { label: 'Marketing', value: 'Marketing & Comms' },
+    { label: 'Software Engineering', value: 'Software Engineering' },
+    { label: 'Product & Design', value: 'Product & Design' },
+    { label: 'Data & Analytics', value: 'Data & Analytics' },
+    { label: 'Marketing & Growth', value: 'Marketing & Growth' },
+    { label: 'Finance & Ops', value: 'Finance & Operations' },
   ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Directory Page Header */}
+      {/* Header Banner */}
       <div className="bg-[#021F53] rounded-3xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
-            <Briefcase className="w-3.5 h-3.5" />
+            <Briefcase className="w-3.5 h-3.5 text-[#ff9b00]" />
             <span>Internship &amp; OJT Directory (S-004)</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-            Verified Internships in the Philippines
+            Curated Internships for Filipino University Students
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Search active openings across vetted tech enterprises and startups. Direct outbound apply with zero stored applicant files (BR-001).
+            Discover verified tech, finance, product, and design roles with clear stipend details, OJT credit hours, and direct official application links.
           </p>
 
-          {/* Quick Search Bar */}
           <div className="relative pt-2">
             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={filters.q}
               onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
-              placeholder="Filter by role title, company, skill (e.g. React, Python), or location..."
+              placeholder="Search by role title, technology (React, Python), company (Maya, GCash), or location..."
               className="w-full pl-11 pr-4 py-3 bg-white text-[#021F53] font-medium text-xs sm:text-sm rounded-xl shadow-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ff9b00]"
             />
           </div>
         </div>
       </div>
 
-      {/* Quick Field Chips Bar & OJT Calculator Trigger */}
-      <div className="flex items-center justify-between gap-4 overflow-x-auto pb-1">
-        <div className="flex items-center gap-1.5 flex-nowrap">
-          {quickFieldTabs.map((tab) => (
-            <button
-              key={tab.label}
-              onClick={() => setFilters((prev) => ({ ...prev, field: tab.value }))}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                filters.field === tab.value
-                  ? 'bg-[#021F53] text-white shadow-2xs font-bold'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
-            isCalculatorOpen
-              ? 'bg-[#ff9b00] text-[#021F53]'
-              : 'bg-white text-[#021F53] border border-slate-200 hover:border-[#ff9b00]'
-          }`}
-        >
-          <Calculator className="w-3.5 h-3.5 text-[#ff9b00]" />
-          <span>{isCalculatorOpen ? 'Hide OJT Calculator' : 'OJT Feasibility Tool'}</span>
-        </button>
+      {/* Quick Field Navigation Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        {quickFieldPills.map((pill) => (
+          <button
+            key={pill.label}
+            onClick={() => setFilters((prev) => ({ ...prev, field: pill.value }))}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              filters.field === pill.value
+                ? 'bg-[#021F53] text-white shadow-2xs font-bold'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            {pill.label}
+          </button>
+        ))}
       </div>
 
-      {/* Embedded OJT Calculator Accordion */}
-      {isCalculatorOpen && (
-        <div className="animate-slideDown">
-          <OjtCalculatorWidget
-            onFindMatchingRoles={(hours) => {
-              setFilters((prev) => ({ ...prev, minOjtHours: String(hours) }));
-              setIsCalculatorOpen(false);
-            }}
-          />
-        </div>
-      )}
-
-      {/* Main Content Layout */}
+      {/* Main Content Area */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-        {/* Desktop Sidebar (hidden below 768px) */}
-        <aside className="hidden md:block md:col-span-4 lg:col-span-3">
+        {/* Desktop Sidebar Filters */}
+        <aside className="hidden md:block md:col-span-4 lg:col-span-3 space-y-6">
           <InternshipFilters
             filters={filters}
             setFilters={setFilters}
-            totalResults={filteredInternships.length}
-            onReset={handleResetFilters}
+            totalResults={internships.length}
+            onReset={handleReset}
           />
+
+          <button
+            type="button"
+            onClick={() => setIsCalculatorOpen(true)}
+            className="w-full p-4 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/20 hover:border-[#3f58b2]/40 transition-all text-left space-y-1 group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#021F53] flex items-center gap-1.5 font-headline">
+                <Calculator className="w-4 h-4 text-[#3f58b2]" />
+                <span>OJT Hours Calculator</span>
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#ff9b00] text-[#021F53] font-accent">
+                Widget
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-snug">
+              Calculate daily shifts &amp; required weeks to complete 300, 486, or 600 practicum hours.
+            </p>
+          </button>
         </aside>
 
-        {/* Results Area */}
+        {/* Results Stream / Master-Detail Area */}
         <main className="md:col-span-8 lg:col-span-9 space-y-4">
-          {/* Top Control Bar: Total Count, 3-Way Mode Switcher & Mobile Filters */}
-          <div className="flex items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center justify-between bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs">
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs sm:text-sm text-[#021F53]">
-                {filteredInternships.length} Opportunities
+                {isLoading ? 'Searching...' : `${internships.length} Verified Roles Open`}
               </span>
-              {hasActiveFilters && (
-                <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/30 text-[10px] py-0">
-                  Filtered
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-2">
-              {/* 3-Way View Mode Switcher */}
               <div className="hidden sm:flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl">
                 <button
                   type="button"
@@ -266,7 +177,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
                       ? 'bg-white text-[#021F53] shadow-2xs font-bold'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
-                  title="Master-Detail Split View"
+                  title="2-Column Dossier Split View"
                 >
                   <Columns2 className="w-4 h-4" />
                 </button>
@@ -278,7 +189,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
                       ? 'bg-white text-[#021F53] shadow-2xs font-bold'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
-                  title="Linear Stream List View"
+                  title="Full Width Stream View"
                 >
                   <LayoutList className="w-4 h-4" />
                 </button>
@@ -290,13 +201,12 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
                       ? 'bg-white text-[#021F53] shadow-2xs font-bold'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
-                  title="Matrix Grid View"
+                  title="Card Grid View"
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Mobile Filter Button */}
               <button
                 type="button"
                 onClick={() => setIsMobileDrawerOpen(true)}
@@ -305,90 +215,84 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Filters</span>
               </button>
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  className="text-xs font-semibold text-slate-500 hover:text-[#3f58b2] flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-slate-100 cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span className="hidden sm:inline">Reset</span>
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Internships Stream, Split Dossier, or Grid */}
-          {filteredInternships.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 shadow-2xs flex flex-col items-center justify-center space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
+              <p className="text-xs font-semibold text-slate-500">Loading internships...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-rose-50 rounded-3xl p-8 text-center border border-rose-200 space-y-3">
+              <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
+              <h3 className="text-base font-bold text-rose-900">Failed to load directory</h3>
+              <p className="text-xs text-rose-700">{(error as any).message || 'Unable to connect to server.'}</p>
+            </div>
+          ) : internships.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs space-y-4">
-              <div className="w-12 h-12 rounded-full bg-[#f0f7ff] text-[#3f58b2] flex items-center justify-center mx-auto">
-                <Search className="w-6 h-6" />
-              </div>
               <h3 className="text-lg font-bold text-[#021F53] font-headline">
-                No matching internships found
+                No internships found matching your criteria
               </h3>
               <p className="text-xs text-slate-600 max-w-md mx-auto">
-                No roles matched your current filter criteria. Try adjusting your query or resetting active filters.
+                Try loosening your filters, changing the work setup, or searching for broader keywords.
               </p>
               <button
                 type="button"
-                onClick={handleResetFilters}
-                className="px-5 py-2 bg-[#021F53] hover:bg-[#3f58b2] text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                onClick={handleReset}
+                className="px-5 py-2 bg-[#021F53] hover:bg-[#3f58b2] text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset All Filters</span>
+                Reset All Filters
               </button>
             </div>
           ) : viewMode === 'split' ? (
-            /* Split Master-Detail Layout */
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Stream Rows */}
+              {/* Left Master Stream */}
               <div className="lg:col-span-6 space-y-3">
-                {filteredInternships.map((internship) => (
+                {internships.map((internship) => (
                   <InternshipCard
                     key={internship.id}
                     internship={internship}
                     layout="split"
                     isSelected={currentDossierRole?.id === internship.id}
-                    onSelect={(item) => setActiveDossierRole(item)}
-                    onApply={(item) => setSelectedInternship(item)}
+                    onSelect={(i) => setActiveDossierRole(i)}
+                    onApply={(i) => setSelectedInternship(i)}
                   />
                 ))}
               </div>
 
-              {/* Right Column: Sticky Dossier Inspector */}
+              {/* Right Detail Dossier */}
               <div className="hidden lg:block lg:col-span-6">
-                {currentDossierRole ? (
+                {currentDossierRole && (
                   <InternshipDossier
                     internship={currentDossierRole}
-                    onApply={(item) => setSelectedInternship(item)}
+                    onApply={(i) => setSelectedInternship(i)}
                     onBookCoach={(c) => setBookingCoach(c)}
                   />
-                ) : null}
+                )}
               </div>
             </div>
           ) : viewMode === 'row' ? (
             <div className="space-y-3">
-              {filteredInternships.map((internship) => (
+              {internships.map((internship) => (
                 <InternshipCard
                   key={internship.id}
                   internship={internship}
                   layout="row"
-                  onSelect={() => navigate(`/internships/${internship.slug}`)}
-                  onApply={(item) => setSelectedInternship(item)}
+                  onSelect={(i) => navigate(`/internships/${i.slug}`)}
+                  onApply={(i) => setSelectedInternship(i)}
                 />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {filteredInternships.map((internship) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {internships.map((internship) => (
                 <InternshipCard
                   key={internship.id}
                   internship={internship}
                   layout="grid"
-                  onSelect={() => navigate(`/internships/${internship.slug}`)}
-                  onApply={(item) => setSelectedInternship(item)}
+                  onSelect={(i) => navigate(`/internships/${i.slug}`)}
+                  onApply={(i) => setSelectedInternship(i)}
                 />
               ))}
             </div>
@@ -396,7 +300,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
         </main>
       </div>
 
-      {/* Mobile Drawer (S-104) */}
+      {/* Mobile Filters Drawer */}
       <Drawer
         isOpen={isMobileDrawerOpen}
         onClose={() => setIsMobileDrawerOpen(false)}
@@ -405,36 +309,40 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
         <InternshipFilters
           filters={filters}
           setFilters={setFilters}
-          totalResults={filteredInternships.length}
-          onReset={handleResetFilters}
+          totalResults={internships.length}
+          onReset={handleReset}
           isMobileDrawer
         />
       </Drawer>
 
-      {/* Outbound Departure Notice Modal (S-103, BR-001/BR-002) */}
+      {/* OJT Calculator Modal */}
+      <Modal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+        title="OJT Hours & Allowance Calculator"
+        maxWidth="2xl"
+      >
+        <OjtCalculatorWidget
+          onFindMatchingRoles={(hours) => {
+            setFilters((prev) => ({ ...prev, minOjtHours: hours.toString() }));
+            setIsCalculatorOpen(false);
+          }}
+        />
+      </Modal>
+
+      {/* Outbound Notice Modal */}
       <LeavingSiteModal
         isOpen={!!selectedInternship}
         onClose={() => setSelectedInternship(null)}
         internship={selectedInternship}
       />
 
-      {/* 1-on-1 Booking Dialog */}
+      {/* Mentorship Cross-Sell Booking Dialog */}
       <BookingDialog
         isOpen={!!bookingCoach}
         onClose={() => setBookingCoach(null)}
         coach={bookingCoach}
-        onOpenPayMongo={(b) => setActivePayMongoBooking(b)}
-        onBookingSuccess={() => {}}
-      />
-
-      {/* PayMongo Modal */}
-      <PayMongoModal
-        isOpen={!!activePayMongoBooking}
-        onClose={() => setActivePayMongoBooking(null)}
-        booking={activePayMongoBooking}
-        onSuccess={() => {
-          navigate('/app/bookings');
-        }}
+        onBookingSuccess={() => navigate('/app/bookings')}
       />
     </div>
   );

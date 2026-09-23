@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
+import { ExternalLink, AlertCircle, ArrowRight } from 'lucide-react';
 import { Modal } from './Modal';
-import { Internship } from '../../types';
-import { useData } from '../../context/DataContext';
+import { InternshipCard, InternshipDetail } from '../../types/api';
+import { useRecordApplyClick } from '../../services/queries';
 
 interface LeavingSiteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  internship: Internship | null;
+  internship: InternshipCard | InternshipDetail | null;
 }
 
 export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
@@ -15,7 +15,7 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
   onClose,
   internship,
 }) => {
-  const { recordApplyClick } = useData();
+  const recordApplyClickMutation = useRecordApplyClick();
   const [countdown, setCountdown] = useState(3);
   const [autoRedirect, setAutoRedirect] = useState(false);
 
@@ -31,9 +31,19 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
 
   if (!internship) return null;
 
+  const destinationUrl =
+    (internship as InternshipDetail).external_apply_url ||
+    (internship as any).applyUrl ||
+    'https://careers.google.com';
+
+  const logoUrl = internship.company.logo_url || (internship.company as any).logo || '';
+
   const handleProceed = () => {
-    recordApplyClick(internship.id, 'leaving_modal');
-    window.open(internship.applyUrl, '_blank', 'noopener,noreferrer');
+    recordApplyClickMutation.mutate({
+      internshipId: internship.id,
+      referrerSurface: 'detail',
+    });
+    window.open(destinationUrl, '_blank', 'noopener,noreferrer');
     onClose();
   };
 
@@ -52,7 +62,7 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
       <div className="space-y-6">
         <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/20">
           <img
-            src={internship.company.logo}
+            src={logoUrl}
             alt={internship.company.name}
             className="w-14 h-14 rounded-xl object-cover border border-white shadow-sm flex-shrink-0"
           />
@@ -62,11 +72,6 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
             </h4>
             <p className="text-sm text-[#2c3f77] flex items-center gap-1.5 mt-0.5">
               <span>{internship.company.name}</span>
-              {internship.company.isVerified && (
-                <span className="inline-flex items-center text-xs font-semibold text-[#3f58b2] bg-white px-2 py-0.5 rounded-full border border-[#3f58b2]/20">
-                  <ShieldCheck className="w-3 h-3 mr-0.5 text-[#3f58b2]" /> Verified
-                </span>
-              )}
             </p>
           </div>
         </div>
@@ -91,7 +96,7 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
             Destination Link
           </div>
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-mono break-all select-all">
-            {internship.applyUrl}
+            {destinationUrl}
           </div>
         </div>
 
@@ -99,14 +104,14 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-[#2c3f77] hover:bg-[#f0f7ff] rounded-full transition-colors order-2 sm:order-1"
+            className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-[#2c3f77] hover:bg-[#f0f7ff] rounded-full transition-colors order-2 sm:order-1 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleProceed}
-            className="w-full sm:w-auto px-6 py-3 text-sm font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 order-1 sm:order-2"
+            className="w-full sm:w-auto px-6 py-3 text-sm font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 order-1 sm:order-2 cursor-pointer"
           >
             <span>Continue to Official Application</span>
             <ArrowRight className="w-4 h-4" />

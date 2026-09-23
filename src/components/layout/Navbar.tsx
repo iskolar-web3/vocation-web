@@ -1,24 +1,18 @@
 import React, { useState } from 'react';
 import {
   Briefcase,
-  Compass,
   Bookmark,
   Calendar,
   User,
-  PlusCircle,
   ShieldAlert,
   Menu,
   X,
-  ChevronDown,
-  Building,
   GraduationCap,
-  Sparkles,
   Award,
-  Search,
+  LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useData } from '../../context/DataContext';
-import { Role } from '../../types';
+import { useSavedInternships, useStudentBookings } from '../../services/queries';
 
 interface NavbarProps {
   currentPath: string;
@@ -26,82 +20,53 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
-  const { role, setRole, userName, avatar, isAuthenticated, logout } = useAuth();
-  const { savedInternshipIds, bookings } = useData();
+  const { user, role, userName, avatar, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
-  const pendingBookingsCount = bookings.filter(
-    (b) => b.status === 'pending' || b.paymentStatus === 'pending'
+  // TanStack queries for badges (only enabled if student)
+  const { data: savedList } = useSavedInternships();
+  const { data: studentBookings } = useStudentBookings('upcoming');
+
+  const savedCount = savedList?.length || 0;
+  const pendingCount = (studentBookings || []).filter(
+    (b) => b.status === 'pending' || b.payment_status === 'pending'
   ).length;
 
   const handleNav = (path: string) => {
     navigate(path);
     setIsMobileMenuOpen(false);
+    setIsUserMenuOpen(false);
   };
 
-  const rolesList: { role: Role; label: string; desc: string; icon: any }[] = [
-    { role: 'visitor', label: 'Guest Visitor', desc: 'Outbound apply & public discovery', icon: Compass },
-    { role: 'student', label: 'Student Persona', desc: 'Dashboard, completeness meter, bookings', icon: GraduationCap },
-    { role: 'coach', label: 'Coach Persona', desc: 'Manage sessions, availability & earnings', icon: Award },
-    { role: 'employer', label: 'Employer Persona', desc: 'Create postings & track moderation', icon: Building },
-    { role: 'admin', label: 'Admin / Moderator', desc: 'Approve, reject, or withdraw listings', icon: ShieldAlert },
-  ];
+  const handleLogout = async () => {
+    await logout();
+    setIsUserMenuOpen(false);
+    setIsMobileMenuOpen(false);
+    navigate('/');
+  };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-[#3f58b2]/10 shadow-[0_1px_3px_rgba(2,31,83,0.04)]">
-      {/* Top Utility & Role Switcher Bar */}
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-[#3f58b2]/10 shadow-[0_1px_3px_rgba(2,31,83,0.04)]">
+      {/* Top Banner */}
       <div className="bg-[#021F53] text-white px-4 sm:px-8 py-1.5 text-xs flex items-center justify-between border-b border-[#3f58b2]/20">
         <div className="flex items-center gap-2.5">
           <span className="bg-[#ff9b00] text-[#021F53] font-bold px-2 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-accent">
             Vocation
           </span>
           <span className="text-slate-300 hidden md:inline text-[11px] font-medium">
-            Internship Directory + 1-on-1 Coaching Marketplace
+            Verified Internships &amp; 1-on-1 Career Mentorship for Filipino Students
           </span>
         </div>
 
-        {/* Multi-Persona Interactive Switcher */}
-        <div className="relative">
-          <button
-            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-2 bg-[#607ef2]/20 hover:bg-[#607ef2]/30 border border-[#607ef2]/30 px-3 py-1 rounded-full text-[11px] font-bold text-blue-100 transition-all cursor-pointer"
-          >
-            <span className="w-2 h-2 rounded-full bg-[#ff9b00] animate-pulse" />
-            <span className="capitalize font-semibold">Persona: {role}</span>
-            <ChevronDown className="w-3 h-3 text-slate-300" />
-          </button>
-
-          {isRoleDropdownOpen && (
-            <div className="absolute right-0 mt-1.5 w-72 bg-white rounded-2xl shadow-2xl border border-[#3f58b2]/15 p-2 z-50 text-slate-800 animate-scaleUp">
-              <div className="px-3 py-2 border-b border-slate-100 mb-1 text-[10px] font-bold uppercase tracking-wider text-[#3f58b2]">
-                Switch Persona to Test Workflows
-              </div>
-              {rolesList.map((item) => {
-                const IconComponent = item.icon;
-                const isSelected = role === item.role;
-                return (
-                  <button
-                    key={item.role}
-                    onClick={() => {
-                      setRole(item.role);
-                      setIsRoleDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl flex items-start gap-2.5 transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#f0f7ff] text-[#3f58b2] font-semibold ring-1 ring-[#3f58b2]/20'
-                        : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <IconComponent className={`w-4 h-4 mt-0.5 ${isSelected ? 'text-[#3f58b2]' : 'text-slate-400'}`} />
-                    <div>
-                      <div className="text-xs font-bold">{item.label}</div>
-                      <div className="text-[11px] text-slate-500 leading-tight mt-0.5">{item.desc}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        <div className="flex items-center gap-3 text-[11px] text-slate-300">
+          {isAuthenticated ? (
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+              Signed in as <strong className="text-white capitalize">{user?.role}</strong>
+            </span>
+          ) : (
+            <span className="hidden sm:inline text-slate-300">Public Directory</span>
           )}
         </div>
       </div>
@@ -181,16 +146,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
           {/* Right Action / Account Area */}
           <div className="hidden md:flex items-center gap-3">
             {role === 'student' && (
-              <>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleNav('/app/saved')}
                   className="relative p-2 text-[#2c3f77] hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-full transition-colors cursor-pointer"
                   title="Saved Internships"
                 >
                   <Bookmark className="w-4 h-4" />
-                  {savedInternshipIds.length > 0 && (
+                  {savedCount > 0 && (
                     <span className="absolute top-1 right-1 w-4 h-4 bg-[#ff9b00] text-[#021F53] text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {savedInternshipIds.length}
+                      {savedCount}
                     </span>
                   )}
                 </button>
@@ -201,66 +166,115 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                   title="My Bookings"
                 >
                   <Calendar className="w-4 h-4" />
-                  {pendingBookingsCount > 0 && (
+                  {pendingCount > 0 && (
                     <span className="absolute top-1 right-1 w-4 h-4 bg-[#607ef2] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {pendingBookingsCount}
+                      {pendingCount}
                     </span>
                   )}
                 </button>
 
-                <button
-                  onClick={() => handleNav('/app')}
-                  className="flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-full bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 transition-all text-xs font-bold text-[#021F53] cursor-pointer"
-                >
-                  <img
-                    src={avatar}
-                    alt={userName}
-                    className="w-7 h-7 rounded-full object-cover border border-[#3f58b2]"
-                  />
-                  <span>Student Dashboard</span>
-                </button>
-              </>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 transition-all text-xs font-bold text-[#021F53] cursor-pointer"
+                  >
+                    {avatar ? (
+                      <img
+                        src={avatar}
+                        alt={userName}
+                        className="w-7 h-7 rounded-full object-cover border border-[#3f58b2]"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-[#3f58b2] text-white flex items-center justify-center font-bold text-xs">
+                        {userName ? userName.charAt(0).toUpperCase() : 'S'}
+                      </div>
+                    )}
+                    <span className="max-w-[120px] truncate">{userName}</span>
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-scaleUp">
+                      <button
+                        onClick={() => handleNav('/app')}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
+                      >
+                        <GraduationCap className="w-4 h-4" />
+                        <span>Student Dashboard</span>
+                      </button>
+                      <button
+                        onClick={() => handleNav('/app/bookings')}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>My Bookings</span>
+                      </button>
+                      <button
+                        onClick={() => handleNav('/app/saved')}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
+                      >
+                        <Bookmark className="w-4 h-4" />
+                        <span>Saved Roles</span>
+                      </button>
+                      <button
+                        onClick={() => handleNav('/app/profile')}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
+                      >
+                        <User className="w-4 h-4" />
+                        <span>Profile &amp; Settings</span>
+                      </button>
+                      <div className="border-t border-slate-100 my-1" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {role === 'coach' && (
-              <button
-                onClick={() => handleNav('/coach')}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 text-xs font-bold text-[#021F53] cursor-pointer"
-              >
-                <img src={avatar} alt={userName} className="w-6 h-6 rounded-full object-cover" />
-                <span>Coach Portal</span>
-              </button>
-            )}
-
-            {role === 'employer' && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleNav('/employer/postings/new')}
-                  className="px-4 py-2 rounded-full bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  onClick={() => handleNav('/coach')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 text-xs font-bold text-[#021F53] cursor-pointer"
                 >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Post Internship</span>
+                  <Award className="w-4 h-4 text-[#3f58b2]" />
+                  <span>Coach Portal</span>
                 </button>
                 <button
-                  onClick={() => handleNav('/employer/postings')}
-                  className="px-3.5 py-2 rounded-full bg-[#f0f7ff] text-[#3f58b2] font-semibold text-xs border border-[#3f58b2]/15 cursor-pointer"
+                  onClick={handleLogout}
+                  className="p-2 text-slate-400 hover:text-rose-600 rounded-full hover:bg-slate-100 cursor-pointer"
+                  title="Sign Out"
                 >
-                  Employer Hub
+                  <LogOut className="w-4 h-4" />
                 </button>
               </div>
             )}
 
             {role === 'admin' && (
-              <button
-                onClick={() => handleNav('/admin/listings')}
-                className="px-4 py-2 rounded-full bg-[#021F53] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <ShieldAlert className="w-4 h-4 text-[#ff9b00]" />
-                <span>Moderation Queue</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleNav('/admin/listings')}
+                  className="px-4 py-2 rounded-full bg-[#021F53] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <ShieldAlert className="w-4 h-4 text-[#ff9b00]" />
+                  <span>Moderation Queue</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-slate-400 hover:text-rose-600 rounded-full hover:bg-slate-100 cursor-pointer"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             )}
 
-            {role === 'visitor' && (
+            {!isAuthenticated && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleNav('/signin')}
@@ -300,20 +314,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
             >
               <Briefcase className="w-4 h-4 text-[#3f58b2]" />
-              <span>Internship Directory</span>
+              <span>Internships Directory</span>
             </button>
             <button
               onClick={() => handleNav('/companies')}
               className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
             >
-              <Building className="w-4 h-4 text-[#607ef2]" />
-              <span>Companies Directory</span>
+              <Award className="w-4 h-4 text-[#3f58b2]" />
+              <span>Partner Companies</span>
             </button>
             <button
               onClick={() => handleNav('/coaching')}
               className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
             >
-              <Compass className="w-4 h-4 text-[#3f58b2]" />
+              <GraduationCap className="w-4 h-4 text-[#3f58b2]" />
               <span>Coaching Hub</span>
             </button>
             <button
@@ -325,64 +339,73 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
             </button>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 space-y-2">
-            {role === 'student' && (
-              <>
+          <div className="border-t border-slate-100 pt-3">
+            {isAuthenticated ? (
+              <div className="space-y-2">
+                <div className="px-3 py-1.5 text-xs text-slate-500 font-medium">
+                  Signed in as <strong className="text-slate-800">{userName}</strong> ({role})
+                </div>
+                {role === 'student' && (
+                  <>
+                    <button
+                      onClick={() => handleNav('/app')}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
+                    >
+                      Student Dashboard
+                    </button>
+                    <button
+                      onClick={() => handleNav('/app/bookings')}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
+                    >
+                      My Bookings
+                    </button>
+                    <button
+                      onClick={() => handleNav('/app/saved')}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
+                    >
+                      Saved Roles ({savedCount})
+                    </button>
+                  </>
+                )}
+                {role === 'coach' && (
+                  <button
+                    onClick={() => handleNav('/coach')}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
+                  >
+                    Coach Portal
+                  </button>
+                )}
+                {role === 'admin' && (
+                  <button
+                    onClick={() => handleNav('/admin/listings')}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
+                  >
+                    Admin Moderation Queue
+                  </button>
+                )}
                 <button
-                  onClick={() => handleNav('/app')}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#f0f7ff] text-[#3f58b2] font-bold text-sm text-left flex items-center gap-2 cursor-pointer"
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
                 >
-                  <User className="w-4 h-4" />
-                  <span>Student Dashboard</span>
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={() => handleNav('/signin')}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold text-[#3f58b2] bg-[#f0f7ff] text-center"
+                >
+                  Sign In
                 </button>
                 <button
-                  onClick={() => handleNav('/app/saved')}
-                  className="w-full px-4 py-2 rounded-xl text-slate-700 hover:bg-slate-50 text-sm font-semibold text-left flex items-center justify-between cursor-pointer"
+                  onClick={() => handleNav('/signup')}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-[#3f58b2] text-center"
                 >
-                  <span className="flex items-center gap-2">
-                    <Bookmark className="w-4 h-4" /> Saved Roles
-                  </span>
-                  <span className="text-xs bg-[#ff9b00] text-[#021F53] px-2 py-0.5 rounded-full font-bold">
-                    {savedInternshipIds.length}
-                  </span>
+                  Get Started
                 </button>
-                <button
-                  onClick={() => handleNav('/app/bookings')}
-                  className="w-full px-4 py-2 rounded-xl text-slate-700 hover:bg-slate-50 text-sm font-semibold text-left flex items-center justify-between cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" /> My Bookings
-                  </span>
-                </button>
-              </>
-            )}
-
-            {role === 'employer' && (
-              <>
-                <button
-                  onClick={() => handleNav('/employer/postings/new')}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#ff9b00] text-[#021F53] font-bold text-sm text-center flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Post an Internship</span>
-                </button>
-                <button
-                  onClick={() => handleNav('/employer/postings')}
-                  className="w-full px-4 py-2 rounded-xl bg-[#f0f7ff] text-[#3f58b2] font-semibold text-sm text-left cursor-pointer"
-                >
-                  Employer Listings Hub
-                </button>
-              </>
-            )}
-
-            {role === 'admin' && (
-              <button
-                onClick={() => handleNav('/admin/listings')}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#021F53] text-white font-bold text-sm text-left flex items-center gap-2 cursor-pointer"
-              >
-                <ShieldAlert className="w-4 h-4 text-[#ff9b00]" />
-                <span>Admin Moderation Queue</span>
-              </button>
+              </div>
             )}
           </div>
         </div>

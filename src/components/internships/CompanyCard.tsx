@@ -1,13 +1,16 @@
 import React from 'react';
-import { Building, MapPin, ShieldCheck, ArrowRight, Briefcase } from 'lucide-react';
-import { Company } from '../../types';
+import { MapPin, ArrowRight, Briefcase } from 'lucide-react';
+import { CompanyCard as CompanyCardType, CompanyDetail } from '../../types/api';
 
 interface CompanyCardProps {
-  company: Company;
-  onSelect: (company: Company) => void;
+  company: CompanyCardType | CompanyDetail;
+  onSelect: (company: CompanyCardType | CompanyDetail) => void;
 }
 
 export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) => {
+  const logoUrl = company.logo_url || (company as any).logo || '';
+  const openRoles = company.open_role_count ?? (company as any).openRoleCount ?? 0;
+
   return (
     <div
       onClick={() => onSelect(company)}
@@ -17,21 +20,14 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) =
         {/* Company Header Row */}
         <div className="flex items-start gap-3.5">
           <img
-            src={company.logo}
+            src={logoUrl}
             alt={company.name}
             className="w-13 h-13 rounded-2xl object-cover border border-slate-200 bg-white group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5"
           />
           <div className="min-w-0 space-y-1 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors font-headline leading-tight truncate">
-                {company.name}
-              </h3>
-              {company.isVerified && (
-                <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/30 text-[9.5px] py-0 px-1.5">
-                  <ShieldCheck className="w-2.5 h-2.5" /> Verified
-                </span>
-              )}
-            </div>
+            <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors font-headline leading-tight truncate">
+              {company.name}
+            </h3>
             <p className="text-xs font-semibold text-[#3f58b2] truncate">{company.industry}</p>
             <p className="text-[11px] text-slate-500 flex items-center gap-1">
               <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
@@ -41,9 +37,11 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) =
         </div>
 
         {/* Description */}
-        <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
-          {company.description}
-        </p>
+        {company.description && (
+          <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+            {company.description}
+          </p>
+        )}
 
         {/* Perks Tags */}
         {company.perks && company.perks.length > 0 && (
@@ -64,7 +62,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) =
       <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
         <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/20">
           <Briefcase className="w-3 h-3 text-[#3f58b2]" />
-          <span>{company.openRoleCount} Open Roles</span>
+          <span>{openRoles} Open Roles</span>
         </span>
 
         <span className="font-bold text-[#021F53] group-hover:text-[#3f58b2] flex items-center gap-1 transition-colors text-xs">

@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
-import { Bookmark, ArrowLeft, Briefcase, Trash2 } from 'lucide-react';
-import { useData } from '../../context/DataContext';
+import { Bookmark, ArrowLeft, Loader2 } from 'lucide-react';
+import { useSavedInternships } from '../../services/queries';
 import { InternshipCard } from '../../components/internships/InternshipCard';
 import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
-import { Internship } from '../../types';
+import { InternshipCard as InternshipCardType, InternshipDetail } from '../../types/api';
 
 interface SavedInternshipsPageProps {
   navigate: (path: string) => void;
 }
 
 export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navigate }) => {
-  const { internships, savedInternshipIds } = useData();
-  const [selectedInternship, setSelectedInternship] = useState<Internship | null>(null);
-
-  const savedRoles = internships.filter((i) => savedInternshipIds.includes(i.id));
+  const { data: savedRoles = [], isLoading } = useSavedInternships();
+  const [selectedInternship, setSelectedInternship] = useState<InternshipCardType | InternshipDetail | null>(null);
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <button
         onClick={() => navigate('/app')}
-        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Back to Student Dashboard</span>
@@ -39,7 +37,11 @@ export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navi
         </span>
       </div>
 
-      {savedRoles.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center p-16 bg-white rounded-3xl border border-slate-200">
+          <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
+        </div>
+      ) : savedRoles.length === 0 ? (
         <div className="bg-white rounded-3xl p-16 text-center border border-[#3f58b2]/10 shadow-soft space-y-4">
           <div className="w-16 h-16 rounded-full bg-[#f0f7ff] text-[#ff9b00] flex items-center justify-center mx-auto">
             <Bookmark className="w-8 h-8" />
@@ -49,8 +51,9 @@ export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navi
             Click the bookmark icon on any internship posting in the directory to save it to this list.
           </p>
           <button
+            type="button"
             onClick={() => navigate('/internships')}
-            className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold text-xs rounded-full hover:bg-[#021F53]"
+            className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold text-xs rounded-full hover:bg-[#021F53] cursor-pointer"
           >
             Explore Directory
           </button>

@@ -11,15 +11,10 @@ import { CompanyDetailPage } from './pages/internships/CompanyDetailPage';
 import { CoachingHubPage } from './pages/coaching/CoachingHubPage';
 import { CoachDirectoryPage } from './pages/coaching/CoachDirectoryPage';
 import { CoachDetailPage } from './pages/coaching/CoachDetailPage';
-import { ProgramsPage } from './pages/coaching/ProgramsPage';
-import { ProgramDetailPage } from './pages/coaching/ProgramDetailPage';
 import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
 import { StudentBookingsPage } from './pages/student/StudentBookingsPage';
 import { SavedInternshipsPage } from './pages/student/SavedInternshipsPage';
 import { StudentProfileSettingsPage } from './pages/student/StudentProfileSettingsPage';
-import { EmployerDashboardPage } from './pages/employer/EmployerDashboardPage';
-import { EmployerProfilePage } from './pages/employer/EmployerProfilePage';
-import { CreatePostingPage } from './pages/employer/CreatePostingPage';
 import { ModerationQueuePage } from './pages/employer/ModerationQueuePage';
 import { CoachDashboardPage } from './pages/coach/CoachDashboardPage';
 import { AuthPages } from './pages/static/AuthPages';
@@ -126,14 +121,6 @@ export const App: React.FC = () => {
       return <CoachDetailPage slug={slug} navigate={navigate} />;
     }
 
-    if (pathOnly === '/programs') {
-      return <ProgramsPage navigate={navigate} />;
-    }
-    if (pathOnly.startsWith('/programs/')) {
-      const slug = pathOnly.replace('/programs/', '');
-      return <ProgramDetailPage slug={slug} navigate={navigate} />;
-    }
-
     // Student Account Module
     if (pathOnly === '/app') {
       return <StudentDashboardPage navigate={navigate} />;
@@ -151,21 +138,6 @@ export const App: React.FC = () => {
     // Coach Module
     if (pathOnly.startsWith('/coach')) {
       return <CoachDashboardPage navigate={navigate} />;
-    }
-
-    // Employer Module
-    if (pathOnly === '/employer/postings') {
-      return <EmployerDashboardPage navigate={navigate} />;
-    }
-    if (pathOnly === '/employer/profile') {
-      return <EmployerProfilePage navigate={navigate} />;
-    }
-    if (pathOnly === '/employer/postings/new') {
-      return <CreatePostingPage navigate={navigate} />;
-    }
-    if (pathOnly === '/employer/postings/edit') {
-      const editId = searchParams.get('id');
-      return <CreatePostingPage navigate={navigate} editId={editId} />;
     }
 
     // Admin Moderation

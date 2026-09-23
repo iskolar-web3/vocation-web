@@ -25,9 +25,14 @@ export function formatPesos(amount: number): string {
   }).format(amount);
 }
 
+// Timezone rule: Server speaks UTC, UI renders Asia/Manila (UTC+8)
+export const MANILA_TZ = 'Asia/Manila';
+
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  if (!dateString) return '';
+  const date = new Date(dateString.includes('T') ? dateString : `${dateString}T00:00:00+08:00`);
   return new Intl.DateTimeFormat('en-PH', {
+    timeZone: MANILA_TZ,
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -35,8 +40,10 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatDateTime(isoString: string): string {
+  if (!isoString) return '';
   const date = new Date(isoString);
   return new Intl.DateTimeFormat('en-PH', {
+    timeZone: MANILA_TZ,
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -44,6 +51,50 @@ export function formatDateTime(isoString: string): string {
     minute: '2-digit',
     hour12: true,
   }).format(date);
+}
+
+export function formatTimeOnly(isoString: string): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  return new Intl.DateTimeFormat('en-PH', {
+    timeZone: MANILA_TZ,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+}
+
+export function formatTimeRange(startIso: string, durationMinutes: number = 45): string {
+  if (!startIso) return '';
+  const startDate = new Date(startIso);
+  const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+
+  const startFormatted = new Intl.DateTimeFormat('en-PH', {
+    timeZone: MANILA_TZ,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(startDate);
+
+  const endFormatted = new Intl.DateTimeFormat('en-PH', {
+    timeZone: MANILA_TZ,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(endDate);
+
+  return `${startFormatted} – ${endFormatted}`;
+}
+
+/**
+ * Given a Manila wall-clock date (YYYY-MM-DD) and time (HH:mm),
+ * converts to a UTC ISO string (e.g. 2026-09-22 17:00 Manila -> 2026-09-22T09:00:00.000Z).
+ */
+export function manilaWallClockToUtcIso(dateStr: string, timeStr: string): string {
+  // If timeStr doesn't have seconds, pad it
+  const cleanTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+  const manilaDate = new Date(`${dateStr}T${cleanTime}+08:00`);
+  return manilaDate.toISOString();
 }
 
 export function getTimeRemaining(deadlineIso: string): {

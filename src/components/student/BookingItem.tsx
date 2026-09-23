@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Calendar,
   Clock,
   Video,
   CreditCard,
@@ -9,13 +8,13 @@ import {
   AlertCircle,
   ExternalLink,
 } from 'lucide-react';
-import { Booking } from '../../types';
+import { BookingItem as BookingItemType } from '../../types/api';
 import { formatDateTime, formatPHP } from '../../lib/utils';
 
 interface BookingItemProps {
-  booking: Booking;
-  onPay: (booking: Booking) => void;
-  onReview: (booking: Booking) => void;
+  booking: BookingItemType;
+  onPay: (booking: BookingItemType) => void;
+  onReview: (booking: BookingItemType) => void;
 }
 
 export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onReview }) => {
@@ -51,24 +50,33 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
     }
   };
 
+  const avatarUrl = booking.coach_avatar_url || (booking as any).coachAvatar || '';
+  const coachName = booking.coach_name || (booking as any).coachName || '';
+  const coachRole = booking.coach_role || (booking as any).coachRole || '';
+  const sessionTypeName = booking.session_type_name || (booking as any).sessionTypeName || '';
+  const sessionDuration = booking.session_duration || (booking as any).sessionDuration || 45;
+  const slotStartsAt = booking.slot_starts_at || (booking as any).slotStartsAt || '';
+  const priceCentavos = booking.price_centavos ?? (booking as any).priceCentavos ?? 0;
+  const joinUrl = booking.join_url || (booking as any).joinUrl;
+
   return (
     <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-[#3f58b2]/30 transition-all space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div className="flex items-start gap-3.5">
           <img
-            src={booking.coachAvatar}
-            alt={booking.coachName}
+            src={avatarUrl}
+            alt={coachName}
             className="w-12 h-12 rounded-xl object-cover border border-slate-200 flex-shrink-0"
           />
           <div>
             <div className="text-[10px] font-bold text-[#3f58b2] uppercase tracking-wider">
-              {booking.coachRole}
+              {coachRole}
             </div>
             <h4 className="text-base font-bold text-[#021F53] font-headline mt-0.5">
-              {booking.sessionTypeName}
+              {sessionTypeName}
             </h4>
             <p className="text-xs text-slate-600 mt-0.5">
-              Coach: <strong>{booking.coachName}</strong> ({booking.sessionDuration} mins)
+              Coach: <strong>{coachName}</strong> ({sessionDuration} mins)
             </p>
           </div>
         </div>
@@ -76,7 +84,7 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
         <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-start gap-1.5">
           {getStatusBadge()}
           <span className="text-xs font-bold text-[#021F53]">
-            {formatPHP(booking.priceCentavos)}
+            {formatPHP(priceCentavos)}
           </span>
         </div>
       </div>
@@ -84,7 +92,7 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
       <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 text-[#021F53] font-semibold">
           <Clock className="w-3.5 h-3.5 text-[#3f58b2]" />
-          <span>{formatDateTime(booking.slotStartsAt)}</span>
+          <span>{formatDateTime(slotStartsAt)}</span>
         </div>
 
         {booking.notes && (
@@ -96,9 +104,9 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
 
       {/* Action Row */}
       <div className="pt-1 flex flex-wrap items-center justify-end gap-2">
-        {booking.status === 'confirmed' && booking.joinUrl && (
+        {booking.status === 'confirmed' && joinUrl && (
           <a
-            href={booking.joinUrl}
+            href={joinUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -116,11 +124,11 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
             className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <CreditCard className="w-3.5 h-3.5" />
-            <span>Pay with PayMongo</span>
+            <span>Complete PayMongo Payment</span>
           </button>
         )}
 
-        {booking.status === 'completed' && !booking.hasReviewed && (
+        {booking.status === 'completed' && !booking.has_reviewed && (
           <button
             type="button"
             onClick={() => onReview(booking)}
@@ -131,7 +139,7 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
           </button>
         )}
 
-        {booking.status === 'completed' && booking.hasReviewed && (
+        {booking.status === 'completed' && booking.has_reviewed && (
           <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1 py-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Review Submitted</span>
@@ -141,4 +149,3 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
     </div>
   );
 };
-

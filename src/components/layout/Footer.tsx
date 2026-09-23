@@ -121,14 +121,6 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
             <ul className="space-y-2 text-sm text-slate-300">
               <li>
                 <button
-                  onClick={() => navigate('/employer/postings')}
-                  className="hover:text-white transition-colors"
-                >
-                  Employer Hub
-                </button>
-              </li>
-              <li>
-                <button
                   onClick={() => navigate('/admin/listings')}
                   className="hover:text-white transition-colors"
                 >

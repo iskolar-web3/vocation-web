@@ -1,22 +1,22 @@
 import React from 'react';
-import { CheckCircle2, Circle, Sparkles, ArrowRight, FileText, Code2, GraduationCap } from 'lucide-react';
-import { StudentProfile } from '../../types';
+import { CheckCircle2, Circle, Sparkles, ArrowRight } from 'lucide-react';
 
 interface ProfileMeterProps {
-  profile: StudentProfile;
+  completenessPct?: number;
   onEditProfile: () => void;
 }
 
-export const ProfileMeter: React.FC<ProfileMeterProps> = ({ profile, onEditProfile }) => {
+export const ProfileMeter: React.FC<ProfileMeterProps> = ({
+  completenessPct = 75,
+  onEditProfile,
+}) => {
   const checklist = [
-    { label: 'Basic Info & Photo', done: !!profile.fullName && !!profile.avatar, weight: 15 },
-    { label: 'University & Degree', done: !!profile.school && !!profile.course, weight: 20 },
-    { label: 'Year Level & Target OJT Hours', done: !!profile.yearLevel && profile.targetOjtHours > 0, weight: 15 },
-    { label: 'At least 3 Skills added', done: profile.skills.length >= 3, weight: 25 },
-    { label: 'Resume PDF uploaded', done: !!profile.resumeUrl, weight: 25 },
+    { label: 'Basic Info & Photo', done: completenessPct >= 20, weight: 20 },
+    { label: 'University & Degree', done: completenessPct >= 40, weight: 20 },
+    { label: 'Year Level & Target OJT Hours', done: completenessPct >= 60, weight: 20 },
+    { label: 'Skills Added', done: completenessPct >= 80, weight: 20 },
+    { label: 'Resume Key Added', done: completenessPct >= 100, weight: 20 },
   ];
-
-  const score = checklist.reduce((sum, item) => sum + (item.done ? item.weight : 0), 0);
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#3f58b2]/10 shadow-soft space-y-5">
@@ -33,7 +33,7 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({ profile, onEditProfi
           </div>
         </div>
         <div className="text-right">
-          <span className="text-xl sm:text-2xl font-black text-[#3f58b2]">{score}%</span>
+          <span className="text-xl sm:text-2xl font-black text-[#3f58b2]">{completenessPct}%</span>
         </div>
       </div>
 
@@ -41,7 +41,7 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({ profile, onEditProfi
       <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5">
         <div
           className="h-full bg-gradient-to-r from-[#607ef2] via-[#3f58b2] to-[#ff9b00] rounded-full transition-all duration-700"
-          style={{ width: `${score}%` }}
+          style={{ width: `${completenessPct}%` }}
         />
       </div>
 
@@ -71,11 +71,11 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({ profile, onEditProfi
         ))}
       </div>
 
-      {score < 100 && (
+      {completenessPct < 100 && (
         <button
           type="button"
           onClick={onEditProfile}
-          className="w-full py-2.5 px-4 bg-[#f0f7ff] hover:bg-[#e0efff] text-[#3f58b2] font-bold text-xs rounded-2xl border border-[#607ef2]/20 transition-all flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 px-4 bg-[#f0f7ff] hover:bg-[#e0efff] text-[#3f58b2] font-bold text-xs rounded-2xl border border-[#607ef2]/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <span>Complete Remaining Details</span>
           <ArrowRight className="w-3.5 h-3.5" />

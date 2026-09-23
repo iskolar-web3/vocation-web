@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Award, SlidersHorizontal, RotateCcw, Sparkles, LayoutList, LayoutGrid } from 'lucide-react';
-import { useData } from '../../context/DataContext';
+import React, { useState } from 'react';
+import { Search, Award, SlidersHorizontal, LayoutList, LayoutGrid, Loader2, AlertCircle } from 'lucide-react';
+import { useCoaches } from '../../services/queries';
 import { CoachCard } from '../../components/coaching/CoachCard';
 import { CoachFilters, CoachFilterState } from '../../components/coaching/CoachFilters';
 import { BookingDialog } from '../../components/coaching/BookingDialog';
-import { PayMongoModal } from '../../components/common/PayMongoModal';
 import { Drawer } from '../../components/common/Drawer';
-import { Coach, Booking } from '../../types';
+import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
 
 interface CoachDirectoryPageProps {
   navigate: (path: string) => void;
@@ -19,8 +18,6 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
   initialExpertise = '',
   initialPrice = 'all',
 }) => {
-  const { coaches } = useData();
-
   const [filters, setFilters] = useState<CoachFilterState>({
     q: '',
     expertise: initialExpertise,
@@ -29,48 +26,19 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
 
   const [viewMode, setViewMode] = useState<'grid' | 'row'>('grid');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
-  const [activePayMongoBooking, setActivePayMongoBooking] = useState<Booking | null>(null);
+  const [selectedCoach, setSelectedCoach] = useState<CoachCardType | CoachDetail | null>(null);
 
-  const filteredCoaches = useMemo(() => {
-    return coaches.filter((coach) => {
-      // Query search
-      if (filters.q.trim()) {
-        const query = filters.q.toLowerCase();
-        const matchesName = coach.name.toLowerCase().includes(query);
-        const matchesCompany = coach.company.toLowerCase().includes(query);
-        const matchesBio = coach.bio.toLowerCase().includes(query);
-        const matchesExp = coach.expertise.some((e) => e.toLowerCase().includes(query));
-        if (!matchesName && !matchesCompany && !matchesBio && !matchesExp) return false;
-      }
+  // Map filters to API params
+  const apiPriceParam =
+    filters.price === 'free' ? 'free' : filters.price === 'all' ? undefined : 'paid';
 
-      // Expertise filter
-      if (filters.expertise) {
-        if (!coach.expertise.includes(filters.expertise)) return false;
-      }
+  const { data, isLoading, error } = useCoaches({
+    q: filters.q || undefined,
+    expertise: filters.expertise || undefined,
+    price: apiPriceParam as any,
+  });
 
-      // Price tier
-      if (filters.price === 'free') {
-        const hasFree = coach.sessionTypes.some((st) => st.priceCentavos === 0);
-        if (!hasFree) return false;
-      } else if (filters.price === 'under500') {
-        const hasUnder500 = coach.sessionTypes.some(
-          (st) => st.priceCentavos > 0 && st.priceCentavos <= 50000
-        );
-        if (!hasUnder500) return false;
-      } else if (filters.price === '500to1000') {
-        const has500to1000 = coach.sessionTypes.some(
-          (st) => st.priceCentavos > 50000 && st.priceCentavos <= 100000
-        );
-        if (!has500to1000) return false;
-      } else if (filters.price === '1000plus') {
-        const has1000plus = coach.sessionTypes.some((st) => st.priceCentavos > 100000);
-        if (!has1000plus) return false;
-      }
-
-      return true;
-    });
-  }, [coaches, filters]);
+  const coaches = data?.items || [];
 
   const handleReset = () => {
     setFilters({ q: '', expertise: '', price: 'all' });
@@ -97,7 +65,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
             Book 1-on-1 Coaching with Industry Leaders
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Select a verified coach by specialization and book directly into their live availability schedule. Supports GCash, Maya, and Visa/Mastercard via PayMongo.
+            Select a verified coach by specialization and book directly into their live availability schedule. Free intro calls and paid deep-dives hosted securely.
           </p>
 
           <div className="relative pt-2">
@@ -141,7 +109,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
         <main className="md:col-span-8 lg:col-span-9 space-y-4">
           <div className="flex items-center justify-between bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs">
             <span className="font-bold text-xs sm:text-sm text-[#021F53]">
-              {filteredCoaches.length} Available Coaches
+              {isLoading ? 'Searching coaches...' : `${coaches.length} Available Coaches`}
             </span>
 
             <div className="flex items-center gap-2">
@@ -182,7 +150,18 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
             </div>
           </div>
 
-          {filteredCoaches.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs flex flex-col items-center justify-center space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
+              <p className="text-xs font-semibold text-slate-500">Loading coaches from directory...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-rose-50 rounded-3xl p-8 text-center border border-rose-200 space-y-3">
+              <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
+              <h3 className="text-base font-bold text-rose-900">Failed to load coaches</h3>
+              <p className="text-xs text-rose-700 max-w-md mx-auto">{(error as any).message || 'Unable to connect to server.'}</p>
+            </div>
+          ) : coaches.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs space-y-4">
               <h3 className="text-lg font-bold text-[#021F53] font-headline">
                 No coaches match your filters
@@ -199,7 +178,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
             </div>
           ) : viewMode === 'row' ? (
             <div className="space-y-3">
-              {filteredCoaches.map((coach) => (
+              {coaches.map((coach) => (
                 <CoachCard
                   key={coach.id}
                   coach={coach}
@@ -211,7 +190,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {filteredCoaches.map((coach) => (
+              {coaches.map((coach) => (
                 <CoachCard
                   key={coach.id}
                   coach={coach}
@@ -238,15 +217,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
         isOpen={!!selectedCoach}
         onClose={() => setSelectedCoach(null)}
         coach={selectedCoach}
-        onOpenPayMongo={(b) => setActivePayMongoBooking(b)}
         onBookingSuccess={() => navigate('/app/bookings')}
-      />
-
-      <PayMongoModal
-        isOpen={!!activePayMongoBooking}
-        onClose={() => setActivePayMongoBooking(null)}
-        booking={activePayMongoBooking}
-        onSuccess={() => navigate('/app/bookings')}
       />
     </div>
   );

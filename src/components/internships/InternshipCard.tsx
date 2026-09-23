@@ -5,23 +5,18 @@ import {
   MapPin,
   Clock,
   Coins,
-  ShieldCheck,
-  Building2,
-  CalendarDays,
-  Sparkles,
-  ArrowUpRight,
-  CheckCircle2,
   ChevronRight,
 } from 'lucide-react';
-import { Internship } from '../../types';
+import { InternshipCard as InternshipCardType, InternshipDetail } from '../../types/api';
 import { formatPesos } from '../../lib/utils';
 import { DeadlineCountdown } from './DeadlineCountdown';
-import { useData } from '../../context/DataContext';
+import { useSavedInternships, useSaveInternship, useUnsaveInternship } from '../../services/queries';
+import { useAuth } from '../../context/AuthContext';
 
 interface InternshipCardProps {
-  internship: Internship;
-  onSelect: (internship: Internship) => void;
-  onApply: (internship: Internship) => void;
+  internship: InternshipCardType | InternshipDetail;
+  onSelect: (internship: InternshipCardType | InternshipDetail) => void;
+  onApply: (internship: InternshipCardType | InternshipDetail) => void;
   layout?: 'grid' | 'row' | 'split';
   isSelected?: boolean;
 }
@@ -33,12 +28,21 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
   layout = 'grid',
   isSelected = false,
 }) => {
-  const { isInternshipSaved, toggleSaveInternship } = useData();
-  const isSaved = isInternshipSaved(internship.id);
+  const { isAuthenticated } = useAuth();
+  const { data: savedList = [] } = useSavedInternships();
+  const saveMutation = useSaveInternship();
+  const unsaveMutation = useUnsaveInternship();
+
+  const isSaved = savedList.some((item) => item.id === internship.id);
 
   const handleSaveToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleSaveInternship(internship.id);
+    if (!isAuthenticated) return;
+    if (isSaved) {
+      unsaveMutation.mutate(internship.id);
+    } else {
+      saveMutation.mutate(internship.id);
+    }
   };
 
   const handleApplyClick = (e: React.MouseEvent) => {
@@ -72,6 +76,8 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
     }
   };
 
+  const logoUrl = internship.company.logo_url || (internship.company as any).logo || '';
+
   // Layout 1: Split Dossier Master Item (Used in 2-column master-detail view)
   if (layout === 'split') {
     return (
@@ -87,7 +93,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <img
-              src={internship.company.logo}
+              src={logoUrl}
               alt={internship.company.name}
               className="w-11 h-11 rounded-xl object-cover border border-slate-200/80 bg-white flex-shrink-0 mt-0.5 group-hover:scale-105 transition-transform"
             />
@@ -96,206 +102,8 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
                   {internship.company.name}
                 </span>
-                {internship.company.isVerified && (
-                  <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/30 text-[9px] py-0 px-1">
-                    <ShieldCheck className="w-2.5 h-2.5" /> Verified
-                  </span>
-                )}
               </div>
-              <h4 className="text-sm font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors line-clamp-1 font-headline">
-                {internship.title}
-              </h4>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSaveToggle}
-            className={`p-1.5 rounded-lg transition-all cursor-pointer flex-shrink-0 ${
-              isSaved
-                ? 'bg-amber-100 text-[#ff9b00]'
-                : 'text-slate-400 hover:text-[#ff9b00] hover:bg-slate-100'
-            }`}
-            title={isSaved ? 'Saved' : 'Save role'}
-          >
-            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-[#ff9b00]' : ''}`} />
-          </button>
-        </div>
-
-        {/* Badges Horizon Row (Wrap safe with exact heights) */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#607ef2]/20 text-[10px] py-0 px-2">
-            {internship.field}
-          </span>
-          {getSetupBadge(internship.workSetup)}
-          {internship.isPaid && internship.stipendAmount ? (
-            <span className="stamp-badge bg-amber-50 text-amber-950 border border-amber-300 text-[10px] py-0 px-2">
-              <Coins className="w-2.5 h-2.5 text-[#ff9b00]" />
-              {formatPesos(internship.stipendAmount)}/mo
-            </span>
-          ) : (
-            <span className="stamp-badge bg-slate-100 text-slate-600 border border-slate-200 text-[10px] py-0 px-2">
-              Unpaid
-            </span>
-          )}
-          {internship.ojtHours && (
-            <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200 text-[10px] py-0 px-2 font-medium">
-              {internship.ojtHours}h OJT
-            </span>
-          )}
-        </div>
-
-        {/* Footer: Location & Inspect Action */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-          <span className="flex items-center gap-1 truncate max-w-[200px]">
-            <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-            <span className="truncate">{internship.company.location}</span>
-          </span>
-          <span className="text-[#3f58b2] font-semibold text-[10.5px] flex items-center gap-0.5">
-            <span>Inspect</span>
-            <ChevronRight className="w-3 h-3" />
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // Layout 2: Full-Width Stream Row (Used on homepage & full-width directory stream)
-  if (layout === 'row') {
-    return (
-      <div
-        onClick={() => onSelect(internship)}
-        className={`group relative rounded-2xl p-4 sm:p-5 transition-all duration-200 cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
-          isSelected
-            ? 'stream-row-active bg-[#f0f7ff]'
-            : 'stream-row hover:border-[#3f58b2]/40 hover:shadow-soft'
-        }`}
-      >
-        {/* Left Side: Logo & Aligned Text */}
-        <div className="flex items-start gap-4 min-w-0 flex-1">
-          <img
-            src={internship.company.logo}
-            alt={internship.company.name}
-            className="w-12 h-12 rounded-2xl object-cover border border-slate-200/80 bg-white flex-shrink-0 group-hover:scale-105 transition-transform mt-0.5"
-          />
-
-          <div className="min-w-0 space-y-1 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                {internship.company.name}
-              </span>
-              {internship.company.isVerified && (
-                <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/30 text-[9.5px] py-0 px-1.5">
-                  <ShieldCheck className="w-2.5 h-2.5" /> Verified
-                </span>
-              )}
-            </div>
-
-            <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors truncate font-headline leading-snug">
-              {internship.title}
-            </h3>
-
-            {/* Realigned Metadata Horizon Bar */}
-            <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-slate-500">
-              <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 font-medium">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                <span>{internship.company.location}</span>
-              </span>
-
-              <span className="text-slate-300">·</span>
-
-              <span className="text-[11px] font-bold text-[#3f58b2]">
-                {internship.field}
-              </span>
-
-              {internship.ojtHours && (
-                <>
-                  <span className="text-slate-300">·</span>
-                  <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200 text-[10px] py-0 px-1.5 font-medium">
-                    {internship.ojtHours}h OJT
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: Realigned Compensation & Action Buttons */}
-        <div className="flex items-center justify-between lg:justify-end gap-3.5 flex-shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-          <div className="flex items-center gap-2">
-            {getSetupBadge(internship.workSetup)}
-
-            {internship.isPaid && internship.stipendAmount ? (
-              <span className="stamp-badge bg-amber-50 text-amber-950 border border-amber-300 text-[11px]">
-                <Coins className="w-3 h-3 text-[#ff9b00]" />
-                {formatPesos(internship.stipendAmount)}/mo
-              </span>
-            ) : (
-              <span className="stamp-badge bg-slate-100 text-slate-600 border border-slate-200 text-[11px]">
-                Unpaid
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleSaveToggle}
-              className={`p-2 rounded-xl transition-all cursor-pointer ${
-                isSaved
-                  ? 'bg-amber-100 text-[#ff9b00] hover:bg-amber-200'
-                  : 'text-slate-400 hover:text-[#ff9b00] hover:bg-slate-50'
-              }`}
-              title={isSaved ? 'Remove from saved' : 'Save role'}
-            >
-              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#ff9b00]' : ''}`} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleApplyClick}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#021F53] hover:bg-[#3f58b2] shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <span>Apply</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-[#ff9b00]" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Layout 3: Grid / Matrix View
-  return (
-    <div
-      onClick={() => onSelect(internship)}
-      className={`group relative rounded-3xl p-5 sm:p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between ${
-        isSelected
-          ? 'bg-[#f0f7ff] border-2 border-[#3f58b2] shadow-soft'
-          : 'tactile-card'
-      }`}
-    >
-      <div className="space-y-3.5">
-        {/* Top Header Strip */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <img
-              src={internship.company.logo}
-              alt={internship.company.name}
-              className="w-12 h-12 rounded-2xl object-cover border border-slate-200/80 bg-white flex-shrink-0 group-hover:scale-105 transition-transform mt-0.5"
-            />
-            <div className="min-w-0 space-y-0.5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-[#3f58b2] transition-colors truncate">
-                  {internship.company.name}
-                </span>
-                {internship.company.isVerified && (
-                  <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/30 text-[9.5px] py-0 px-1.5">
-                    <ShieldCheck className="w-2.5 h-2.5" /> Verified
-                  </span>
-                )}
-              </div>
-              <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors line-clamp-1 font-headline leading-snug">
+              <h3 className="text-sm font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors line-clamp-1 font-headline">
                 {internship.title}
               </h3>
             </div>
@@ -304,60 +112,205 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
           <button
             type="button"
             onClick={handleSaveToggle}
-            className={`p-2 rounded-xl transition-all flex-shrink-0 cursor-pointer ${
+            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
               isSaved
-                ? 'bg-amber-100 text-[#ff9b00]'
-                : 'text-slate-400 hover:text-[#ff9b00] hover:bg-slate-50'
+                ? 'text-[#ff9b00] bg-[#ff9b00]/10'
+                : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
             }`}
-            title={isSaved ? 'Saved' : 'Save'}
+            title={isSaved ? 'Remove from saved' : 'Save internship'}
           >
-            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#ff9b00]' : ''}`} />
+            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
           </button>
         </div>
 
-        {/* Feature Badges Horizon */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#607ef2]/30 text-[10.5px]">
-            {internship.field}
+        {/* Spec Pill Strip */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {getSetupBadge(internship.work_setup)}
+          <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200 text-[10px] py-0 px-2">
+            {internship.duration_weeks} wks
           </span>
-          {getSetupBadge(internship.workSetup)}
-          {internship.isPaid && internship.stipendAmount ? (
-            <span className="stamp-badge bg-amber-50 text-amber-950 border border-amber-300 text-[10.5px]">
-              <Coins className="w-3 h-3 text-[#ff9b00]" />
-              {formatPesos(internship.stipendAmount)}/mo
+          {internship.is_paid && internship.stipend_amount ? (
+            <span className="stamp-badge bg-amber-50 text-amber-950 border border-amber-300 text-[10px] py-0 px-2 font-bold">
+              {formatPesos(internship.stipend_amount)}/{internship.stipend_period || 'mo'}
             </span>
           ) : (
-            <span className="stamp-badge bg-slate-100 text-slate-600 border border-slate-200 text-[10.5px]">
-              Unpaid
-            </span>
-          )}
-          {internship.ojtHours && (
-            <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200 text-[10.5px]">
-              {internship.ojtHours}h OJT
+            <span className="stamp-badge bg-slate-100 text-slate-600 border border-slate-200 text-[10px] py-0 px-2">
+              Unpaid / For Credit
             </span>
           )}
         </div>
 
-        {/* Description snippet */}
-        <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed">
-          {internship.description}
-        </p>
+        {/* Footer Meta: Location + Deadline Countdown */}
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100/80 text-[11px] text-slate-500">
+          <div className="flex items-center gap-1 truncate max-w-[140px]">
+            <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+            <span className="truncate">{internship.location}</span>
+          </div>
+          <DeadlineCountdown deadlineIso={internship.deadline} />
+        </div>
+      </div>
+    );
+  }
+
+  // Layout 2: Wide Stream Row
+  if (layout === 'row') {
+    return (
+      <div
+        onClick={() => onSelect(internship)}
+        className="stream-row rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:border-[#3f58b2]/40 hover:shadow-soft transition-all"
+      >
+        <div className="flex items-start gap-4 min-w-0">
+          <img
+            src={logoUrl}
+            alt={internship.company.name}
+            className="w-13 h-13 rounded-2xl object-cover border border-slate-200/80 bg-white flex-shrink-0"
+          />
+
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                {internship.company.name}
+              </span>
+              <span className="stamp-badge bg-[#f0f7ff] text-[#3f58b2] border border-[#607ef2]/20 text-[10px] py-0 px-2">
+                {internship.field}
+              </span>
+            </div>
+
+            <h3 className="text-base font-bold text-[#021F53] hover:text-[#3f58b2] transition-colors truncate font-headline">
+              {internship.title}
+            </h3>
+
+            <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                <span>{internship.location}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>{internship.duration_weeks} Weeks</span>
+              </div>
+              {internship.is_paid && internship.stipend_amount && (
+                <div className="flex items-center gap-1 font-bold text-amber-950 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px]">
+                  <Coins className="w-3 h-3 text-[#ff9b00]" />
+                  <span>{formatPesos(internship.stipend_amount)}/{internship.stipend_period || 'month'}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between md:justify-end gap-3 flex-shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
+          <DeadlineCountdown deadlineIso={internship.deadline} />
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleSaveToggle}
+              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                isSaved
+                  ? 'text-[#ff9b00] bg-[#ff9b00]/10'
+                  : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
+              }`}
+              title={isSaved ? 'Remove from saved' : 'Save'}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleApplyClick}
+              className="px-4 py-2 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Apply</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Layout 3: Default Grid Card
+  return (
+    <div
+      onClick={() => onSelect(internship)}
+      className="tactile-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer group"
+    >
+      <div className="space-y-4">
+        {/* Top bar */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <img
+              src={logoUrl}
+              alt={internship.company.name}
+              className="w-12 h-12 rounded-2xl object-cover border border-slate-200 bg-white group-hover:scale-105 transition-transform"
+            />
+            <div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                {internship.company.name}
+              </span>
+              <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors line-clamp-1 font-headline">
+                {internship.title}
+              </h3>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveToggle}
+            className={`p-2 rounded-xl transition-colors cursor-pointer ${
+              isSaved
+                ? 'text-[#ff9b00] bg-[#ff9b00]/10'
+                : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
+            }`}
+            title={isSaved ? 'Remove from saved' : 'Save'}
+          >
+            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+
+        {/* Spec Pill Strip */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {getSetupBadge(internship.work_setup)}
+          <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200">
+            {internship.field}
+          </span>
+          <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200">
+            {internship.duration_weeks} Weeks
+          </span>
+        </div>
+
+        {/* Location & Allowance */}
+        <div className="space-y-1.5 pt-1 text-xs text-slate-600">
+          <div className="flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+            <span>{internship.location}</span>
+          </div>
+          {internship.is_paid && internship.stipend_amount ? (
+            <div className="flex items-center gap-1.5 font-bold text-amber-950">
+              <Coins className="w-3.5 h-3.5 text-[#ff9b00]" />
+              <span>{formatPesos(internship.stipend_amount)} / {internship.stipend_period || 'month'} stipend</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <Coins className="w-3.5 h-3.5 text-slate-400" />
+              <span>Unpaid / School credit</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Card Footer: Location Left, Action Right */}
-      <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-1.5 text-slate-500 min-w-0">
-          <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-          <span className="truncate text-[11px] font-medium">{internship.company.location}</span>
-        </div>
+      {/* Footer */}
+      <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+        <DeadlineCountdown deadlineIso={internship.deadline} />
 
         <button
           type="button"
           onClick={handleApplyClick}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#021F53] hover:bg-[#3f58b2] shadow-2xs transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+          className="px-4 py-2 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
         >
           <span>Apply</span>
-          <ArrowUpRight className="w-3.5 h-3.5 text-[#ff9b00]" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

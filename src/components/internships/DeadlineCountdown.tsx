@@ -3,11 +3,17 @@ import { Clock, AlertTriangle } from 'lucide-react';
 import { getTimeRemaining } from '../../lib/utils';
 
 interface DeadlineCountdownProps {
-  deadline: string;
+  deadline?: string;
+  deadlineIso?: string;
 }
 
-export const DeadlineCountdown: React.FC<DeadlineCountdownProps> = ({ deadline }) => {
-  const { days, hours, isUrgent, isExpired } = getTimeRemaining(deadline);
+export const DeadlineCountdown: React.FC<DeadlineCountdownProps> = ({
+  deadline,
+  deadlineIso,
+}) => {
+  const target = deadline || deadlineIso;
+  if (!target) return null;
+  const { days, hours, isUrgent, isExpired } = getTimeRemaining(target);
 
   if (isExpired) {
     return (

@@ -1,91 +1,102 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Role } from '../types';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { UserRole, UserSession } from '../types/api';
+import { api, ApiError } from '../lib/api';
 
 interface AuthContextType {
-  role: Role;
-  setRole: (role: Role) => void;
+  user: UserSession | null;
+  role: UserRole | 'visitor';
   isAuthenticated: boolean;
+  isLoading: boolean;
   userName: string;
   userEmail: string;
   avatar: string;
-  login: (role: Role) => void;
-  logout: () => void;
+  signin: (credentials: { email: string; password: string }) => Promise<void>;
+  signup: (payload: { email: string; password: string; role: UserRole; full_name?: string }) => Promise<void>;
+  logout: () => Promise<void>;
+  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRoleState] = useState<Role>(() => {
-    const saved = localStorage.getItem('iskolar_vocation_role');
-    return (saved as Role) || 'student';
-  });
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const fetchSession = useCallback(async () => {
+    try {
+      const res = await api.get<UserSession>('/me');
+      setUser(res.data);
+    } catch {
+      // 401 or no active session cookie
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('iskolar_vocation_role', role);
-  }, [role]);
+    fetchSession();
+  }, [fetchSession]);
 
-  const setRole = (newRole: Role) => {
-    setRoleState(newRole);
-  };
-
-  const login = (newRole: Role) => {
-    setRoleState(newRole);
-  };
-
-  const logout = () => {
-    setRoleState('visitor');
-  };
-
-  const isAuthenticated = role !== 'visitor';
-
-  const getUserDetails = () => {
-    switch (role) {
-      case 'student':
-        return {
-          userName: 'Clarisse Salazar',
-          userEmail: 'clarisse.salazar@iskolar.edu.ph',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        };
-      case 'coach':
-        return {
-          userName: 'Engr. Paolo Ramos',
-          userEmail: 'paolo.ramos@grab.com',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-        };
-      case 'employer':
-        return {
-          userName: 'Maya Talent Team',
-          userEmail: 'talent@maya.ph',
-          avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-        };
-      case 'admin':
-        return {
-          userName: 'Platform Moderator',
-          userEmail: 'admin@iskolar.io',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80',
-        };
-      default:
-        return {
-          userName: 'Guest Visitor',
-          userEmail: '',
-          avatar: '',
-        };
+  const signin = async ({ email, password }: { email: string; password: string }) => {
+    setIsLoading(true);
+    try {
+      await api.post('/auth/signin', { email, password });
+      await fetchSession();
+    } catch (err) {
+      setIsLoading(false);
+      throw err;
     }
   };
 
-  const { userName, userEmail, avatar } = getUserDetails();
+  const signup = async (payload: {
+    email: string;
+    password: string;
+    role: UserRole;
+    full_name?: string;
+  }) => {
+    setIsLoading(true);
+    try {
+      await api.post('/auth/signup', payload);
+      await fetchSession();
+    } catch (err) {
+      setIsLoading(false);
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await api.post('/auth/signout');
+    } catch {
+      // ignore
+    } finally {
+      setUser(null);
+      setIsLoading(false);
+    }
+  };
+
+  const role: UserRole | 'visitor' = user ? user.role : 'visitor';
+  const isAuthenticated = Boolean(user);
+  const userName = user?.full_name || (user ? 'Authenticated User' : 'Guest Visitor');
+  const userEmail = user?.email || '';
+  const avatar = user?.avatar_url || '';
 
   return (
     <AuthContext.Provider
       value={{
+        user,
         role,
-        setRole,
         isAuthenticated,
+        isLoading,
         userName,
         userEmail,
         avatar,
-        login,
+        signin,
+        signup,
         logout,
+        refetchUser: fetchSession,
       }}
     >
       {children}

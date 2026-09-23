@@ -4,19 +4,13 @@ import {
   FileText,
   MessageSquare,
   Sparkles,
-  ArrowRight,
-  Clock,
-  ShieldCheck,
-  CheckCircle2,
-  Calendar,
-  Layers,
   ChevronRight,
 } from 'lucide-react';
-import { Coach } from '../../types';
-import { useData } from '../../context/DataContext';
+import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
+import { useCoaches } from '../../services/queries';
 
 interface SessionTopicMatcherProps {
-  onBookCoach: (coach: Coach) => void;
+  onBookCoach: (coach: CoachCardType | CoachDetail) => void;
   navigate?: (path: string) => void;
 }
 
@@ -24,7 +18,8 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
   onBookCoach,
   navigate,
 }) => {
-  const { coaches } = useData();
+  const { data } = useCoaches();
+  const coaches = data?.items || [];
   const [activeTopic, setActiveTopic] = useState<string>('technical');
 
   const topics = [
@@ -83,11 +78,13 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
   // Find matching coaches for this topic
   const matchingCoaches = coaches
     .filter((c) =>
-      c.expertise.some((exp: string) =>
+      (c.expertise || []).some((exp: string) =>
         exp.toLowerCase().includes(currentTopic.filterTag.toLowerCase())
       )
     )
     .slice(0, 3);
+
+  const displayCoaches = matchingCoaches.length > 0 ? matchingCoaches : coaches.slice(0, 3);
 
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-8">
@@ -174,22 +171,19 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
           </div>
 
           <div className="space-y-3">
-            {matchingCoaches.map((coach) => (
+            {displayCoaches.map((coach) => (
               <div
                 key={coach.id}
                 className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs hover:border-[#3f58b2]/40 transition-all flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <img
-                    src={coach.avatar}
+                    src={coach.avatar_url}
                     alt={coach.name}
                     className="w-11 h-11 rounded-2xl object-cover border border-slate-200 flex-shrink-0"
                   />
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-[#021F53] truncate">{coach.name}</span>
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#3f58b2] flex-shrink-0" />
-                    </div>
+                    <span className="text-xs font-bold text-[#021F53] truncate block">{coach.name}</span>
                     <span className="text-[11px] text-slate-500 truncate block">
                       {coach.headline} · {coach.company}
                     </span>
@@ -213,7 +207,7 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
               onClick={() => navigate('/coaches')}
               className="w-full py-2.5 text-center text-xs font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors flex items-center justify-center gap-1 cursor-pointer"
             >
-              <span>Explore All {coaches.length} Industry Coaches</span>
+              <span>Explore All {coaches.length || 6}+ Industry Coaches</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           )}

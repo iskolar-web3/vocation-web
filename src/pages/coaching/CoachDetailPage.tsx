@@ -1,21 +1,15 @@
 import React, { useState } from 'react';
 import {
-  Award,
   Star,
-  ShieldCheck,
   Calendar,
   Clock,
   ArrowLeft,
-  MessageSquare,
-  CheckCircle2,
-  Sparkles,
-  ExternalLink,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
-import { useData } from '../../context/DataContext';
+import { useCoach, useCoachReviews } from '../../services/queries';
 import { BookingDialog } from '../../components/coaching/BookingDialog';
-import { PayMongoModal } from '../../components/common/PayMongoModal';
 import { formatPHP, formatDate } from '../../lib/utils';
-import { Coach, Booking } from '../../types';
 
 interface CoachDetailPageProps {
   slug: string;
@@ -23,20 +17,28 @@ interface CoachDetailPageProps {
 }
 
 export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate }) => {
-  const { coaches, reviews } = useData();
-
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [activePayMongoBooking, setActivePayMongoBooking] = useState<Booking | null>(null);
 
-  const coach = coaches.find((c) => c.slug === slug);
+  const { data: coach, isLoading, error } = useCoach(slug);
+  const { data: reviews = [] } = useCoachReviews(slug);
 
-  if (!coach) {
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2] mx-auto" />
+        <p className="text-xs font-semibold text-slate-500">Loading coach profile...</p>
+      </div>
+    );
+  }
+
+  if (error || !coach) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
         <h2 className="text-2xl font-bold text-[#021F53]">Coach Not Found</h2>
+        <p className="text-xs text-slate-500">This profile may have been removed or does not exist.</p>
         <button
           onClick={() => navigate('/coaches')}
-          className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold text-xs rounded-full"
+          className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold text-xs rounded-full cursor-pointer hover:bg-[#021F53] transition-colors"
         >
           Back to Coach Directory
         </button>
@@ -44,14 +46,13 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
     );
   }
 
-  // Filter reviews for this coach
-  const coachReviews = reviews.filter((r) => r.coachSlug === coach.slug);
+  const sessionTypes = coach.session_types || [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
       <button
         onClick={() => navigate('/coaches')}
-        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Back to Find a Coach</span>
@@ -63,37 +64,25 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
           <div className="flex items-start gap-5">
             <div className="relative">
               <img
-                src={coach.avatar}
+                src={coach.avatar_url}
                 alt={coach.name}
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-cover border-2 border-white shadow-lg flex-shrink-0"
               />
-              {coach.isVerified && (
-                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#3f58b2] text-white rounded-full flex items-center justify-center shadow-md">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-              )}
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
-                  {coach.name}
-                </h1>
-                {coach.isVerified && (
-                  <span className="inline-flex items-center text-xs font-bold text-[#3f58b2] bg-[#f0f7ff] px-2 py-0.5 rounded-full border border-[#3f58b2]/20">
-                    <ShieldCheck className="w-3.5 h-3.5 mr-0.5" /> Verified Coach
-                  </span>
-                )}
-              </div>
-              <p className="text-sm font-semibold text-[#607ef2]">{coach.headline}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
+                {coach.name}
+              </h1>
+              <p className="text-sm font-semibold text-[#607ef2]">{coach.headline} · {coach.company}</p>
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
                 <div className="flex items-center gap-1 text-amber-900 font-bold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                   <Star className="w-3.5 h-3.5 fill-[#ff9b00] text-[#ff9b00]" />
                   <span>{coach.rating}</span>
-                  <span className="text-slate-400 font-normal">({coach.reviewCount} reviews)</span>
+                  <span className="text-slate-400 font-normal">({coach.review_count} reviews)</span>
                 </div>
                 <span>•</span>
-                <span>{coach.experienceYears}+ years experience</span>
+                <span>{coach.experience_years}+ years experience</span>
                 <span>•</span>
                 <span>{coach.location}</span>
               </div>
@@ -103,9 +92,9 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
           <button
             type="button"
             onClick={() => setIsBookingOpen(true)}
-            className="w-full sm:w-auto px-8 py-3.5 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-3.5 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-4 h-4 text-[#ff9b00]" />
             <span>Book a Session</span>
           </button>
         </div>
@@ -116,7 +105,7 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
             Areas of Specialization
           </h4>
           <div className="flex flex-wrap gap-2">
-            {coach.expertise.map((exp, idx) => (
+            {(coach.expertise || []).map((exp, idx) => (
               <span
                 key={idx}
                 className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#f0f7ff] text-[#3f58b2] border border-[#607ef2]/20"
@@ -143,7 +132,7 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {coach.sessionTypes.map((st) => (
+          {sessionTypes.map((st) => (
             <div
               key={st.id}
               className="bg-white rounded-3xl p-6 border border-[#3f58b2]/10 shadow-soft flex flex-col justify-between space-y-4 hover:border-[#607ef2]/40 transition-all"
@@ -151,7 +140,7 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-lg text-[#021F53]">
-                    {formatPHP(st.priceCentavos)}
+                    {formatPHP(st.price_centavos)}
                   </div>
                   {st.badge && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ff9b00]/15 text-[#ff9b00] border border-[#ff9b00]/30">
@@ -166,12 +155,12 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-slate-500 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>{st.durationMinutes} mins</span>
+                  <span>{st.duration_minutes} mins</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsBookingOpen(true)}
-                  className="px-4 py-2 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] font-bold text-xs rounded-full border border-[#3f58b2]/20 transition-all"
+                  className="px-4 py-2 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] font-bold text-xs rounded-full border border-[#3f58b2]/20 transition-all cursor-pointer"
                 >
                   Book This
                 </button>
@@ -186,24 +175,24 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-bold text-[#021F53] font-display">
-              Student Reviews & Ratings
+              Student Reviews &amp; Ratings
             </h2>
             <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] px-2.5 py-0.5 rounded-full font-bold">
-              {coachReviews.length} Verified
+              {reviews.length} Verified
             </span>
           </div>
           <span className="text-xs text-slate-500 hidden sm:inline">
-            BR-011: Public reviews show student first name only
+            BR-011: Public reviews display student first name only
           </span>
         </div>
 
-        {coachReviews.length === 0 ? (
+        {reviews.length === 0 ? (
           <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
             <p className="text-xs text-slate-500">No reviews yet for this coach.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {coachReviews.map((rev) => (
+            {reviews.map((rev) => (
               <div
                 key={rev.id}
                 className="bg-white rounded-3xl p-6 border border-[#3f58b2]/10 shadow-soft space-y-3"
@@ -220,8 +209,8 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
                   "{rev.comment}"
                 </p>
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#021F53]">{rev.studentFirstName}</span>
-                  <span className="text-[11px] text-[#607ef2]">{rev.sessionTypeName}</span>
+                  <span className="font-bold text-[#021F53]">{rev.student_first_name}</span>
+                  <span className="text-[11px] text-[#607ef2]">{rev.session_type_name}</span>
                 </div>
               </div>
             ))}
@@ -233,15 +222,7 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
         coach={coach}
-        onOpenPayMongo={(b) => setActivePayMongoBooking(b)}
         onBookingSuccess={() => navigate('/app/bookings')}
-      />
-
-      <PayMongoModal
-        isOpen={!!activePayMongoBooking}
-        onClose={() => setActivePayMongoBooking(null)}
-        booking={activePayMongoBooking}
-        onSuccess={() => navigate('/app/bookings')}
       />
     </div>
   );

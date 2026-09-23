@@ -25,7 +25,6 @@ export const ModerationQueuePage: React.FC<ModerationQueuePageProps> = ({ naviga
 
       <ModerationQueueTable
         onViewPosting={(int) => navigate(`/internships/${int.slug}`)}
-        onEditPosting={(int) => navigate(`/employer/postings/edit?id=${int.id}`)}
       />
     </div>
   );
