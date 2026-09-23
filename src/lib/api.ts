@@ -1,6 +1,7 @@
 import { ApiResponse, PaginationMeta } from '../types/api';
+import { handleDevMockRequest } from './devMock';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.vocation.iskolar.io/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || '/v1';
 
 export class ApiError extends Error {
   public status: number;
@@ -32,7 +33,9 @@ export async function apiFetch<T>(
 ): Promise<ApiFetchResult<T>> {
   const { params, headers, ...customConfig } = options;
 
-  let url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  let url = endpoint.startsWith('http')
+    ? endpoint
+    : `${BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
   if (params) {
     const searchParams = new URLSearchParams();
@@ -64,8 +67,26 @@ export async function apiFetch<T>(
 
   try {
     const response = await fetch(url, config);
-    let payload: ApiResponse<T>;
 
+    // If local dev proxy responds with 502/504 because no backend server is on port 8080
+    if ((response.status === 502 || response.status === 504 || response.status === 404) && !import.meta.env.VITE_API_URL) {
+      const parsedBody = config.body
+        ? typeof config.body === 'string'
+          ? JSON.parse(config.body)
+          : config.body
+        : undefined;
+      const mock = await handleDevMockRequest<T>(
+        endpoint,
+        config.method || 'GET',
+        parsedBody,
+        params
+      );
+      if (mock) {
+        return mock;
+      }
+    }
+
+    let payload: ApiResponse<T>;
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       payload = await response.json();
@@ -95,6 +116,27 @@ export async function apiFetch<T>(
     if (error instanceof ApiError) {
       throw error;
     }
+
+    // Network / offline fallback in dev mode
+    try {
+      const parsedBody = config.body
+        ? typeof config.body === 'string'
+          ? JSON.parse(config.body)
+          : config.body
+        : undefined;
+      const mock = await handleDevMockRequest<T>(
+        endpoint,
+        config.method || 'GET',
+        parsedBody,
+        params
+      );
+      if (mock) {
+        return mock;
+      }
+    } catch {
+      // ignore mock parsing errors
+    }
+
     const message = error instanceof Error ? error.message : 'Network error';
     throw new ApiError(message, 0);
   }

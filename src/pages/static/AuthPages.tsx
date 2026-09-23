@@ -196,6 +196,52 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
                 </>
               )}
             </button>
+
+            {mode === 'signin' && (
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center">
+                  Quick Demo Accounts
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setEmail('student@iskolar.ph');
+                      setPassword('password123');
+                      await signin({ email: 'student@iskolar.ph', password: 'password123' });
+                      navigate('/app');
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-blue-50 text-[#021F53] font-bold text-[11px] hover:bg-blue-100 transition-colors cursor-pointer border border-blue-200 text-center"
+                  >
+                    🎓 Student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setEmail('coach@iskolar.ph');
+                      setPassword('password123');
+                      await signin({ email: 'coach@iskolar.ph', password: 'password123' });
+                      navigate('/coach');
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-900 font-bold text-[11px] hover:bg-indigo-100 transition-colors cursor-pointer border border-indigo-200 text-center"
+                  >
+                    💼 Coach
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setEmail('admin@iskolar.ph');
+                      setPassword('password123');
+                      await signin({ email: 'admin@iskolar.ph', password: 'password123' });
+                      navigate('/admin/listings');
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-900 font-bold text-[11px] hover:bg-amber-100 transition-colors cursor-pointer border border-amber-200 text-center"
+                  >
+                    🛡️ Admin
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
         )}
 
