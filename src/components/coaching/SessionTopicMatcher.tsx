@@ -3,7 +3,7 @@ import {
   Code2,
   FileText,
   MessageSquare,
-  Sparkles,
+  Compass,
   ChevronRight,
 } from 'lucide-react';
 import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
@@ -87,13 +87,13 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
   const displayCoaches = matchingCoaches.length > 0 ? matchingCoaches : coaches.slice(0, 3);
 
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-8">
+    <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f0f7ff] text-[#3f58b2] text-xs font-bold uppercase tracking-wider font-accent border border-[#3f58b2]/20">
-            <Sparkles className="w-3.5 h-3.5 text-[#ff9b00]" />
-            <span>Interactive Session Simulator</span>
+            <Compass className="w-3.5 h-3.5 text-[#3f58b2]" />
+            <span>Coaching Focus Tracks</span>
           </div>
           <h3 className="text-xl sm:text-2xl font-bold font-display text-[#021F53]">
             What Interview Round Are You Preparing For?
@@ -162,7 +162,7 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
         </div>
 
         {/* Right Side: Matched Verified Coaches */}
-        <div className="lg:col-span-5 bg-slate-50 p-5 rounded-3xl border border-slate-200/80 space-y-4">
+        <div className="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
             <span className="text-xs font-bold text-[#021F53] uppercase tracking-wider font-headline">
               Specialized Coaches for this Track
@@ -173,19 +173,19 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
           <div className="space-y-3">
             {displayCoaches.map((coach) => (
               <div
-                key={coach.id}
+                key={coach.slug}
                 className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs hover:border-[#3f58b2]/40 transition-all flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <img
-                    src={coach.avatar_url}
-                    alt={coach.name}
+                    src={coach.avatar_url || undefined}
+                    alt={coach.display_name}
                     className="w-11 h-11 rounded-2xl object-cover border border-slate-200 flex-shrink-0"
                   />
                   <div className="min-w-0">
-                    <span className="text-xs font-bold text-[#021F53] truncate block">{coach.name}</span>
+                    <span className="text-xs font-bold text-[#021F53] truncate block">{coach.display_name}</span>
                     <span className="text-[11px] text-slate-500 truncate block">
-                      {coach.headline} · {coach.company}
+                      {coach.headline}
                     </span>
                   </div>
                 </div>

@@ -94,15 +94,15 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center p-16 bg-white rounded-3xl border border-slate-200">
+        <div className="flex items-center justify-center p-16 bg-white rounded-2xl border border-slate-200">
           <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
         </div>
       ) : internships.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
+        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
           <p className="text-sm font-bold text-[#021F53]">No internships found in this view.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-soft overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-soft overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#f0f7ff] text-[#2c3f77] font-bold uppercase tracking-wider border-b border-slate-200">
@@ -126,15 +126,15 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                       <div className="text-[11px] text-slate-500">{item.location}</div>
                     </td>
                     <td className="px-5 py-4">
-                      {item.is_paid && item.stipend_amount ? (
+                      {item.is_paid ? (
                         <span className="font-bold text-emerald-700">
-                          {formatPesos(item.stipend_amount)}/{item.stipend_period || 'mo'}
+                          {(item as any).compensation_details || ((item as any).stipend_amount ? `${formatPesos((item as any).stipend_amount)}/${(item as any).stipend_period || 'mo'}` : 'Paid')}
                         </span>
                       ) : (
                         <span className="text-slate-400">Unpaid / Credit</span>
                       )}
                     </td>
-                    <td className="px-5 py-4">{getStatusBadge(item.status)}</td>
+                    <td className="px-5 py-4">{getStatusBadge((item as any).status || 'open')}</td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {onViewPosting && (
@@ -147,7 +147,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                             <Eye className="w-4 h-4" />
                           </button>
                         )}
-                        {item.status === 'open' && (
+                        {(item as any).status === 'open' && (
                           <button
                             type="button"
                             onClick={() => setWithdrawModalItem(item)}

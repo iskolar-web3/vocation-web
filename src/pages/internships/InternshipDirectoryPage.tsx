@@ -11,7 +11,6 @@ import {
   AlertCircle,
   X,
   RotateCcw,
-  Sparkles,
 } from 'lucide-react';
 import { useInternships } from '../../services/queries';
 import { InternshipCard } from '../../components/internships/InternshipCard';
@@ -66,7 +65,10 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
   // Filter by min OJT hours if applied
   if (filters.minOjtHours && filters.minOjtHours !== 'all') {
     const minH = Number(filters.minOjtHours);
-    internships = internships.filter((i) => (i.ojt_hours || i.duration_weeks * 20) >= minH);
+    internships = internships.filter((i) => {
+      const estimatedHours = (i as any).ojt_hours || (i.duration_weeks ? i.duration_weeks * 20 : 0);
+      return estimatedHours >= minH;
+    });
   }
 
   const currentDossierRole = activeDossierRole || internships[0] || null;
@@ -102,7 +104,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#021F53] via-[#002774] to-[#021F53] rounded-3xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
+      <div className="bg-[#021F53] rounded-2xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
@@ -179,7 +181,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
           <button
             type="button"
             onClick={() => setIsCalculatorOpen(true)}
-            className="w-full p-4 rounded-3xl bg-gradient-to-br from-[#021F53] to-[#002774] text-white border border-[#3f58b2]/30 hover:border-[#ff9b00]/50 transition-all text-left space-y-2 group cursor-pointer shadow-soft"
+            className="w-full p-4 rounded-2xl bg-[#002774] text-white border border-[#3f58b2]/30 hover:border-[#ff9b00]/50 transition-all text-left space-y-2 group cursor-pointer shadow-soft"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold flex items-center gap-1.5 font-headline text-white">
@@ -325,18 +327,18 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
 
           {/* Results State */}
           {isLoading ? (
-            <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 shadow-2xs flex flex-col items-center justify-center space-y-3">
+            <div className="bg-white rounded-2xl p-16 text-center border border-slate-200 shadow-2xs flex flex-col items-center justify-center space-y-3">
               <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
               <p className="text-xs font-semibold text-slate-500">Loading internships from API...</p>
             </div>
           ) : error ? (
-            <div className="bg-rose-50 rounded-3xl p-8 text-center border border-rose-200 space-y-3">
+            <div className="bg-rose-50 rounded-2xl p-8 text-center border border-rose-200 space-y-3">
               <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
               <h3 className="text-base font-bold text-rose-900">Failed to load directory</h3>
               <p className="text-xs text-rose-700">{(error as any).message || 'Unable to connect to server.'}</p>
             </div>
           ) : internships.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs space-y-4">
+            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-2xs space-y-4">
               <h3 className="text-lg font-bold text-[#021F53] font-headline">
                 No internships found matching your criteria
               </h3>
@@ -373,7 +375,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
                 {currentDossierRole && (
                   <InternshipDossier
                     internship={currentDossierRole}
-                    onApply={(i) => setSelectedInternship(i)}
+                    onApplyOutbound={(i) => setSelectedInternship(i)}
                     onBookCoach={(c) => setBookingCoach(c)}
                   />
                 )}

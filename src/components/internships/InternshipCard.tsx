@@ -125,13 +125,15 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
 
         {/* Spec Pill Strip */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {getSetupBadge(internship.work_setup)}
-          <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200 text-[10px] py-0 px-2">
-            {internship.duration_weeks} wks
-          </span>
-          {internship.is_paid && internship.stipend_amount ? (
+          {(internship as any).work_setup && getSetupBadge((internship as any).work_setup)}
+          {internship.duration_weeks && (
+            <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200 text-[10px] py-0 px-2">
+              {internship.duration_weeks} wks
+            </span>
+          )}
+          {internship.is_paid ? (
             <span className="stamp-badge bg-amber-50 text-amber-950 border border-amber-300 text-[10px] py-0 px-2 font-bold">
-              {formatPesos(internship.stipend_amount)}/{internship.stipend_period || 'mo'}
+              {(internship as any).compensation_details || ((internship as any).stipend_amount ? `${formatPesos((internship as any).stipend_amount)}/${(internship as any).stipend_period || 'mo'}` : 'Paid')}
             </span>
           ) : (
             <span className="stamp-badge bg-slate-100 text-slate-600 border border-slate-200 text-[10px] py-0 px-2">
@@ -146,7 +148,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
             <span className="truncate">{internship.location}</span>
           </div>
-          <DeadlineCountdown deadlineIso={internship.deadline} />
+          <DeadlineCountdown deadlineIso={internship.deadline || undefined} />
         </div>
       </div>
     );
@@ -189,10 +191,12 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
                 <span>{internship.duration_weeks} Weeks</span>
               </div>
-              {internship.is_paid && internship.stipend_amount && (
+              {internship.is_paid && (
                 <div className="flex items-center gap-1 font-bold text-amber-950 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px]">
                   <Coins className="w-3 h-3 text-[#ff9b00]" />
-                  <span>{formatPesos(internship.stipend_amount)}/{internship.stipend_period || 'month'}</span>
+                  <span>
+                    {(internship as any).compensation_details || ((internship as any).stipend_amount ? `${formatPesos((internship as any).stipend_amount)}/${(internship as any).stipend_period || 'month'}` : 'Paid Allowance')}
+                  </span>
                 </div>
               )}
             </div>
@@ -200,7 +204,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
         </div>
 
         <div className="flex items-center justify-between md:justify-end gap-3 flex-shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-          <DeadlineCountdown deadlineIso={internship.deadline} />
+          <DeadlineCountdown deadlineIso={internship.deadline || undefined} />
 
           <div className="flex items-center gap-1.5">
             <button
@@ -234,7 +238,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
   return (
     <div
       onClick={() => onSelect(internship)}
-      className="tactile-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer group"
+      className="tactile-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer group"
     >
       <div className="space-y-4">
         {/* Top bar */}
@@ -271,13 +275,15 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
 
         {/* Spec Pill Strip */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {getSetupBadge(internship.work_setup)}
+          {(internship as any).work_setup && getSetupBadge((internship as any).work_setup)}
           <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200">
             {internship.field}
           </span>
-          <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200">
-            {internship.duration_weeks} Weeks
-          </span>
+          {internship.duration_weeks && (
+            <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200">
+              {internship.duration_weeks} Weeks
+            </span>
+          )}
         </div>
 
         {/* Location & Allowance */}
@@ -286,10 +292,12 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             <MapPin className="w-3.5 h-3.5 text-slate-400" />
             <span>{internship.location}</span>
           </div>
-          {internship.is_paid && internship.stipend_amount ? (
+          {internship.is_paid ? (
             <div className="flex items-center gap-1.5 font-bold text-amber-950">
               <Coins className="w-3.5 h-3.5 text-[#ff9b00]" />
-              <span>{formatPesos(internship.stipend_amount)} / {internship.stipend_period || 'month'} stipend</span>
+              <span>
+                {(internship as any).compensation_details || ((internship as any).stipend_amount ? `${formatPesos((internship as any).stipend_amount)} / ${(internship as any).stipend_period || 'month'} stipend` : 'Paid Allowance')}
+              </span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-slate-500">
@@ -302,7 +310,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
 
       {/* Footer */}
       <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-        <DeadlineCountdown deadlineIso={internship.deadline} />
+        <DeadlineCountdown deadlineIso={internship.deadline || undefined} />
 
         <button
           type="button"

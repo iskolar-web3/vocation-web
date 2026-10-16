@@ -1,47 +1,67 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, AlertCircle, ArrowRight } from 'lucide-react';
+import { ExternalLink, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 import { InternshipCard, InternshipDetail } from '../../types/api';
-import { useRecordApplyClick } from '../../services/queries';
+import { useRecordApplyClick, useInternship } from '../../services/queries';
 
 interface LeavingSiteModalProps {
   isOpen: boolean;
   onClose: () => void;
   internship: InternshipCard | InternshipDetail | null;
+  referrerSurface?: 'directory' | 'detail' | 'share' | 'cross_sell';
+  onNavigateDetail?: (slug: string) => void;
 }
 
 export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
   isOpen,
   onClose,
   internship,
+  referrerSurface = 'detail',
+  onNavigateDetail,
 }) => {
   const recordApplyClickMutation = useRecordApplyClick();
   const [countdown, setCountdown] = useState(3);
   const [autoRedirect, setAutoRedirect] = useState(false);
 
+  // If internship doesn't carry external_apply_url, fetch its detail
+  const needsDetail = Boolean(internship && !(internship as InternshipDetail).external_apply_url);
+  const { data: detailData, isLoading: isLoadingDetail } = useInternship(
+    needsDetail && internship ? internship.slug : ''
+  );
+
+  const destinationUrl =
+    (internship as InternshipDetail)?.external_apply_url ||
+    detailData?.external_apply_url ||
+    '';
+
+  const logoUrl = internship?.company?.logo_url || '';
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isOpen && autoRedirect && countdown > 0) {
+    if (isOpen && autoRedirect && countdown > 0 && destinationUrl) {
       timer = setTimeout(() => setCountdown((prev) => prev - 1), 1000);
-    } else if (isOpen && autoRedirect && countdown === 0 && internship) {
+    } else if (isOpen && autoRedirect && countdown === 0 && destinationUrl) {
       handleProceed();
     }
     return () => clearTimeout(timer);
-  }, [isOpen, autoRedirect, countdown, internship]);
+  }, [isOpen, autoRedirect, countdown, destinationUrl]);
 
   if (!internship) return null;
 
-  const destinationUrl =
-    (internship as InternshipDetail).external_apply_url ||
-    (internship as any).applyUrl ||
-    'https://careers.google.com';
-
-  const logoUrl = internship.company.logo_url || (internship.company as any).logo || '';
-
   const handleProceed = () => {
+    if (!destinationUrl) {
+      if (onNavigateDetail) {
+        onNavigateDetail(internship.slug);
+      } else {
+        window.location.href = `/internships/${internship.slug}`;
+      }
+      onClose();
+      return;
+    }
+
     recordApplyClickMutation.mutate({
       internshipId: internship.id,
-      referrerSurface: 'detail',
+      referrerSurface: referrerSurface,
     });
     window.open(destinationUrl, '_blank', 'noopener,noreferrer');
     onClose();
@@ -53,7 +73,7 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
       onClose={onClose}
       title={
         <div className="flex items-center gap-2 text-[#021F53]">
-          <ExternalLink className="w-5 h-5 text-[#607ef2]" />
+          <ExternalLink className="w-5 h-5 text-[#3f58b2]" />
           <span>Leaving iSkolar Vocation</span>
         </div>
       }
@@ -61,60 +81,63 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
     >
       <div className="space-y-6">
         <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/20">
-          <img
-            src={logoUrl}
-            alt={internship.company.name}
-            className="w-14 h-14 rounded-xl object-cover border border-white shadow-sm flex-shrink-0"
-          />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={internship.company.name}
+              className="w-12 h-12 rounded-xl object-cover bg-white border border-slate-200"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-xs font-bold text-[#021F53]">
+              {internship.company.name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
           <div>
-            <h4 className="text-base font-bold text-[#021F53] font-headline">
-              {internship.title}
-            </h4>
-            <p className="text-sm text-[#2c3f77] flex items-center gap-1.5 mt-0.5">
-              <span>{internship.company.name}</span>
-            </p>
+            <h4 className="font-bold text-sm text-[#021F53]">{internship.title}</h4>
+            <p className="text-xs text-slate-600">Company: {internship.company.name}</p>
           </div>
         </div>
 
-        {/* BR-001 & BR-002 Callout */}
-        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 text-sm space-y-2">
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-5 h-5 text-[#ff9b00] flex-shrink-0 mt-0.5" />
+        <div className="space-y-3 text-xs text-[#2c3f77] leading-relaxed">
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
+            <AlertCircle className="w-4 h-4 text-[#ff9b00] shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-amber-950">
-                You will be redirected to the employer's official careers portal.
-              </p>
-              <p className="text-xs text-amber-800/90 mt-1 leading-relaxed">
-                <strong>iSkolar Vocation does not store or process student applications.</strong> All resumes, personal details, and screening submissions are handled directly on {internship.company.name}'s secure application page.
-              </p>
+              <span className="font-bold block">Important Notice (Zero Application Storage):</span>
+              iSkolar Vocation does not store student resumes or job applications on its servers. You are being redirected to the employer's official careers portal to submit your documents directly.
             </div>
           </div>
+
+          <p>
+            Please make sure you have your updated resume and scholastic documents prepared before proceeding.
+          </p>
         </div>
 
-        <div className="space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#2c3f77]">
-            Destination Link
-          </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-mono break-all select-all">
-            {destinationUrl}
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#3f58b2]/10">
+        <div className="pt-2 flex items-center justify-between border-t border-slate-100">
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-[#2c3f77] hover:bg-[#f0f7ff] rounded-full transition-colors order-2 sm:order-1 cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
           >
             Cancel
           </button>
+
           <button
             type="button"
             onClick={handleProceed}
-            className="w-full sm:w-auto px-6 py-3 text-sm font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 order-1 sm:order-2 cursor-pointer"
+            disabled={isLoadingDetail && !destinationUrl}
+            className="px-6 py-2.5 bg-[#021F53] hover:bg-[#002774] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            <span>Continue to Official Application</span>
-            <ArrowRight className="w-4 h-4" />
+            {isLoadingDetail && !destinationUrl ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Loading Link...</span>
+              </>
+            ) : (
+              <>
+                <span>Continue to {internship.company.name}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </>
+            )}
           </button>
         </div>
       </div>

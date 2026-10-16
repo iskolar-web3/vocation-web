@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { MaintenanceScreen } from './components/common/MaintenanceScreen';
+import { CookieConsentBanner } from './components/common/CookieConsentBanner';
+import { FeedbackModal } from './components/common/FeedbackModal';
+import { useAuth } from './context/AuthContext';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
@@ -15,24 +20,41 @@ import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
 import { StudentBookingsPage } from './pages/student/StudentBookingsPage';
 import { SavedInternshipsPage } from './pages/student/SavedInternshipsPage';
 import { StudentProfileSettingsPage } from './pages/student/StudentProfileSettingsPage';
-import { ModerationQueuePage } from './pages/employer/ModerationQueuePage';
+import { StudentOnboardingPage } from './pages/student/StudentOnboardingPage';
 import { CoachDashboardPage } from './pages/coach/CoachDashboardPage';
+import { CoachOnboardingPage } from './pages/coach/CoachOnboardingPage';
+import { CheckoutSuccessPage } from './pages/checkout/CheckoutSuccessPage';
+import { CheckoutCancelPage } from './pages/checkout/CheckoutCancelPage';
+import { ModerationQueuePage } from './pages/employer/ModerationQueuePage';
 import { AuthPages } from './pages/static/AuthPages';
 import { LegalPages } from './pages/static/LegalPages';
 import { NotFoundPage } from './pages/static/NotFoundPage';
 
 export const App: React.FC = () => {
+  const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
   const [currentPath, setCurrentPath] = useState<string>(() => {
     return window.location.pathname || '/';
   });
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   // Browser history sync
   useEffect(() => {
     const handlePopState = () => {
       setCurrentPath(window.location.pathname || '/');
     };
+    const handleMaintenance = () => setIsMaintenance(true);
+    const handleOpenFeedback = () => setIsFeedbackOpen(true);
+
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('app:maintenance', handleMaintenance);
+    window.addEventListener('app:open_feedback', handleOpenFeedback);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('app:maintenance', handleMaintenance);
+      window.removeEventListener('app:open_feedback', handleOpenFeedback);
+    };
   }, []);
 
   const navigate = (path: string) => {
@@ -41,10 +63,45 @@ export const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Router resolution
+  // Router resolution with strict Route Guards (Issue #16 & docs/sitemap.md §5)
   const renderRoute = () => {
+    if (isMaintenance) {
+      return (
+        <MaintenanceScreen
+          onRetry={() => {
+            setIsMaintenance(false);
+            window.location.reload();
+          }}
+          navigate={navigate}
+        />
+      );
+    }
+
     const [pathOnly, queryString] = currentPath.split('?');
     const searchParams = new URLSearchParams(queryString || '');
+
+    // 1. Route Guards for Protected Zones
+    if (!isLoadingAuth) {
+      if (pathOnly.startsWith('/app') || pathOnly.startsWith('/coach') || pathOnly.startsWith('/admin')) {
+        if (!isAuthenticated) {
+          return <AuthPages mode="signin" navigate={navigate} />;
+        }
+      }
+
+      // Student Onboarding Guard (Issue #16)
+      if (isAuthenticated && user?.role === 'student') {
+        if (!user.is_onboarded && pathOnly.startsWith('/app') && pathOnly !== '/app/onboarding') {
+          return <StudentOnboardingPage navigate={navigate} />;
+        }
+      }
+
+      // Coach Onboarding Guard (Issue #18)
+      if (isAuthenticated && user?.role === 'coach') {
+        if (!user.is_onboarded && pathOnly.startsWith('/coach') && pathOnly !== '/coach/onboarding') {
+          return <CoachOnboardingPage navigate={navigate} />;
+        }
+      }
+    }
 
     // Landing
     if (pathOnly === '/' || pathOnly === '') {
@@ -62,12 +119,15 @@ export const App: React.FC = () => {
       return <AuthPages mode="reset" navigate={navigate} />;
     }
 
-    // Legal
+    // Legal Pages (Issue #19 & #23)
     if (pathOnly === '/terms') {
       return <LegalPages page="terms" navigate={navigate} />;
     }
     if (pathOnly === '/privacy') {
       return <LegalPages page="privacy" navigate={navigate} />;
+    }
+    if (pathOnly === '/coach-agreement') {
+      return <LegalPages page="coach-agreement" navigate={navigate} />;
     }
     if (pathOnly === '/refunds') {
       return <LegalPages page="refunds" navigate={navigate} />;
@@ -121,7 +181,18 @@ export const App: React.FC = () => {
       return <CoachDetailPage slug={slug} navigate={navigate} />;
     }
 
-    // Student Account Module
+    // Checkout Outcomes (Issue #17)
+    if (pathOnly === '/checkout/success') {
+      return <CheckoutSuccessPage navigate={navigate} />;
+    }
+    if (pathOnly === '/checkout/cancel') {
+      return <CheckoutCancelPage navigate={navigate} />;
+    }
+
+    // Student Onboarding & Account
+    if (pathOnly === '/app/onboarding') {
+      return <StudentOnboardingPage navigate={navigate} />;
+    }
     if (pathOnly === '/app') {
       return <StudentDashboardPage navigate={navigate} />;
     }
@@ -135,7 +206,10 @@ export const App: React.FC = () => {
       return <StudentProfileSettingsPage navigate={navigate} />;
     }
 
-    // Coach Module
+    // Coach Onboarding & Dashboard
+    if (pathOnly === '/coach/onboarding') {
+      return <CoachOnboardingPage navigate={navigate} />;
+    }
     if (pathOnly.startsWith('/coach')) {
       return <CoachDashboardPage navigate={navigate} />;
     }
@@ -150,10 +224,14 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0f7ff] text-[#021F53]">
-      <Navbar currentPath={currentPath} navigate={navigate} />
-      <div className="flex-1">{renderRoute()}</div>
-      <Footer navigate={navigate} />
-    </div>
+    <ErrorBoundary navigate={navigate}>
+      <div className="min-h-screen flex flex-col bg-[#f0f7ff] text-[#021F53]">
+        <Navbar currentPath={currentPath} navigate={navigate} />
+        <main className="flex-1">{renderRoute()}</main>
+        <Footer navigate={navigate} />
+        <CookieConsentBanner navigate={navigate} />
+        <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+      </div>
+    </ErrorBoundary>
   );
 };

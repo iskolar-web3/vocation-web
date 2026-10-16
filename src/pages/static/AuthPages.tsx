@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { GraduationCap, ArrowRight, Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GraduationCap, ArrowRight, Mail, Lock, User, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/api';
 import { api } from '../../lib/api';
@@ -10,15 +10,29 @@ interface AuthPageProps {
 }
 
 export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
-  const { signin, signup } = useAuth();
+  const { signin, signup, user } = useAuth();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [agreeLegal, setAgreeLegal] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [resetConfirmed, setResetConfirmed] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check for reset token in URL (API-025 / Issue #16)
+  const [resetToken, setResetToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      setResetToken(token);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,22 +41,48 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
 
     try {
       if (mode === 'reset') {
-        await api.post('/auth/password-reset/request', { email });
-        setResetSent(true);
+        if (resetToken) {
+          // Confirming password reset with token
+          if (password !== confirmPassword) {
+            throw new Error('Passwords do not match.');
+          }
+          if (password.length < 8) {
+            throw new Error('Password must be at least 8 characters long.');
+          }
+          await api.post('/auth/password-reset/confirm', {
+            token: resetToken,
+            password: password,
+          });
+          setResetConfirmed(true);
+        } else {
+          // Requesting password reset email
+          await api.post('/auth/password-reset/request', { email });
+          setResetSent(true);
+        }
       } else if (mode === 'signin') {
         await signin({ email, password });
-        navigate('/app');
+        // Redirect check handled by route or caller
+        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+        if (redirectParam) {
+          navigate(redirectParam);
+        } else {
+          navigate('/app');
+        }
       } else if (mode === 'signup') {
+        if (!agreeLegal) {
+          throw new Error('Please agree to the Terms of Service and Privacy Policy to proceed.');
+        }
         await signup({
           email,
           password,
           role: selectedRole,
           full_name: fullName.trim(),
         });
+
         if (selectedRole === 'coach') {
-          navigate('/coach');
+          navigate('/coach/onboarding');
         } else {
-          navigate('/app');
+          navigate('/app/onboarding');
         }
       }
     } catch (err: any) {
@@ -55,22 +95,22 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
   return (
     <div className="max-w-md mx-auto px-4 py-16 space-y-6">
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-[#3f58b2] text-white flex items-center justify-center mx-auto shadow-md">
-          <GraduationCap className="w-7 h-7 text-[#ff9b00]" />
+        <div className="w-12 h-12 rounded-2xl bg-[#021F53] text-white flex items-center justify-center mx-auto shadow-sm">
+          <GraduationCap className="w-6 h-6 text-[#ff9b00]" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#021F53]">
           {mode === 'signin' && 'Sign in to iSkolar Vocation'}
           {mode === 'signup' && 'Create Your iSkolar Account'}
-          {mode === 'reset' && 'Reset Your Password'}
+          {mode === 'reset' && (resetToken ? 'Set New Password' : 'Reset Your Password')}
         </h1>
         <p className="text-xs text-[#2c3f77]">
-          {mode === 'signin' && 'Access your internships, bookings, and coach sessions'}
+          {mode === 'signin' && 'Access your internships, bookings, and coaching sessions'}
           {mode === 'signup' && 'Join thousands of students and industry mentors'}
-          {mode === 'reset' && 'We will send a secure reset link to your email'}
+          {mode === 'reset' && (resetToken ? 'Choose a strong password for your account' : 'We will send a secure password reset link to your email')}
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#3f58b2]/15 shadow-soft space-y-5">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-5">
         {errorMsg && (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
             <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
@@ -78,18 +118,34 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
           </div>
         )}
 
-        {resetSent ? (
+        {resetConfirmed ? (
+          <div className="text-center py-6 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto font-bold">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-base text-[#021F53]">Password Updated</h3>
+            <p className="text-xs text-slate-500">
+              Your password has been successfully reset. You can now sign in with your new credentials.
+            </p>
+            <button
+              onClick={() => navigate('/signin')}
+              className="mt-3 px-6 py-2.5 bg-[#021F53] text-white font-bold text-xs rounded-xl cursor-pointer hover:bg-[#002774] transition-colors"
+            >
+              Sign In Now
+            </button>
+          </div>
+        ) : resetSent ? (
           <div className="text-center py-6 space-y-3">
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto font-bold">
               ✓
             </div>
             <h3 className="font-bold text-base text-[#021F53]">Reset Email Sent</h3>
             <p className="text-xs text-slate-500">
-              If an account exists for {email}, you will receive a secure password reset link.
+              If an account exists for {email}, you will receive a secure password reset link shortly.
             </p>
             <button
               onClick={() => navigate('/signin')}
-              className="mt-3 px-5 py-2 bg-[#3f58b2] text-white font-bold text-xs rounded-full cursor-pointer hover:bg-[#021F53] transition-colors"
+              className="mt-3 px-6 py-2.5 bg-[#021F53] text-white font-bold text-xs rounded-xl cursor-pointer hover:bg-[#002774] transition-colors"
             >
               Return to Sign In
             </button>
@@ -113,7 +169,7 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
                         onClick={() => setSelectedRole(item.role as UserRole)}
                         className={`py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                           selectedRole === item.role
-                            ? 'bg-[#3f58b2] text-white shadow-xs'
+                            ? 'bg-[#021F53] text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
@@ -139,19 +195,53 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
               </>
             )}
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@university.edu.ph"
-                className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
-                required
-              />
-            </div>
+            {mode === 'reset' && resetToken ? (
+              <>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
+                    required
+                    minLength={8}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat new password"
+                    className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
+                    required
+                    minLength={8}
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@university.edu.ph"
+                  className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
+                  required
+                />
+              </div>
+            )}
 
             {mode !== 'reset' && (
               <div>
@@ -161,9 +251,9 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
                     <button
                       type="button"
                       onClick={() => navigate('/reset')}
-                      className="text-[11px] text-[#607ef2] font-semibold hover:underline cursor-pointer"
+                      className="text-[11px] text-[#3f58b2] font-semibold hover:underline cursor-pointer"
                     >
-                      Forgot?
+                      Forgot password?
                     </button>
                   )}
                 </label>
@@ -178,10 +268,41 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
               </div>
             )}
 
+            {mode === 'signup' && (
+              <div className="pt-2">
+                <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreeLegal}
+                    onChange={(e) => setAgreeLegal(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 text-[#021F53] rounded border-slate-300 focus:ring-[#021F53]"
+                  />
+                  <span>
+                    I agree to the{' '}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/terms')}
+                      className="text-[#3f58b2] font-semibold underline hover:text-[#021F53]"
+                    >
+                      Terms of Service
+                    </button>{' '}
+                    and{' '}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/privacy')}
+                      className="text-[#3f58b2] font-semibold underline hover:text-[#021F53]"
+                    >
+                      Privacy Policy
+                    </button>.
+                  </span>
+                </label>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 bg-[#3f58b2] hover:bg-[#021F53] disabled:opacity-60 text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
+              className="w-full py-3.5 bg-[#021F53] hover:bg-[#002774] disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 mt-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -190,58 +311,12 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
                   <span>
                     {mode === 'signin' && 'Sign In'}
                     {mode === 'signup' && 'Create Account'}
-                    {mode === 'reset' && 'Send Reset Email'}
+                    {mode === 'reset' && (resetToken ? 'Update Password' : 'Send Reset Link')}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
-
-            {mode === 'signin' && (
-              <div className="pt-3 border-t border-slate-100 space-y-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center">
-                  Quick Demo Accounts
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setEmail('student@iskolar.ph');
-                      setPassword('password123');
-                      await signin({ email: 'student@iskolar.ph', password: 'password123' });
-                      navigate('/app');
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-blue-50 text-[#021F53] font-bold text-[11px] hover:bg-blue-100 transition-colors cursor-pointer border border-blue-200 text-center"
-                  >
-                    🎓 Student
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setEmail('coach@iskolar.ph');
-                      setPassword('password123');
-                      await signin({ email: 'coach@iskolar.ph', password: 'password123' });
-                      navigate('/coach');
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-900 font-bold text-[11px] hover:bg-indigo-100 transition-colors cursor-pointer border border-indigo-200 text-center"
-                  >
-                    💼 Coach
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setEmail('admin@iskolar.ph');
-                      setPassword('password123');
-                      await signin({ email: 'admin@iskolar.ph', password: 'password123' });
-                      navigate('/admin/listings');
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-900 font-bold text-[11px] hover:bg-amber-100 transition-colors cursor-pointer border border-amber-200 text-center"
-                  >
-                    🛡️ Admin
-                  </button>
-                </div>
-              </div>
-            )}
           </form>
         )}
 

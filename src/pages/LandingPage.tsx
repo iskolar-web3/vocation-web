@@ -5,7 +5,7 @@ import {
   Star,
   Users,
   CheckCircle2,
-  Sparkles,
+  Compass,
   Award,
   Search,
   Building,
@@ -38,11 +38,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
 
   const featuredInternships =
     landingData?.featured_internships || internshipsData?.items || [];
-  const openInternships = featuredInternships.filter((i) => i.status === 'open');
+  const openInternships = featuredInternships.filter((i: any) => !i.status || i.status === 'open');
   const filteredPreviewRoles = openInternships.filter((i) => i.field === activeTabField);
   const activeSpotlightRole = filteredPreviewRoles[0] || openInternships[0];
-  const featuredCoaches =
-    landingData?.top_coaches || (coachesData?.items || []).slice(0, 3);
+  const featuredCoaches: CoachCardType[] =
+    landingData?.featured_coaches || (coachesData?.items || []).slice(0, 3);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +62,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
   return (
     <div className="space-y-24 pb-24 overflow-hidden">
       {/* Editorial Hero Stage */}
-      <section className="relative pt-10 pb-16 md:py-20 bg-gradient-to-b from-[#f0f7ff] via-white to-[#f0f7ff] border-b border-slate-200/80 dots-pattern">
+      <section className="relative pt-10 pb-16 md:py-20 bg-[#f0f7ff] border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Col: Hero Statement & Integrated Console */}
@@ -136,11 +136,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
             {/* Right Col: Live Interactive Spotlight Card */}
             <div className="lg:col-span-5">
               {activeSpotlightRole && (
-                <div className="tactile-card rounded-3xl p-6 sm:p-7 space-y-5 bg-white border border-slate-200 shadow-lift">
+                <div className="tactile-card rounded-2xl p-6 sm:p-7 space-y-5 bg-white border border-slate-200 shadow-soft">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <span className="text-xs font-bold text-[#3f58b2] uppercase tracking-wider font-accent flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-[#ff9b00]" />
-                      Featured Opportunity (Live Data)
+                      <Compass className="w-3.5 h-3.5 text-[#3f58b2]" />
+                      Featured Opportunity
                     </span>
                     <span className="stamp-badge bg-emerald-50 text-emerald-800 border border-emerald-300">
                       Open Now
@@ -183,7 +183,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
 
           <button
             onClick={() => navigate('/internships')}
-            className="px-5 py-2.5 bg-[#f0f7ff] text-[#3f58b2] hover:bg-[#e0efff] font-bold text-xs rounded-full border border-[#607ef2]/20 flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
+            className="px-5 py-2.5 bg-[#f0f7ff] text-[#3f58b2] hover:bg-[#e0efff] font-bold text-xs rounded-xl border border-[#607ef2]/20 flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
           >
             <span>View Full Directory</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -209,7 +209,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
 
         {/* Roles Grid */}
         {isLoadingInternships ? (
-          <div className="flex items-center justify-center p-12 bg-white rounded-3xl border border-slate-200">
+          <div className="flex items-center justify-center p-12 bg-white rounded-2xl border border-slate-200">
             <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
           </div>
         ) : (
@@ -251,7 +251,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredCoaches.map((coach) => (
               <CoachCard
-                key={coach.id}
+                key={coach.slug || (coach as any).id}
                 coach={coach}
                 onSelect={() => navigate(`/coaches/${coach.slug}`)}
                 onBook={(c) => setSelectedCoach(c)}

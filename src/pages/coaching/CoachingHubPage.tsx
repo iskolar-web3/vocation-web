@@ -70,7 +70,7 @@ export const CoachingHubPage: React.FC<CoachingHubPageProps> = ({ navigate }) =>
 
       {/* Transparent Step by Step Booking Workflow */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="tactile-card rounded-3xl p-8 sm:p-10">
+        <div className="tactile-card rounded-2xl p-8 sm:p-10">
           <div className="max-w-2xl mb-8 space-y-1.5">
             <span className="text-xs font-bold uppercase tracking-wider text-[#3f58b2] font-accent">
               Transparent Workflow
@@ -120,14 +120,14 @@ export const CoachingHubPage: React.FC<CoachingHubPageProps> = ({ navigate }) =>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center p-12 bg-white rounded-3xl border border-slate-200">
+          <div className="flex items-center justify-center p-12 bg-white rounded-2xl border border-slate-200">
             <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {topCoaches.map((coach) => (
               <CoachCard
-                key={coach.id}
+                key={coach.slug}
                 coach={coach}
                 onSelect={() => navigate(`/coaches/${coach.slug}`)}
                 onBook={(c) => setSelectedCoach(c)}

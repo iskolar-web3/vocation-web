@@ -23,8 +23,8 @@ export const RatingModal: React.FC<RatingModalProps> = ({
 
   if (!booking) return null;
 
-  const coachName = booking.coach_name || (booking as any).coachName || '';
-  const sessionTypeName = booking.session_type_name || (booking as any).sessionTypeName || '';
+  const coachName = booking.coach_display_name || (booking as any).coach_name || '';
+  const sessionTypeName = (booking as any).session_type_name || '1-on-1 Coaching Session';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +32,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
 
     try {
       await createReviewMutation.mutateAsync({
-        bookingId: booking.id,
+        bookingId: booking.booking_id,
         review: {
           rating,
           body: comment.trim() || undefined,

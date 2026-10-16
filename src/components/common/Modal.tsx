@@ -42,16 +42,16 @@ export const Modal: React.FC<ModalProps> = ({
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#021F53]/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#021F53]/70 animate-fadeIn">
       <div
         className="fixed inset-0"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className={`relative w-full ${maxWidthClass} max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-[#3f58b2]/15 p-6 md:p-8 z-10 animate-scaleUp`}
+        className={`relative w-full ${maxWidthClass} max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-soft border border-slate-200 p-6 md:p-8 z-10 animate-scaleUp`}
       >
-        <div className="flex items-center justify-between pb-4 border-b border-[#3f58b2]/10 mb-6">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
           <div className="text-xl font-bold text-[#021F53] font-headline">{title}</div>
           <button
             onClick={onClose}

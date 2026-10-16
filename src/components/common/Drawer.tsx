@@ -28,13 +28,13 @@ export const Drawer: React.FC<DrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end bg-[#021F53]/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end bg-[#021F53]/70 animate-fadeIn">
       <div
         className="fixed inset-0"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative w-full max-h-[85vh] overflow-y-auto bg-white rounded-t-3xl shadow-2xl p-6 z-10 animate-slideUp border-t border-[#607ef2]/20">
+      <div className="relative w-full max-h-[85vh] overflow-y-auto bg-white rounded-t-2xl shadow-soft p-6 z-10 animate-slideUp border-t border-slate-200">
         <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4" />
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
           <h3 className="text-lg font-bold text-[#021F53] font-headline">{title}</h3>

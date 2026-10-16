@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-[#3f58b2]/10 shadow-[0_1px_3px_rgba(2,31,83,0.04)]">
+    <header className="sticky top-0 z-40 bg-white border-b border-[#3f58b2]/10 shadow-[0_1px_3px_rgba(2,31,83,0.04)]">
       {/* Top Banner */}
       <div className="bg-[#021F53] text-white px-4 sm:px-8 py-1.5 text-xs flex items-center justify-between border-b border-[#3f58b2]/20">
         <div className="flex items-center gap-2.5">
@@ -98,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
           <nav className="hidden md:flex items-center gap-1 lg:gap-1.5">
             <button
               onClick={() => handleNav('/internships')}
-              className={`px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentPath.startsWith('/internships')
                   ? 'bg-[#f0f7ff] text-[#3f58b2] shadow-[0_1px_2px_rgba(63,88,178,0.1)]'
                   : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
@@ -109,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
 
             <button
               onClick={() => handleNav('/companies')}
-              className={`px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentPath.startsWith('/companies')
                   ? 'bg-[#f0f7ff] text-[#3f58b2]'
                   : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
@@ -122,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
 
             <button
               onClick={() => handleNav('/coaching')}
-              className={`px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentPath === '/coaching'
                   ? 'bg-[#f0f7ff] text-[#3f58b2]'
                   : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
@@ -133,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
 
             <button
               onClick={() => handleNav('/coaches')}
-              className={`px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentPath.startsWith('/coaches')
                   ? 'bg-[#f0f7ff] text-[#3f58b2]'
                   : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
@@ -240,14 +240,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleNav('/coach')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 text-xs font-bold text-[#021F53] cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 text-xs font-bold text-[#021F53] cursor-pointer"
                 >
                   <Award className="w-4 h-4 text-[#3f58b2]" />
                   <span>Coach Portal</span>
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-rose-600 rounded-full hover:bg-slate-100 cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-slate-100 cursor-pointer"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -259,14 +259,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleNav('/admin/listings')}
-                  className="px-4 py-2 rounded-full bg-[#021F53] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#021F53] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <ShieldAlert className="w-4 h-4 text-[#ff9b00]" />
                   <span>Moderation Queue</span>
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-rose-600 rounded-full hover:bg-slate-100 cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-slate-100 cursor-pointer"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -278,13 +278,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleNav('/signin')}
-                  className="px-4 py-2 rounded-full text-xs font-bold text-[#3f58b2] hover:bg-[#f0f7ff] transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#3f58b2] hover:bg-[#f0f7ff] transition-colors cursor-pointer"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => handleNav('/signup')}
-                  className="px-4 py-2 rounded-full text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-sm transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-xs transition-all cursor-pointer"
                 >
                   Get Started
                 </button>

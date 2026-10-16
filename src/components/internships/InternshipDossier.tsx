@@ -4,36 +4,33 @@ import {
   MapPin,
   Clock,
   Coins,
+  Bookmark,
   ExternalLink,
   CheckCircle2,
-  Bookmark,
+  ChevronRight,
+  Share2,
   Calendar,
-  Sparkles,
-  ArrowRight,
-  GraduationCap,
-  Briefcase,
+  Target,
   Copy,
   Check,
 } from 'lucide-react';
-import { InternshipCard as InternshipCardType, InternshipDetail, CoachCard as CoachCardType, CoachDetail } from '../../types/api';
+import { InternshipCard, InternshipDetail, CoachCard } from '../../types/api';
 import { formatPesos, formatDate, getTimeRemaining } from '../../lib/utils';
-import { useSavedInternships, useSaveInternship, useUnsaveInternship, useCoaches } from '../../services/queries';
-import { useAuth } from '../../context/AuthContext';
+import { useSaveInternship, useUnsaveInternship, useSavedInternships, useCoaches } from '../../services/queries';
 
 interface InternshipDossierProps {
-  internship: InternshipDetail | InternshipCardType;
-  onApply: (internship: InternshipDetail | InternshipCardType) => void;
-  onBookCoach?: (coach: CoachCardType | CoachDetail) => void;
-  isCompact?: boolean;
+  internship: InternshipCard | InternshipDetail;
+  onApplyOutbound: (internship: InternshipCard | InternshipDetail) => void;
+  onBookCoach?: (coach: CoachCard) => void;
+  navigate?: (path: string) => void;
 }
 
 export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   internship,
-  onApply,
+  onApplyOutbound,
   onBookCoach,
-  isCompact = false,
+  navigate,
 }) => {
-  const { isAuthenticated } = useAuth();
   const { data: savedList = [] } = useSavedInternships();
   const saveMutation = useSaveInternship();
   const unsaveMutation = useUnsaveInternship();
@@ -42,7 +39,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
 
   const isSaved = savedList.some((item) => item.id === internship.id);
-  const { days, isExpired } = getTimeRemaining(internship.deadline);
+  const { days, isExpired } = getTimeRemaining(internship.deadline || '');
 
   // Find coaches specialized in this internship's field
   const coaches = coachesData?.items || [];
@@ -63,7 +60,6 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   };
 
   const handleToggleSave = () => {
-    if (!isAuthenticated) return;
     if (isSaved) {
       unsaveMutation.mutate(internship.id);
     } else {
@@ -71,18 +67,27 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
     }
   };
 
+  const toList = (val: unknown): string[] => {
+    if (Array.isArray(val)) return val.filter(Boolean);
+    if (typeof val === 'string') {
+      return val
+        .split(/\r?\n|•|\*|;/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    }
+    return [];
+  };
+
   const detail = internship as Partial<InternshipDetail>;
-  const responsibilities = detail.responsibilities || [];
-  const requirements = detail.requirements || [];
-  const perks = detail.perks || [];
+  const responsibilities = toList((detail as any).responsibilities);
+  const requirements = toList(detail.requirements);
+  const perks = toList(detail.perks);
   const description = detail.description || '';
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-soft overflow-hidden sticky top-24 space-y-6">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-soft overflow-hidden sticky top-24 space-y-6">
       {/* Dossier Header Banner */}
-      <div className="bg-gradient-to-r from-[#021F53] to-[#3f58b2] text-white p-6 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-
+      <div className="bg-[#021F53] text-white p-6 relative overflow-hidden border-b border-[#3f58b2]/30">
         <div className="relative z-10 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -126,7 +131,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
               {internship.company.name}
             </span>
-            <h2 className="text-xl sm:text-2xl font-bold font-display leading-tight">
+            <h2 className="text-xl sm:text-2xl font-bold font-headline leading-tight">
               {internship.title}
             </h2>
           </div>
@@ -134,68 +139,70 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-xs">
             <div>
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Setup</span>
-              <span className="font-bold capitalize">{internship.work_setup}</span>
+              <span className="font-bold capitalize">{(internship as any).work_setup || 'Internship'}</span>
             </div>
             <div>
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Duration</span>
-              <span className="font-bold">{internship.duration_weeks} Weeks</span>
+              <span className="font-bold">{internship.duration_weeks ? `${internship.duration_weeks} Wks` : 'Flexible'}</span>
             </div>
             <div>
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Allowance</span>
               <span className="font-bold text-[#ff9b00]">
-                {internship.is_paid && internship.stipend_amount
-                  ? `${formatPesos(internship.stipend_amount)}/${internship.stipend_period || 'mo'}`
+                {internship.is_paid
+                  ? (internship as any).compensation_details || 'Paid'
                   : 'Unpaid'}
               </span>
             </div>
             <div>
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Deadline</span>
-              <span className="font-bold">{formatDate(internship.deadline)}</span>
+              <span className="font-bold">{formatDate(internship.deadline || '')}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
-        {/* Outbound CTA Box (BR-001, BR-002: outbound application notice) */}
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <span className="text-xs font-bold text-amber-950 block">Official Application Gateway</span>
-            <span className="text-[11px] text-amber-900 leading-relaxed block">
-              Apply directly on {internship.company.name}'s careers portal. iSkolar stores 0 student resumes.
-            </span>
+      <div className="px-6 space-y-6">
+        {/* Outbound Application Notice */}
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200/80 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+            <ExternalLink className="w-4 h-4 text-[#ff9b00]" />
+            <span>Outbound Official Application</span>
           </div>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            iSkolar Vocation directs you directly to <strong>{internship.company.name}</strong>'s official portal. We do not store or intermediate student resumes.
+          </p>
           <button
             type="button"
-            onClick={() => onApply(internship)}
-            className="px-6 py-3 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-1.5 flex-shrink-0 cursor-pointer"
+            onClick={() => onApplyOutbound(internship)}
+            className="w-full mt-2 py-3 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Apply on Company Site</span>
+            <span>Proceed to Company Portal</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Description & Requirements */}
+        {/* Role Overview */}
         {description && (
           <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
               Role Overview
-            </h4>
+            </h3>
             <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
               {description}
             </p>
           </div>
         )}
 
+        {/* Key Responsibilities */}
         {responsibilities.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
               Key Responsibilities
-            </h4>
+            </h3>
             <ul className="space-y-1.5">
-              {responsibilities.map((resp, i) => (
-                <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+              {responsibilities.map((resp, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#3f58b2] mt-1.5 shrink-0" />
                   <span>{resp}</span>
                 </li>
               ))}
@@ -203,15 +210,16 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
           </div>
         )}
 
+        {/* Requirements */}
         {requirements.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
-              Qualifications &amp; Requirements
-            </h4>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
+              Candidate Requirements
+            </h3>
             <ul className="space-y-1.5">
-              {requirements.map((req, i) => (
-                <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#3f58b2] shrink-0 mt-1.5" />
+              {requirements.map((req, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
                   <span>{req}</span>
                 </li>
               ))}
@@ -219,12 +227,31 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
           </div>
         )}
 
-        {/* Cross-sell 1-on-1 Mentorship */}
+        {/* Perks & Mentorship */}
+        {perks.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
+              Perks &amp; Learning
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {perks.map((perk, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[#f0f7ff] text-[#3f58b2] border border-[#607ef2]/20"
+                >
+                  ✓ {perk}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cross-Sell Mentorship Widget */}
         {matchingCoaches.length > 0 && (
-          <div className="p-4 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/20 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#3f58b2]">
-              <Sparkles className="w-4 h-4 text-[#ff9b00]" />
-              <span>Prepare for {internship.company.name}'s Interview</span>
+          <div className="pt-4 border-t border-slate-100 space-y-3 pb-6">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#021F53]">
+              <Target className="w-3.5 h-3.5 text-[#3f58b2]" />
+              <span>Need Mock Interview Prep?</span>
             </div>
             <p className="text-[11px] text-slate-600">
               Book a 1-on-1 mock interview with industry mentors specializing in {internship.field}:
@@ -232,17 +259,23 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
             <div className="space-y-2">
               {matchingCoaches.map((c) => (
                 <div
-                  key={c.id}
+                  key={c.slug}
                   className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <img
-                      src={c.avatar_url}
-                      alt={c.name}
-                      className="w-8 h-8 rounded-lg object-cover"
-                    />
+                    {c.avatar_url ? (
+                      <img
+                        src={c.avatar_url}
+                        alt={c.display_name}
+                        className="w-8 h-8 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-[#021F53] text-white font-bold flex items-center justify-center text-xs">
+                        {c.display_name.charAt(0)}
+                      </div>
+                    )}
                     <div className="min-w-0">
-                      <span className="text-xs font-bold text-[#021F53] truncate block">{c.name}</span>
+                      <span className="text-xs font-bold text-[#021F53] truncate block">{c.display_name}</span>
                       <span className="text-[10px] text-slate-500 truncate block">{c.headline}</span>
                     </div>
                   </div>

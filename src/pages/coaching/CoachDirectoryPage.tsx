@@ -55,7 +55,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
-      <div className="bg-[#021F53] rounded-3xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
+      <div className="bg-[#021F53] rounded-2xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
             <Award className="w-3.5 h-3.5 text-[#ff9b00]" />
@@ -151,18 +151,18 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
           </div>
 
           {isLoading ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs flex flex-col items-center justify-center space-y-3">
+            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-2xs flex flex-col items-center justify-center space-y-3">
               <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
               <p className="text-xs font-semibold text-slate-500">Loading coaches from directory...</p>
             </div>
           ) : error ? (
-            <div className="bg-rose-50 rounded-3xl p-8 text-center border border-rose-200 space-y-3">
+            <div className="bg-rose-50 rounded-2xl p-8 text-center border border-rose-200 space-y-3">
               <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
               <h3 className="text-base font-bold text-rose-900">Failed to load coaches</h3>
               <p className="text-xs text-rose-700 max-w-md mx-auto">{(error as any).message || 'Unable to connect to server.'}</p>
             </div>
           ) : coaches.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs space-y-4">
+            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-2xs space-y-4">
               <h3 className="text-lg font-bold text-[#021F53] font-headline">
                 No coaches match your filters
               </h3>
@@ -180,7 +180,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
             <div className="space-y-3">
               {coaches.map((coach) => (
                 <CoachCard
-                  key={coach.id}
+                  key={coach.slug}
                   coach={coach}
                   layout="row"
                   onSelect={() => navigate(`/coaches/${coach.slug}`)}
@@ -192,7 +192,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {coaches.map((coach) => (
                 <CoachCard
-                  key={coach.id}
+                  key={coach.slug}
                   coach={coach}
                   layout="grid"
                   onSelect={() => navigate(`/coaches/${coach.slug}`)}

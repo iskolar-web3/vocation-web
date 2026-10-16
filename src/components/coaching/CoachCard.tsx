@@ -16,8 +16,18 @@ export const CoachCard: React.FC<CoachCardProps> = ({
   onBook,
   layout = 'grid',
 }) => {
-  const sessionTypes = coach.session_types || [];
-  const hasFreeSession = sessionTypes.some((st) => st.price_centavos === 0);
+  const sessionTypes = ('session_types' in coach ? coach.session_types : []) || [];
+  const hasFreeSession = coach.price_type === 'free' || sessionTypes.some((st) => st.price_centavos === 0);
+  const paidPrices = sessionTypes.filter((st) => st.price_centavos > 0).map((st) => st.price_centavos);
+  const minPaid = paidPrices.length > 0 ? Math.min(...paidPrices) : null;
+  const rateLabel = hasFreeSession
+    ? 'Free 15-min Intro'
+    : minPaid !== null
+      ? `From ${formatPHP(minPaid)}`
+      : 'Paid';
+
+  const ratingDisplay = coach.rating_avg ? coach.rating_avg.toFixed(1) : 'New';
+  const bioExcerpt = ('bio' in coach && coach.bio) ? coach.bio : coach.headline;
 
   if (layout === 'row') {
     return (
@@ -28,8 +38,8 @@ export const CoachCard: React.FC<CoachCardProps> = ({
         <div className="flex items-start gap-3.5 min-w-0">
           <div className="relative flex-shrink-0">
             <img
-              src={coach.avatar_url}
-              alt={coach.name}
+              src={coach.avatar_url || undefined}
+              alt={coach.display_name}
               className="w-13 h-13 rounded-2xl object-cover border border-slate-200/80 bg-white"
             />
           </div>
@@ -37,17 +47,17 @@ export const CoachCard: React.FC<CoachCardProps> = ({
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm sm:text-base font-bold text-[#021F53] font-headline hover:text-[#3f58b2] transition-colors">
-                {coach.name}
+                {coach.display_name}
               </h3>
               <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px] font-bold text-amber-950">
                 <Star className="w-3 h-3 fill-[#ff9b00] text-[#ff9b00]" />
-                <span>{coach.rating}</span>
-                <span className="text-slate-500 font-normal">({coach.review_count})</span>
+                <span>{ratingDisplay}</span>
+                <span className="text-slate-500 font-normal">({coach.rating_count})</span>
               </div>
             </div>
 
             <p className="text-xs font-semibold text-[#3f58b2] truncate">
-              {coach.headline} · {coach.company}
+              {coach.headline}
             </p>
 
             <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -69,7 +79,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               Session Rate
             </span>
             <span className="font-bold text-sm text-[#021F53]">
-              {hasFreeSession ? 'Free 15-min Intro' : formatPHP(coach.starting_price_centavos)}
+              {rateLabel}
             </span>
           </div>
 
@@ -93,14 +103,14 @@ export const CoachCard: React.FC<CoachCardProps> = ({
   return (
     <div
       onClick={() => onSelect(coach)}
-      className="tactile-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer group"
+      className="tactile-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer group"
     >
       <div className="space-y-4">
         <div className="flex items-start gap-3.5">
           <div className="relative flex-shrink-0">
             <img
-              src={coach.avatar_url}
-              alt={coach.name}
+              src={coach.avatar_url || undefined}
+              alt={coach.display_name}
               className="w-14 h-14 rounded-2xl object-cover border border-slate-200 bg-white group-hover:scale-105 transition-transform"
             />
           </div>
@@ -108,12 +118,12 @@ export const CoachCard: React.FC<CoachCardProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-1.5">
               <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors truncate font-headline">
-                {coach.name}
+                {coach.display_name}
               </h3>
               <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-xs font-bold text-amber-950 flex-shrink-0">
                 <Star className="w-3 h-3 fill-[#ff9b00] text-[#ff9b00]" />
-                <span>{coach.rating}</span>
-                <span className="text-slate-500 font-normal text-[10px]">({coach.review_count})</span>
+                <span>{ratingDisplay}</span>
+                <span className="text-slate-500 font-normal text-[10px]">({coach.rating_count})</span>
               </div>
             </div>
 
@@ -121,14 +131,14 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               {coach.headline}
             </p>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              {coach.experience_years}+ yrs exp · {coach.location}
+              {coach.price_type === 'free' ? 'Pro-bono Mentor' : 'Verified Coach'}
             </p>
           </div>
         </div>
 
         {/* Bio Excerpt */}
         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-          {coach.bio}
+          {bioExcerpt}
         </p>
 
         {/* Expertise Stamps */}
@@ -156,7 +166,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
             Session Rate
           </span>
           <span className="font-bold text-sm text-[#021F53]">
-            {hasFreeSession ? 'Free 15-min Intro' : formatPHP(coach.starting_price_centavos)}
+            {rateLabel}
           </span>
         </div>
 

@@ -18,7 +18,7 @@ import {
 import { ApiFetchResult, ApiError } from './api';
 
 // Initial Seed Data
-const INITIAL_COMPANIES: CompanyDetail[] = [
+const INITIAL_COMPANIES: any[] = [
   {
     id: 'comp_01',
     name: 'Maya Philippines',
@@ -81,7 +81,7 @@ const INITIAL_COMPANIES: CompanyDetail[] = [
   },
 ];
 
-const INITIAL_INTERNSHIPS: InternshipDetail[] = [
+const INITIAL_INTERNSHIPS: any[] = [
   {
     id: 'int_01',
     title: 'Software Engineering Intern (Backend / Go & Node)',
@@ -231,7 +231,7 @@ const INITIAL_INTERNSHIPS: InternshipDetail[] = [
   },
 ];
 
-const INITIAL_COACHES: CoachDetail[] = [
+const INITIAL_COACHES: any[] = [
   {
     id: 'coach_01',
     name: 'Engr. Mark Villanueva',
@@ -241,7 +241,7 @@ const INITIAL_COACHES: CoachDetail[] = [
     current_role: 'Senior Staff Engineer',
     company: 'Grab Philippines',
     location: 'Metro Manila / Remote',
-    bio: 'Over 9 years of engineering experience across Southeast Asia unicorn tech companies. Mentored 120+ Filipino students and career shifters into junior & mid-level engineering roles with an 85% placement rate.',
+    bio: 'Over 9 years of engineering experience across Southeast Asia unicorn tech companies. Mentored 120+ Filipino students and career shifters into junior & mid-level engineering roles with a 90% placement rate.',
     expertise: ['Technical Coding Interviews', 'System Design', 'Backend Engineering', 'Resume Review'],
     experience_years: 9,
     rating: 4.95,
@@ -307,7 +307,7 @@ const INITIAL_COACHES: CoachDetail[] = [
   },
 ];
 
-const INITIAL_REVIEWS: Record<string, CoachReview[]> = {
+const INITIAL_REVIEWS: Record<string, any[]> = {
   'engr-mark-villanueva': [
     {
       id: 'rev_01',
@@ -341,12 +341,12 @@ const INITIAL_REVIEWS: Record<string, CoachReview[]> = {
   ],
 };
 
-const INITIAL_STUDENT_PROFILE: StudentProfile = {
+const INITIAL_STUDENT_PROFILE: any = {
   full_name: 'Clarisse Salazar',
   email: 'student@iskolar.ph',
   school: 'University of the Philippines Diliman',
   course: 'BS Computer Science',
-  year_level: '4th Year',
+  year_level: 4,
   target_ojt_hours: 300,
   completed_ojt_hours: 180,
   skills: ['React', 'TypeScript', 'Node.js', 'Go', 'PostgreSQL', 'Git'],
@@ -354,21 +354,80 @@ const INITIAL_STUDENT_PROFILE: StudentProfile = {
   avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
 };
 
-// Storage Helpers
+// Storage Helpers & Keys
 const STORAGE_KEYS = {
   USER: 'vocation_dev_user',
+  ACCOUNTS: 'vocation_dev_accounts',
   INTERNSHIPS: 'vocation_dev_internships',
   COMPANIES: 'vocation_dev_companies',
   COACHES: 'vocation_dev_coaches',
   BOOKINGS: 'vocation_dev_bookings',
-  SAVED: 'vocation_dev_saved',
-  PROFILE: 'vocation_dev_student_profile',
+  SAVED_BY_USER: 'vocation_dev_saved_by_user',
+  PROFILES: 'vocation_dev_profiles',
+  SETTINGS: 'vocation_dev_settings',
 };
+
+const INITIAL_ACCOUNTS: Record<string, {
+  email: string;
+  password?: string;
+  full_name: string;
+  role: 'student' | 'coach' | 'admin';
+  avatar_url?: string;
+  is_onboarded: boolean;
+}> = {
+  'student@iskolar.ph': {
+    email: 'student@iskolar.ph',
+    password: 'password123',
+    full_name: 'Clarisse Salazar',
+    role: 'student',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+    is_onboarded: true,
+  },
+  'coach@iskolar.ph': {
+    email: 'coach@iskolar.ph',
+    password: 'password123',
+    full_name: 'Engr. Mark Villanueva',
+    role: 'coach',
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
+    is_onboarded: true,
+  },
+  'admin@iskolar.ph': {
+    email: 'admin@iskolar.ph',
+    password: 'password123',
+    full_name: 'Platform Moderator',
+    role: 'admin',
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
+    is_onboarded: true,
+  },
+};
+
+const INITIAL_PROFILES: Record<string, any> = {
+  'student@iskolar.ph': INITIAL_STUDENT_PROFILE,
+};
+
+const INITIAL_SAVED_BY_USER: Record<string, string[]> = {
+  'student@iskolar.ph': ['int_01', 'int_02'],
+};
+
+const INITIAL_BOOKINGS: any[] = [
+  {
+    booking_id: 'bkg_demo_01',
+    student_email: 'student@iskolar.ph',
+    coach_slug: 'engr-mark-villanueva',
+    coach_display_name: 'Engr. Mark Villanueva',
+    slot_starts_at: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+    slot_ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 + 45 * 60000).toISOString(),
+    status: 'confirmed',
+    payment_status: 'paid',
+    price_centavos: 0,
+    join_url: 'https://meet.google.com/abc-defg-hij',
+  },
+];
 
 function getStored<T>(key: string, defaultValue: T): T {
   try {
     const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
+    if (raw !== null && raw !== undefined) return JSON.parse(raw);
   } catch {
     // ignore
   }
@@ -384,27 +443,27 @@ function setStored<T>(key: string, value: T): void {
 }
 
 // Generate dynamic 7-day UTC slots for availability
-function generateAvailabilitySlots(): AvailabilitySlot[] {
-  const slots: AvailabilitySlot[] = [];
+function generateAvailabilitySlots(): any[] {
+  const slots: any[] = [];
   const now = new Date();
 
   for (let d = 1; d <= 7; d++) {
     const dayDate = new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
     const slot1Start = new Date(Date.UTC(dayDate.getUTCFullYear(), dayDate.getUTCMonth(), dayDate.getUTCDate(), 2, 0, 0));
+    const slot1End = new Date(slot1Start.getTime() + 45 * 60000);
     const slot2Start = new Date(Date.UTC(dayDate.getUTCFullYear(), dayDate.getUTCMonth(), dayDate.getUTCDate(), 7, 0, 0));
+    const slot2End = new Date(slot2Start.getTime() + 45 * 60000);
 
     slots.push(
       {
         id: `slot_${d}_1`,
-        slot_starts_at: slot1Start.toISOString(),
-        duration_minutes: 45,
-        is_available: d !== 2,
+        starts_at: slot1Start.toISOString(),
+        ends_at: slot1End.toISOString(),
       },
       {
         id: `slot_${d}_2`,
-        slot_starts_at: slot2Start.toISOString(),
-        duration_minutes: 45,
-        is_available: true,
+        starts_at: slot2Start.toISOString(),
+        ends_at: slot2End.toISOString(),
       }
     );
   }
@@ -422,54 +481,96 @@ export async function handleDevMockRequest<T>(
 
   // 1. Auth & Session Routes
   if (cleanPath === 'me' && methodUpper === 'GET') {
-    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, {
-      id: 'usr_student_01',
-      email: 'student@iskolar.ph',
-      full_name: 'Clarisse Salazar',
-      role: 'student',
-      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-      is_onboarded: true,
-    });
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
 
     if (!user) {
-      throw new ApiError('Not authenticated', 401, 'UNAUTHORIZED');
+      throw new ApiError('Not authenticated', 401, 'unauthenticated');
     }
     return { message: 'Authenticated', data: user as unknown as T };
   }
 
   if (cleanPath === 'auth/signin' && methodUpper === 'POST') {
-    const email = body?.email || 'student@iskolar.ph';
-    const isCoach = email.toLowerCase().includes('coach');
-    const isAdmin = email.toLowerCase().includes('admin');
-    const role = isAdmin ? 'admin' : isCoach ? 'coach' : 'student';
+    const email = (body?.email || 'student@iskolar.ph').trim().toLowerCase();
+    const accounts = getStored<Record<string, any>>(STORAGE_KEYS.ACCOUNTS, INITIAL_ACCOUNTS);
+    let account = accounts[email];
+
+    if (!account) {
+      const isCoach = email.includes('coach');
+      const isAdmin = email.includes('admin');
+      const role = isAdmin ? 'admin' : isCoach ? 'coach' : 'student';
+      account = {
+        email,
+        password: body?.password || 'password123',
+        full_name: role === 'student' ? 'Clarisse Salazar' : role === 'coach' ? 'Engr. Mark Villanueva' : 'Platform Moderator',
+        role,
+        is_onboarded: true,
+      };
+      accounts[email] = account;
+      setStored(STORAGE_KEYS.ACCOUNTS, accounts);
+    } else {
+      if (account.password && body?.password && account.password !== body.password) {
+        throw new ApiError('Incorrect email or password. Please verify your credentials.', 401, 'invalid_credentials');
+      }
+    }
+
+    const profiles = getStored<Record<string, any>>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+    const profile = profiles[email];
 
     const user: UserSession = {
-      id: `usr_${role}_${Date.now()}`,
-      email,
-      full_name: isAdmin ? 'Platform Moderator' : isCoach ? 'Engr. Mark Villanueva' : 'Clarisse Salazar',
-      role,
-      avatar_url: isCoach
-        ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250'
-        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-      is_onboarded: true,
+      id: `usr_${account.role}_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      email: account.email,
+      full_name: profile?.full_name || account.full_name,
+      role: account.role,
+      avatar_url: profile?.avatar_url || account.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+      is_onboarded: account.is_onboarded ?? true,
     };
     setStored(STORAGE_KEYS.USER, user);
-    return { message: 'Signed in successfully', data: { user } as unknown as T };
+    return { message: 'Signed in successfully', data: user as unknown as T };
   }
 
   if (cleanPath === 'auth/signup' && methodUpper === 'POST') {
     const role = body?.role || 'student';
-    const email = body?.email || 'newstudent@iskolar.ph';
-    const user: UserSession = {
-      id: `usr_${role}_${Date.now()}`,
+    const email = (body?.email || 'newstudent@iskolar.ph').trim().toLowerCase();
+    const fullName = body?.full_name || (role === 'coach' ? 'Industry Mentor' : 'New iSkolar Student');
+    const accounts = getStored<Record<string, any>>(STORAGE_KEYS.ACCOUNTS, INITIAL_ACCOUNTS);
+
+    accounts[email] = {
       email,
-      full_name: body?.full_name || (role === 'coach' ? 'Industry Mentor' : 'New iSkolar Student'),
+      password: body?.password || 'password123',
+      full_name: fullName,
       role,
       avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-      is_onboarded: true,
+      is_onboarded: false,
+    };
+    setStored(STORAGE_KEYS.ACCOUNTS, accounts);
+
+    const user: UserSession = {
+      id: `usr_${role}_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      email,
+      full_name: fullName,
+      role,
+      avatar_url: accounts[email].avatar_url,
+      is_onboarded: false,
     };
     setStored(STORAGE_KEYS.USER, user);
-    return { message: 'Account created successfully', data: { user } as unknown as T };
+
+    if (role === 'student') {
+      const profiles = getStored<Record<string, any>>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+      profiles[email] = {
+        ...INITIAL_STUDENT_PROFILE,
+        full_name: fullName,
+        email,
+        target_ojt_hours: 300,
+        completed_ojt_hours: 0,
+      };
+      setStored(STORAGE_KEYS.PROFILES, profiles);
+
+      const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
+      savedByUser[email] = [];
+      setStored(STORAGE_KEYS.SAVED_BY_USER, savedByUser);
+    }
+
+    return { message: 'Account created successfully', data: user as unknown as T };
   }
 
   if (cleanPath === 'auth/signout' && methodUpper === 'POST') {
@@ -481,37 +582,123 @@ export async function handleDevMockRequest<T>(
     return { message: 'Password reset link sent to your email', data: null as unknown as T };
   }
 
-  if (cleanPath === 'me/student-profile' && methodUpper === 'PATCH') {
-    const profile = getStored<StudentProfile>(STORAGE_KEYS.PROFILE, INITIAL_STUDENT_PROFILE);
-    const updated = { ...profile, ...body };
-    setStored(STORAGE_KEYS.PROFILE, updated);
+  if (cleanPath === 'me/student-profile' && methodUpper === 'GET') {
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const profiles = getStored<Record<string, any>>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+    const profile = profiles[email] || {
+      ...INITIAL_STUDENT_PROFILE,
+      email,
+      full_name: user?.full_name || 'Clarisse Salazar',
+    };
+    if (user?.full_name) {
+      profile.full_name = user.full_name;
+    }
+    return { message: 'ok', data: profile as unknown as T };
+  }
+
+  if (cleanPath === 'me/student-profile' && (methodUpper === 'PATCH' || methodUpper === 'POST')) {
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const profiles = getStored<Record<string, any>>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+    const current = profiles[email] || {
+      ...INITIAL_STUDENT_PROFILE,
+      email,
+      full_name: user?.full_name || 'Clarisse Salazar',
+    };
+    const updated = {
+      ...current,
+      ...body,
+      target_ojt_hours: body?.target_ojt_hours !== undefined ? Number(body.target_ojt_hours) : current.target_ojt_hours,
+      completed_ojt_hours: body?.completed_ojt_hours !== undefined ? Number(body.completed_ojt_hours) : current.completed_ojt_hours,
+    };
+    profiles[email] = updated;
+    setStored(STORAGE_KEYS.PROFILES, profiles);
+
+    // Sync account and active session
+    if (user) {
+      const updatedUser: UserSession = {
+        ...user,
+        full_name: updated.full_name || user.full_name,
+        avatar_url: updated.avatar_url || user.avatar_url,
+      };
+      setStored(STORAGE_KEYS.USER, updatedUser);
+
+      const accounts = getStored<Record<string, any>>(STORAGE_KEYS.ACCOUNTS, INITIAL_ACCOUNTS);
+      if (accounts[email]) {
+        accounts[email].full_name = updated.full_name || accounts[email].full_name;
+        setStored(STORAGE_KEYS.ACCOUNTS, accounts);
+      }
+    }
+
     return { message: 'Profile updated', data: updated as unknown as T };
   }
 
+  if (cleanPath === 'me/settings' && methodUpper === 'GET') {
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const allSettings = getStored<Record<string, any>>(STORAGE_KEYS.SETTINGS, {});
+    const userSettings = allSettings[email] || { email_notifications: true };
+    return { message: 'ok', data: userSettings as unknown as T };
+  }
+
   if (cleanPath === 'me/settings' && methodUpper === 'PATCH') {
-    return { message: 'Settings saved', data: { success: true } as unknown as T };
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const accounts = getStored<Record<string, any>>(STORAGE_KEYS.ACCOUNTS, INITIAL_ACCOUNTS);
+
+    // If changing password: save to account
+    if (body?.password && accounts[email]) {
+      accounts[email].password = body.password;
+      setStored(STORAGE_KEYS.ACCOUNTS, accounts);
+    }
+
+    // If changing email
+    if (body?.email && body.email.toLowerCase() !== email) {
+      const newEmail = body.email.toLowerCase();
+      if (accounts[email]) {
+        accounts[newEmail] = { ...accounts[email], email: newEmail };
+        delete accounts[email];
+        setStored(STORAGE_KEYS.ACCOUNTS, accounts);
+      }
+      if (user) {
+        setStored(STORAGE_KEYS.USER, { ...user, email: newEmail });
+      }
+    }
+
+    const allSettings = getStored<Record<string, any>>(STORAGE_KEYS.SETTINGS, {});
+    const current = allSettings[email] || { email_notifications: true };
+    const updated = { ...current, ...body };
+    allSettings[email] = updated;
+    setStored(STORAGE_KEYS.SETTINGS, allSettings);
+
+    return { message: 'Settings saved', data: updated as unknown as T };
   }
 
   // 2. Landing Page
   if (cleanPath === 'landing' && methodUpper === 'GET') {
-    const internships = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
-    const coaches = getStored<CoachDetail[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    const internships = getStored<any[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
 
     const landingData: LandingData = {
-      stats: {
-        open_internships: 142,
-        active_coaches: 24,
-        partner_companies: 38,
-      },
       featured_internships: internships.slice(0, 4),
-      top_coaches: coaches.slice(0, 3),
+      featured_coaches: coaches.slice(0, 3).map((c: any) => ({
+        slug: c.slug,
+        display_name: c.display_name || c.name || 'Coach',
+        headline: c.headline || '',
+        avatar_url: c.avatar_url || null,
+        price_type: (c.price_type === 'free' ? 'free' : 'paid') as 'free' | 'paid',
+        expertise: c.expertise || [],
+        rating_avg: c.rating_avg ?? c.rating ?? 5.0,
+        rating_count: c.rating_count ?? c.review_count ?? 12,
+      })),
     };
     return { message: 'ok', data: landingData as unknown as T };
   }
 
   // 3. Internships
   if (cleanPath === 'internships' && methodUpper === 'GET') {
-    const all = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+    const all = getStored<any[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
     let filtered = all.filter((i) => i.status === 'open');
 
     if (params?.q) {
@@ -559,49 +746,44 @@ export async function handleDevMockRequest<T>(
 
   // 4. Companies
   if (cleanPath === 'companies' && methodUpper === 'GET') {
-    const companies = getStored<CompanyDetail[]>(STORAGE_KEYS.COMPANIES, INITIAL_COMPANIES);
-    const internships = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+    const companies = getStored<any[]>(STORAGE_KEYS.COMPANIES, INITIAL_COMPANIES);
+    const internships = getStored<any[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
 
     const cards: CompanyCard[] = companies.map((c) => ({
-      id: c.id,
       name: c.name,
       slug: c.slug,
-      logo_url: c.logo_url,
-      banner_url: c.banner_url,
+      logo_url: c.logo_url || null,
       industry: c.industry,
       location: c.location,
-      size: c.size,
-      website: c.website,
-      description: c.description,
-      perks: c.perks,
-      open_role_count: internships.filter((i) => i.company.slug === c.slug && i.status === 'open').length,
+      verification_status: c.verification_status || 'verified',
+      open_role_count: internships.filter((i) => i.company?.slug === c.slug && i.status === 'open').length,
     }));
     return { message: 'ok', data: cards as unknown as T, meta: { page: 1, per_page: 20, total: cards.length } };
   }
 
   if (cleanPath.startsWith('companies/') && methodUpper === 'GET') {
     const slug = cleanPath.replace('companies/', '');
-    const companies = getStored<CompanyDetail[]>(STORAGE_KEYS.COMPANIES, INITIAL_COMPANIES);
-    const internships = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
+    const companies = getStored<any[]>(STORAGE_KEYS.COMPANIES, INITIAL_COMPANIES);
+    const internships = getStored<any[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
     const company = companies.find((c) => c.slug === slug || c.id === slug);
     if (!company) throw new ApiError('Company not found', 404);
-    company.open_internships = internships.filter((i) => i.company.slug === company.slug && i.status === 'open');
+    company.open_internships = internships.filter((i) => i.company?.slug === company.slug && i.status === 'open');
     return { message: 'ok', data: company as unknown as T };
   }
 
   // 5. Coaches & Availability
   if (cleanPath === 'coaches' && methodUpper === 'GET') {
-    const coaches = getStored<CoachDetail[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
     let filtered = [...coaches];
 
     if (params?.q) {
       const q = String(params.q).toLowerCase();
-      filtered = filtered.filter((c) => c.name.toLowerCase().includes(q) || c.headline.toLowerCase().includes(q));
+      filtered = filtered.filter((c) => (c.display_name || c.name || '').toLowerCase().includes(q) || (c.headline || '').toLowerCase().includes(q));
     }
     if (params?.price === 'free') {
-      filtered = filtered.filter((c) => c.session_types.some((s) => s.price_centavos === 0));
+      filtered = filtered.filter((c) => c.session_types?.some((s: any) => s.price_centavos === 0));
     } else if (params?.price === 'paid') {
-      filtered = filtered.filter((c) => c.session_types.some((s) => s.price_centavos > 0));
+      filtered = filtered.filter((c) => c.session_types?.some((s: any) => s.price_centavos > 0));
     }
 
     return { message: 'ok', data: filtered as unknown as T, meta: { page: 1, per_page: 20, total: filtered.length } };
@@ -620,7 +802,7 @@ export async function handleDevMockRequest<T>(
 
   if (cleanPath.startsWith('coaches/') && methodUpper === 'GET') {
     const slug = cleanPath.replace('coaches/', '');
-    const coaches = getStored<CoachDetail[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
     const coach = coaches.find((c) => c.slug === slug || c.id === slug);
     if (!coach) throw new ApiError('Coach not found', 404);
     return { message: 'ok', data: coach as unknown as T };
@@ -631,74 +813,160 @@ export async function handleDevMockRequest<T>(
     const bookingReq = body as CreateBookingRequest;
     const coaches = getStored<CoachDetail[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
     const coach = coaches.find((c) => c.slug === bookingReq.coach_slug) || coaches[0];
-    const sessionType = coach.session_types.find((s) => s.id === bookingReq.session_type_id) || coach.session_types[0];
-    const isFree = sessionType.price_centavos === 0;
+    const sessionTypes = coach?.session_types || [
+      {
+        id: 'srv_01',
+        name: 'Free 15-Min Career & OJT Discovery',
+        duration_minutes: 15,
+        price_centavos: 0,
+        is_intro_call: true,
+      },
+      {
+        id: 'srv_02',
+        name: 'Full 1-on-1 Technical Mock Interview',
+        duration_minutes: 45,
+        price_centavos: 150000,
+        is_intro_call: false,
+      },
+    ];
+    const sessionType =
+      sessionTypes.find((s) => s.id === bookingReq.session_type_id) || sessionTypes[0];
+    const isFree = (sessionType?.price_centavos || 0) === 0;
+    const bookingId = `bkg_${Date.now()}`;
+    const slotStartsAt =
+      bookingReq.slot_starts_at || new Date(Date.now() + 1000 * 60 * 60 * 48).toISOString();
+    const slotEndsAt = new Date(
+      new Date(slotStartsAt).getTime() + (sessionType?.duration_minutes || 45) * 60000
+    ).toISOString();
 
-    const newBooking: BookingItem = {
-      id: `bkg_${Date.now()}`,
-      coach_slug: coach.slug,
-      coach_name: coach.name,
-      coach_role: coach.current_role,
-      coach_avatar_url: coach.avatar_url,
-      session_type_id: sessionType.id,
-      session_type_name: sessionType.name,
-      session_duration: sessionType.duration_minutes,
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+
+    const newBooking: BookingItem & { student_email?: string } = {
+      booking_id: bookingId,
+      student_email: email,
+      coach_slug: coach ? coach.slug : bookingReq.coach_slug,
+      coach_display_name: coach ? (coach.display_name || (coach as any).name || 'Coach') : 'Coach',
+      slot_starts_at: slotStartsAt,
+      slot_ends_at: slotEndsAt,
       status: isFree ? 'confirmed' : 'pending',
       payment_status: isFree ? 'paid' : 'pending',
-      slot_starts_at: bookingReq.slot_starts_at || new Date(Date.now() + 1000 * 60 * 60 * 48).toISOString(),
+      price_centavos: sessionType?.price_centavos || 0,
+      amount_due_centavos: isFree ? undefined : (sessionType?.price_centavos || 0),
       join_url: isFree ? 'https://meet.google.com/abc-defg-hij' : undefined,
-      notes: bookingReq.notes,
-      price_centavos: sessionType.price_centavos,
-      platform_fee_centavos: isFree ? 0 : Math.round(sessionType.price_centavos * 0.2),
-      coach_payout_centavos: isFree ? 0 : Math.round(sessionType.price_centavos * 0.8),
-      student_name: 'Clarisse Salazar',
-      student_email: 'student@iskolar.ph',
     };
 
-    const bookings = getStored<BookingItem[]>(STORAGE_KEYS.BOOKINGS, []);
+    const bookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
     setStored(STORAGE_KEYS.BOOKINGS, [newBooking, ...bookings]);
 
     const res: CreateBookingResponse = {
-      booking_id: newBooking.id,
+      booking_id: bookingId,
       status: (newBooking.status === 'confirmed' ? 'confirmed' : 'pending') as 'confirmed' | 'pending',
       payment_status: (newBooking.payment_status === 'paid' ? 'none' : 'pending') as 'none' | 'pending',
       price_centavos: newBooking.price_centavos,
-      platform_fee_centavos: newBooking.platform_fee_centavos,
-      coach_payout_centavos: newBooking.coach_payout_centavos,
-      checkout_url: isFree ? undefined : `https://checkout.paymongo.com/demo_cs_${newBooking.id}`,
+      platform_fee_centavos: isFree ? 0 : Math.round((sessionType?.price_centavos || 0) * 0.1),
+      coach_payout_centavos: isFree ? 0 : Math.round((sessionType?.price_centavos || 0) * 0.9),
+      checkout_url: isFree ? undefined : `/checkout/success?booking_id=${bookingId}`,
     };
-    return { message: isFree ? 'Session booked successfully!' : 'Proceed to checkout', data: res as unknown as T };
+
+    return { message: 'Booking created', data: res as unknown as T };
+  }
+
+  // Cancel Booking (API-046 / Issue #17)
+  if (cleanPath.startsWith('bookings/') && cleanPath.endsWith('/cancel') && methodUpper === 'POST') {
+    const bookingId = cleanPath.replace('bookings/', '').replace('/cancel', '');
+    const bookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+    const target = bookings.find((b) => b.booking_id === bookingId);
+
+    const now = Date.now();
+    const isFree = target ? target.price_centavos === 0 : true;
+    const sessionTime = target ? new Date(target.slot_starts_at).getTime() : now + 86400000 * 2;
+    const isRefundEligible = !isFree && (sessionTime - now >= 24 * 60 * 60 * 1000);
+
+    const updatedBookings = bookings.map((b) => {
+      if (b.booking_id === bookingId) {
+        return {
+          ...b,
+          status: 'cancelled' as const,
+          payment_status: isRefundEligible ? ('refunded' as const) : b.payment_status,
+        };
+      }
+      return b;
+    });
+    setStored(STORAGE_KEYS.BOOKINGS, updatedBookings);
+
+    const cancelledBooking = updatedBookings.find((b) => b.booking_id === bookingId) || {
+      booking_id: bookingId,
+      status: 'cancelled' as const,
+      payment_status: isRefundEligible ? 'refunded' : 'none',
+      price_centavos: target?.price_centavos || 0,
+      platform_fee_centavos: 0,
+      coach_payout_centavos: 0,
+    };
+
+    return {
+      message: 'Booking cancelled successfully',
+      data: cancelledBooking as unknown as T,
+    };
+  }
+
+  // Resume Checkout (API-042) - supports both /checkout and /resume-checkout
+  if (
+    cleanPath.startsWith('bookings/') &&
+    (cleanPath.endsWith('/checkout') || cleanPath.endsWith('/resume-checkout')) &&
+    methodUpper === 'POST'
+  ) {
+    const bookingId = cleanPath
+      .replace('bookings/', '')
+      .replace('/resume-checkout', '')
+      .replace('/checkout', '');
+    return {
+      message: 'Checkout resumed',
+      data: { checkout_url: `/checkout/success?booking_id=${bookingId}` } as unknown as T,
+    };
+  }
+
+  // Review Booking (API-048)
+  if (cleanPath.startsWith('bookings/') && cleanPath.endsWith('/review') && methodUpper === 'POST') {
+    return {
+      message: 'Review submitted successfully',
+      data: { id: `rev_${Date.now()}` } as unknown as T,
+    };
   }
 
   // 7. Student Portal
   if (cleanPath === 'me/bookings' && methodUpper === 'GET') {
-    const bookings = getStored<BookingItem[]>(STORAGE_KEYS.BOOKINGS, [
-      {
-        id: 'bkg_demo_01',
-        coach_slug: 'engr-mark-villanueva',
-        coach_name: 'Engr. Mark Villanueva',
-        coach_role: 'Senior Staff Engineer at Grab',
-        coach_avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
-        session_type_id: 'srv_01',
-        session_type_name: 'Free 15-Min Career & OJT Discovery',
-        session_duration: 15,
-        status: 'confirmed',
-        payment_status: 'paid',
-        slot_starts_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(),
-        join_url: 'https://meet.google.com/iskolar-mentor-session',
-        notes: 'Preparing for Maya backend interview.',
-        price_centavos: 0,
-        platform_fee_centavos: 0,
-        coach_payout_centavos: 0,
-        student_name: 'Clarisse Salazar',
-        student_email: 'student@iskolar.ph',
-      },
-    ]);
-    return { message: 'ok', data: bookings as unknown as T };
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const allBookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+    const bookings = allBookings.filter((b) => !b.student_email || b.student_email.toLowerCase() === email);
+    const now = Date.now();
+
+    const whenParam = params?.when;
+    let filtered = bookings;
+
+    if (whenParam === 'upcoming') {
+      filtered = bookings.filter((b) => {
+        const isNotCancelledOrCompleted = b.status !== 'cancelled' && b.status !== 'completed';
+        const sessionEndTime = new Date(b.slot_ends_at || b.slot_starts_at).getTime();
+        return isNotCancelledOrCompleted && sessionEndTime >= now;
+      });
+    } else if (whenParam === 'past') {
+      filtered = bookings.filter((b) => {
+        const isCancelledOrCompleted = b.status === 'cancelled' || b.status === 'completed';
+        const sessionEndTime = new Date(b.slot_ends_at || b.slot_starts_at).getTime();
+        return isCancelledOrCompleted || sessionEndTime < now;
+      });
+    }
+
+    return { message: 'ok', data: filtered as unknown as T };
   }
 
   if (cleanPath === 'me/saved' && methodUpper === 'GET') {
-    const savedIds = getStored<string[]>(STORAGE_KEYS.SAVED, ['int_01', 'int_02']);
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
+    const savedIds = savedByUser[email] ?? ['int_01', 'int_02'];
     const all = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
     const saved = all.filter((i) => savedIds.includes(i.id));
     return { message: 'ok', data: saved as unknown as T };
@@ -706,28 +974,50 @@ export async function handleDevMockRequest<T>(
 
   if (cleanPath.startsWith('me/saved/') && methodUpper === 'PUT') {
     const id = cleanPath.replace('me/saved/', '');
-    const savedIds = getStored<string[]>(STORAGE_KEYS.SAVED, []);
-    if (!savedIds.includes(id)) {
-      setStored(STORAGE_KEYS.SAVED, [...savedIds, id]);
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
+    const current = savedByUser[email] ?? ['int_01', 'int_02'];
+    if (!current.includes(id)) {
+      savedByUser[email] = [...current, id];
+      setStored(STORAGE_KEYS.SAVED_BY_USER, savedByUser);
     }
     return { message: 'Internship saved to bookmarks', data: { saved: true } as unknown as T };
   }
 
   if (cleanPath.startsWith('me/saved/') && methodUpper === 'DELETE') {
     const id = cleanPath.replace('me/saved/', '');
-    const savedIds = getStored<string[]>(STORAGE_KEYS.SAVED, []);
-    setStored(STORAGE_KEYS.SAVED, savedIds.filter((x) => x !== id));
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
+    const current = savedByUser[email] ?? ['int_01', 'int_02'];
+    savedByUser[email] = current.filter((x) => x !== id);
+    setStored(STORAGE_KEYS.SAVED_BY_USER, savedByUser);
     return { message: 'Internship removed from bookmarks', data: { saved: false } as unknown as T };
   }
 
   if (cleanPath === 'me/dashboard' && methodUpper === 'GET') {
-    const savedIds = getStored<string[]>(STORAGE_KEYS.SAVED, ['int_01', 'int_02']);
-    const bookings = getStored<BookingItem[]>(STORAGE_KEYS.BOOKINGS, []);
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
+    const savedIds = savedByUser[email] ?? ['int_01', 'int_02'];
+
+    const allBookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+    const userBookings = allBookings.filter((b) => !b.student_email || b.student_email.toLowerCase() === email);
+    const now = Date.now();
+    const upcomingSessions = userBookings.filter((b) => {
+      const isNotCancelledOrCompleted = b.status !== 'cancelled' && b.status !== 'completed';
+      const sessionEndTime = new Date(b.slot_ends_at || b.slot_starts_at).getTime();
+      return isNotCancelledOrCompleted && sessionEndTime >= now;
+    });
+
+    const profiles = getStored<Record<string, any>>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+    const profile = profiles[email] || INITIAL_STUDENT_PROFILE;
 
     const data: StudentDashboardData = {
       saved_count: savedIds.length,
-      upcoming_sessions_count: bookings.filter((b) => b.status === 'confirmed').length,
-      completeness_pct: 85,
+      upcoming_sessions_count: upcomingSessions.length,
+      completeness_pct: profile?.completeness_pct || 85,
     };
     return { message: 'ok', data: data as unknown as T };
   }
@@ -737,7 +1027,7 @@ export async function handleDevMockRequest<T>(
     const all = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
     let filtered = all;
     if (params?.status && params.status !== 'all') {
-      filtered = all.filter((i) => i.status === params.status);
+      filtered = all.filter((i) => (i as any).status === params.status);
     }
     return { message: 'ok', data: filtered as unknown as T };
   }
@@ -745,7 +1035,7 @@ export async function handleDevMockRequest<T>(
   if (cleanPath.endsWith('/withdraw') && cleanPath.startsWith('admin/internships/') && methodUpper === 'POST') {
     const id = cleanPath.replace('admin/internships/', '').replace('/withdraw', '');
     const all = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
-    const updated = all.map((i) => (i.id === id ? { ...i, status: 'withdrawn' as const } : i));
+    const updated = all.map((i) => (i.id === id ? ({ ...i, status: 'withdrawn' } as any) : i));
     setStored(STORAGE_KEYS.INTERNSHIPS, updated);
     return { message: 'Listing withdrawn successfully', data: { id, status: 'withdrawn' } as unknown as T };
   }

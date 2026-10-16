@@ -1,0 +1,3148 @@
+openapi: 3.0.3
+info:
+  title: iSkolar Vocation API
+  version: 1.0.0
+  description: |
+    Machine-readable contract between vocation-server and vocation-web (api-spec.md Q1, ADR-0011).
+
+    The canonical, machine-readable HTTP contract for the iSkolar Vocation server.
+
+    This file describes **what the Go handlers actually ship**, not the intent prose in
+    `docs/api-spec.md`. Where the two disagree, the code wins here and the disagreement is listed
+    in the PR that produced this file. `api-spec.md` remains the narrative owner (auth intent,
+    feature traceability, rationale); this file governs *types*.
+
+    Conventions:
+    - Paths are exactly as registered on the `http.ServeMux` in `cmd/api/main.go` and each
+      module's `Register` method. The mux registers **no `/v1` prefix**; see `servers` below.
+    - Every JSON response uses the ADR-0018 envelope `{ message, data, meta?, error? }`. `message`
+      is always present and always safe to display. `data` is payload, `[]` for an empty list, or
+      `null` on error. `meta` appears on list responses only.
+    - All money is integer **centavos** (`*_centavos`), never floating point (AGENTS.md).
+    - All timestamps are RFC 3339 UTC.
+    - Operation ids are the permanent `API-###` ids from `api-spec.md`; where one id covers two
+      operations (API-062, API-064, API-067) the id is suffixed to stay unique.
+    - `POST /webhooks/xendit` is authenticated by the Xendit `x-callback-token` header, never a
+      session, and answers `200` once an event is durably stored (ADR-0009, ADR-0027, ADR-0028).
+servers:
+  - url: /
+    description: |
+      Paths as the mux registers them. No `/v1` prefix is served today; the server mounts every
+      route at the root and does not strip a prefix, and `api-spec.md` now records the same
+      (API versioning is a future decision, not a current prefix).
+  - url: https://api.vocation.iskolar.io
+    description: Documented production host (hostname is an assumption in api-spec.md; no `/v1` prefix).
+tags:
+  - name: Auth
+    description: iam — signup, signin, Google, password reset, session
+  - name: Internships
+    description: internships — public directory, detail, apply-click
+  - name: Companies
+    description: internships — public company directory
+  - name: Coaches
+    description: coaching — public coach directory, profile, reviews, availability
+  - name: Landing
+    description: landing — F-001 featured content
+  - name: Student
+    description: student — profile, saved internships, dashboard, settings
+  - name: Bookings
+    description: coaching — booking write path (F-011, F-022)
+  - name: Coach
+    description: coaching — coach self-service profile, session types, availability, earnings
+  - name: Admin
+    description: admin — company and internship lifecycle (F-050)
+  - name: Uploads
+    description: uploads — presigned uploads (F-023)
+  - name: Payments
+    description: payments — gateway webhooks
+  - name: Platform
+    description: cross-cutting liveness
+paths:
+  /auth/signup:
+    post:
+      tags: [Auth]
+      summary: Create an account (API-020)
+      operationId: API-020
+      description: |
+        Public. `role` is student, employer or coach — **never `admin`**. On success a session
+        cookie is set and the account is returned. Rate-limited 3/hour per IP (`429`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '200':
+          description: Account created; session cookie set.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthAccount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/signin:
+    post:
+      tags: [Auth]
+      summary: Sign in (API-021)
+      operationId: API-021
+      description: |
+        Public. A wrong email and a wrong password both return the same generic `401` message.
+        Rate-limited 5 per 15 minutes per IP **and** per email (`429`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigninRequest'
+      responses:
+        '200':
+          description: Signed in; session cookie set.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthAccount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Google authorization-code sign-in (API-022)
+      operationId: API-022
+      description: |
+        Public. `role` is required only for a first-time Google signup and is never `admin`.
+        Returns `503 unavailable` when Google OAuth is not configured.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleSigninRequest'
+      responses:
+        '200':
+          description: Signed in; session cookie set.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthAccount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/UpstreamFailed'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /auth/signout:
+    post:
+      tags: [Auth]
+      summary: Sign out (API-023)
+      operationId: API-023
+      description: Invalidates the server-side session and clears the cookie.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /auth/password-reset/request:
+    post:
+      tags: [Auth]
+      summary: Request a password reset (API-024)
+      operationId: API-024
+      description: |
+        Public. **Always `202`**, whether or not the email exists, so it cannot be used to
+        enumerate accounts. Rate-limited 5 per 15 minutes per IP and per email (`429`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password-reset/confirm:
+    post:
+      tags: [Auth]
+      summary: Confirm a password reset (API-025)
+      operationId: API-025
+      description: Public. Consumes a single-use, expiring reset token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me:
+    get:
+      tags: [Auth]
+      summary: Current account (API-026)
+      operationId: API-026
+      description: Returns the signed-in account. Drives the auth-aware navbar.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The current account.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /internships:
+    get:
+      tags: [Internships]
+      summary: Search the internship directory (API-001)
+      operationId: API-001
+      description: |
+        Public. Filters, sort and pagination. An empty page is `200` with `data: []` and
+        `meta.total: 0` — never `404`. An unknown enum value is `422`. `sort=relevance` with no
+        `q` falls back to `newest`.
+      security: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Free text over role, company, field, location and requirements.
+        - name: field
+          in: query
+          schema:
+            type: string
+        - name: setup
+          in: query
+          schema:
+            type: string
+            enum: [remote, hybrid, onsite]
+        - name: pay
+          in: query
+          schema:
+            type: string
+            enum: [any, paid, unpaid]
+        - name: duration
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum duration in weeks.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, deadline_soon, relevance]
+            default: newest
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: A page of internship cards.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/InternshipCard'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /internships/{slug}:
+    get:
+      tags: [Internships]
+      summary: Internship detail (API-002)
+      operationId: API-002
+      description: Public. A non-`open` posting is `404`, identical to unknown (BR-003).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SlugParam'
+      responses:
+        '200':
+          description: The internship detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/InternshipDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /internships/{id}/apply-click:
+    post:
+      tags: [Internships]
+      summary: Record an outbound apply click (API-003)
+      operationId: API-003
+      description: |
+        Public, and **never accepts an application payload** (BR-001, BR-002): strict decoding
+        rejects any field other than `referrer_surface`. An optional session is recorded when
+        present. Rate-limited 30/minute per IP (`429`).
+      security:
+        - sessionCookie: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyClickRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /companies:
+    get:
+      tags: [Companies]
+      summary: Search companies (API-004)
+      operationId: API-004
+      description: Public. Ordered by name. Includes each company's open-role count.
+      security: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: A page of company cards.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CompanyCard'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /companies/{slug}:
+    get:
+      tags: [Companies]
+      summary: Company detail (API-005)
+      operationId: API-005
+      description: Public. Includes the company's `open` internships.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SlugParam'
+      responses:
+        '200':
+          description: The company profile.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CompanyProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /coaches:
+    get:
+      tags: [Coaches]
+      summary: Search coaches (API-006)
+      operationId: API-006
+      description: Public. Filters on expertise and price. Unknown enum value is `422`.
+      security: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: expertise
+          in: query
+          schema:
+            type: string
+        - name: price
+          in: query
+          schema:
+            type: string
+            enum: [any, free, paid]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: A page of coach cards.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CoachCard'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /coaches/{slug}:
+    get:
+      tags: [Coaches]
+      summary: Coach profile (API-007)
+      operationId: API-007
+      description: Public. Profile, session types and rating aggregate.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SlugParam'
+      responses:
+        '200':
+          description: The public coach profile.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CoachProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /coaches/{slug}/reviews:
+    get:
+      tags: [Coaches]
+      summary: Coach reviews (API-008)
+      operationId: API-008
+      description: |
+        Public. An unknown coach is `404`, not an empty list. Reviewers are identified by first
+        name only (BR-011).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SlugParam'
+      responses:
+        '200':
+          description: The coach's reviews.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Review'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /coaches/{slug}/availability:
+    get:
+      tags: [Coaches]
+      summary: Public bookable availability (API-040)
+      operationId: API-040
+      description: |
+        Public. `from` and `to` are required RFC 3339 timestamps. Only bookable (unbooked) slots
+        are returned. An unknown coach is `404`.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SlugParam'
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Bookable slots in the window.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublicAvailabilitySlot'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /landing:
+    get:
+      tags: [Landing]
+      summary: Landing page content (API-011)
+      operationId: API-011
+      description: Public. Featured internships and coaches from live data, cached >= 60s.
+      security: []
+      responses:
+        '200':
+          description: Featured internships and coaches.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LandingResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/student-profile:
+    post:
+      tags: [Student]
+      summary: Complete student onboarding (API-030)
+      operationId: API-030
+      description: Student role. One-shot; a second call is `409`.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudentProfileRequest'
+      responses:
+        '201':
+          description: Profile created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StudentProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Student]
+      summary: Edit the student profile (API-031)
+      operationId: API-031
+      description: Student role. Partial update; omitted fields are left unchanged. Skills replace wholesale.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentProfileRequest'
+      responses:
+        '200':
+          description: Updated profile.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StudentProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/dashboard:
+    get:
+      tags: [Student]
+      summary: Student dashboard (API-033)
+      operationId: API-033
+      description: Student role. Carries no application data (BR-014).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Dashboard counters.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Dashboard'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/saved:
+    get:
+      tags: [Student]
+      summary: List saved internships (API-034)
+      operationId: API-034
+      description: Student role. Newest save first.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Saved internships.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SavedInternship'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/saved/{internshipId}:
+    put:
+      tags: [Student]
+      summary: Save an internship (API-035)
+      operationId: API-035
+      description: Student role. Idempotent — a repeat save is `200`, not `409`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/InternshipIDParam'
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [internship_id]
+                        properties:
+                          internship_id:
+                            type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Student]
+      summary: Remove a saved internship (API-036)
+      operationId: API-036
+      description: Student role. Idempotent.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/InternshipIDParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/settings:
+    patch:
+      tags: [Student]
+      summary: Update account settings (API-038)
+      operationId: API-038
+      description: |
+        Student role. `email`, `password` and `notification_preference` are independently
+        optional and independently applied.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSettingsRequest'
+      responses:
+        '200':
+          description: Applied settings.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Settings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /bookings:
+    post:
+      tags: [Bookings]
+      summary: Create a booking (API-041)
+      operationId: API-041
+      description: |
+        Student role. Free or intro-call sessions are written `confirmed`/`none` with no gateway
+        call and no `checkout_url`. A paid session writes the booking first (`pending`/`pending`)
+        with the stored money split (BR-007/BR-008, ADR-0007), then creates a Xendit invoice and
+        returns `checkout_url`. Rate-limited 10/hour per account (`429`).
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created (paid bookings also carry `checkout_url`).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BookingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/UpstreamFailed'
+  /bookings/{id}/checkout:
+    post:
+      tags: [Bookings]
+      summary: Resume payment (API-042)
+      operationId: API-042
+      description: |
+        Student owner. Mints a fresh Xendit invoice for a still-pending booking under the booking
+        row lock and sweeps every other pending invoice for the booking. Owner miss is `404`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Fresh checkout URL.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BookingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/UpstreamFailed'
+  /bookings/{id}/review:
+    post:
+      tags: [Bookings]
+      summary: Review a completed session (API-043)
+      operationId: API-043
+      description: |
+        Student owner. `409` if already reviewed or the booking is not `completed` (BR-010).
+        The coach rating aggregate is recomputed in the same transaction (BR-011).
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Review created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReviewCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /bookings/{id}/cancel:
+    post:
+      tags: [Bookings]
+      summary: Cancel a booking (API-046)
+      operationId: API-046
+      description: |
+        Session; ownership checked in the handler — either the student or the coach on the booking
+        may cancel. A coach cancelling always refunds; a student refunds when >24h before the
+        session (ADR-0012). Refunds are asynchronous; a `PENDING` gateway refund cancels the
+        booking but leaves `payment_status=paid` until the `refund.succeeded` callback.
+        Also sweeps every pending invoice of the booking. A non-owner gets `404`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Cancelled booking.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BookingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/UpstreamFailed'
+  /bookings/{id}/complete:
+    post:
+      tags: [Bookings]
+      summary: Complete a booking (API-047)
+      operationId: API-047
+      description: |
+        Session; either party on the booking may complete it, only after the session's scheduled
+        end time (ADR-0012). A non-owner gets `404`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Completed booking.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BookingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /bookings/{id}:
+    patch:
+      tags: [Bookings]
+      summary: Set a booking's join URL (API-048)
+      operationId: API-048
+      description: Coach owner. Lets the coach override their default meeting link for one booking.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchBookingRequest'
+      responses:
+        '200':
+          description: Updated booking.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BookingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/bookings:
+    get:
+      tags: [Student]
+      summary: List the student's bookings (API-037)
+      operationId: API-037
+      description: Student role. Confirmed rows carry `join_url`; pending paid rows carry `amount_due_centavos`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WhenParam'
+      responses:
+        '200':
+          description: The student's bookings.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/StudentBooking'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/coach-profile:
+    post:
+      tags: [Coach]
+      summary: Complete coach onboarding (API-060)
+      operationId: API-060
+      description: |
+        Coach role. One-shot. `slug` is set once here (a taken slug is `422` on the field);
+        `price_type` defaults to `paid` and is `free` or `paid` only. Session types and pricing
+        are a separate call (API-067).
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCoachProfileRequest'
+      responses:
+        '201':
+          description: Coach profile created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CoachProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Coach]
+      summary: Edit the coach profile (API-061)
+      operationId: API-061
+      description: |
+        Coach role. Partial update. `slug`, `price_type` and `verification_status` are not
+        writable. The payout destination (`payout_channel_code`, `payout_account_number`,
+        `payout_account_holder_name`) must be supplied together; the account number is returned
+        masked to its last four digits (ADR-0028).
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCoachProfileRequest'
+      responses:
+        '200':
+          description: Updated coach profile.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CoachProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/availability:
+    get:
+      tags: [Coach]
+      summary: List the coach's availability (API-062)
+      operationId: API-062-list
+      description: Coach role. Includes booked slots, flagged `is_booked` rather than leaking a booking id.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The coach's slots, earliest first.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MyAvailabilitySlot'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Coach]
+      summary: Replace the coach's availability (API-062)
+      operationId: API-062-replace
+      description: |
+        Coach role. Drops unbooked slots and inserts the submitted batch. Overlapping slots or a
+        slot with an existing booking are `422`. Each slot's `ends_at` must be after `starts_at`.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutAvailabilityRequest'
+      responses:
+        '200':
+          description: The resulting slots.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MyAvailabilitySlot'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/sessions:
+    get:
+      tags: [Coach]
+      summary: List the coach's sessions (API-063)
+      operationId: API-063
+      description: Coach role. `?when=upcoming|past`, defaulting to `upcoming`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/WhenParam'
+      responses:
+        '200':
+          description: The coach's bookings.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CoachBooking'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/earnings:
+    get:
+      tags: [Coach]
+      summary: Coach earnings (API-064)
+      operationId: API-064-earnings
+      description: |
+        Coach role. `data` is the per-booking array; the money split is as stored at booking time
+        and is never recomputed here. `meta.balance` carries the ledger balance gauges (ADR-0028).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Per-booking earnings with a balance block in `meta`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/EarningsItem'
+                      meta:
+                        $ref: '#/components/schemas/EarningsMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/earnings/ledger:
+    get:
+      tags: [Coach]
+      summary: Coach ledger entries (API-064)
+      operationId: API-064-ledger
+      description: Coach role. Paginated append-only ledger entries, newest first.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: A page of ledger entries.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LedgerEntry'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/session-types:
+    post:
+      tags: [Coach]
+      summary: Create a session type (API-067)
+      operationId: API-067-create
+      description: Coach role. A price change never affects existing bookings.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionTypeRequest'
+      responses:
+        '201':
+          description: Session type created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SessionType'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/session-types/{id}:
+    patch:
+      tags: [Coach]
+      summary: Update a session type (API-067)
+      operationId: API-067-update
+      description: Coach role. Partial update; owner-scoped. A miss is `404`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/SessionTypeIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSessionTypeRequest'
+      responses:
+        '200':
+          description: Updated session type.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SessionType'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /admin/companies:
+    post:
+      tags: [Admin]
+      summary: Create a company (API-077)
+      operationId: API-077
+      description: Admin role. `owner_account_id` is always left null in v1 (ADR-0019, ADR-0010).
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCompanyRequest'
+      responses:
+        '201':
+          description: Company created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreatedCompany'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /admin/internships:
+    get:
+      tags: [Admin]
+      summary: List internships (API-070)
+      operationId: API-070
+      description: Admin role. No status predicate unless `?status` is supplied; admin sees every status.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/InternshipStatus'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: A page of admin internship cards.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data, meta]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AdminInternshipCard'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Admin]
+      summary: Create an internship (API-071)
+      operationId: API-071
+      description: Admin role. Written `status=open` directly — admin is the trusted author. `external_apply_url` is required.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInternshipRequest'
+      responses:
+        '201':
+          description: Internship created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminInternship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /admin/internships/{id}:
+    patch:
+      tags: [Admin]
+      summary: Edit an internship (API-075)
+      operationId: API-075
+      description: Admin role. Partial update. `status` is not writable here; a caller sending it gets `400`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInternshipRequest'
+      responses:
+        '200':
+          description: Updated internship.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminInternship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /admin/internships/{id}/withdraw:
+    post:
+      tags: [Admin]
+      summary: Withdraw an internship (API-076)
+      operationId: API-076
+      description: Admin role. `status=withdrawn`, immediately non-public (BR-006).
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Withdrawn internship.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminInternship'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /uploads/presign:
+    post:
+      tags: [Uploads]
+      summary: Presign an upload (API-080)
+      operationId: API-080
+      description: |
+        Session (any role). Bytes go straight to object storage; resumes land in a private
+        prefix. `413` over the per-purpose size cap, `415` for a disallowed content type.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresignRequest'
+      responses:
+        '201':
+          description: Presigned upload.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PresignResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webhooks/xendit:
+    post:
+      tags: [Payments]
+      summary: Xendit callback — the only thing that confirms a payment (API-045)
+      operationId: API-045
+      description: |
+        **No session.** Authenticated solely by the `x-callback-token` header, compared in
+        constant time before the body is read. An unconfigured token rejects every delivery.
+        Xendit delivers invoice, refund and payout callbacks to this same URL, distinguished by
+        body shape (ADR-0027, ADR-0028).
+
+        The order is the contract: verify token → insert the event idempotently into
+        `payment_event` → resolve/transition → always `200` once durably stored. A rejected or
+        unmatched event is stored with `applied_at` null, alerts, and still answers `200` so
+        Xendit does not retry forever and the payload is not lost. Only a token failure (`401`),
+        an unreadable body (`400`) or a real storage failure (`500`) deviate.
+      security: []
+      parameters:
+        - name: x-callback-token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Static Xendit callback token; must equal `XENDIT_CALLBACK_TOKEN`.
+        - name: webhook-id
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Per-delivery idempotency key (fallback is a deterministic event key).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/XenditCallback'
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /healthz:
+    get:
+      tags: [Platform]
+      summary: Health check (process and database)
+      operationId: healthz
+      description: |
+        Pings the database with a 2-second timeout (ADR-0032). Note: unlike every other endpoint
+        the `200` response is **not** wrapped in the ADR-0018 envelope; it is a bare
+        `{ "message": "ok" }`. The `503` is a normal error envelope with code `unavailable`.
+      security: []
+      responses:
+        '200':
+          description: Process is up and the database answered.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+        '503':
+          description: The database did not answer the ping.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: vocation_session
+      description: |
+        Server-side session cookie (`vocation_session`), `HttpOnly`, `Secure`, `SameSite=Lax`
+        (ADR-0023). The only session scheme; there are no bearer tokens.
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPageParam:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    SlugParam:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    IDParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    InternshipIDParam:
+      name: internshipId
+      in: path
+      required: true
+      schema:
+        type: string
+    SessionTypeIDParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    WhenParam:
+      name: when
+      in: query
+      schema:
+        type: string
+        enum: [upcoming, past]
+        default: upcoming
+  headers:
+    RetryAfter:
+      description: Seconds to wait before retrying.
+      schema:
+        type: integer
+  responses:
+    EmptySuccess:
+      description: Success with no payload (`data` is `null`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EmptySuccess'
+    BadRequest:
+      description: Malformed JSON or missing required field (`bad_request`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthenticated:
+      description: No or expired session, or a bad webhook token (`unauthenticated`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated but the wrong role (`forbidden`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Unknown record, an owner-scoped record the caller does not own, or a non-open posting (`not_found`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Slot taken, already reviewed, already registered, or already in a final state (`conflict`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Valid JSON, invalid values — bad enum, slot outside availability, invalid field (`unprocessable`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooLarge:
+      description: Upload over the per-purpose size cap (`too_large`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnsupportedMediaType:
+      description: Disallowed upload content type (`unsupported_media_type`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded (`rate_limited`).
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UpstreamFailed:
+      description: Xendit or Google unreachable (`upstream_failed`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unavailable:
+      description: Maintenance or an unconfigured dependency (`unavailable`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Unexpected server failure (`internal_error`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    Envelope:
+      type: object
+      description: ADR-0018 response envelope. `message` is always present and safe to display.
+      required: [message]
+      properties:
+        message:
+          type: string
+        data:
+          description: Payload; `null` on error, `[]` for an empty list.
+        meta:
+          $ref: '#/components/schemas/Meta'
+        error:
+          $ref: '#/components/schemas/Error'
+    EmptySuccess:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              nullable: true
+    ErrorResponse:
+      type: object
+      required: [message, data, error]
+      properties:
+        message:
+          type: string
+          description: Top-level, always safe to display (ADR-0018).
+        data:
+          nullable: true
+          description: Always `null` on error (ADR-0018 envelope).
+        error:
+          $ref: '#/components/schemas/Error'
+    Error:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Stable machine value.
+          enum:
+            - bad_request
+            - unauthenticated
+            - forbidden
+            - not_found
+            - conflict
+            - too_large
+            - unsupported_media_type
+            - unprocessable
+            - rate_limited
+            - upstream_failed
+            - unavailable
+            - internal_error
+        details:
+          type: object
+          additionalProperties: true
+          description: Field-level details for form errors.
+    Meta:
+      type: object
+      description: Pagination, present on list responses only, plus an optional endpoint-specific balance.
+      required: [page, per_page, total]
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        balance:
+          $ref: '#/components/schemas/Balance'
+    EarningsMeta:
+      allOf:
+        - $ref: '#/components/schemas/Meta'
+        - type: object
+          description: "`GET /me/earnings` always supplies a balance block (ADR-0028)."
+          required: [balance]
+          properties:
+            balance:
+              $ref: '#/components/schemas/Balance'
+    Balance:
+      type: object
+      description: Coach earnings gauges on `GET /me/earnings` (ADR-0028).
+      required: [available_centavos, in_transit_centavos, paid_out_centavos, pending_centavos]
+      properties:
+        available_centavos:
+          type: integer
+          format: int64
+        in_transit_centavos:
+          type: integer
+          format: int64
+        paid_out_centavos:
+          type: integer
+          format: int64
+        pending_centavos:
+          type: integer
+          format: int64
+    Role:
+      type: string
+      enum: [student, employer, coach, admin]
+    SignupRole:
+      type: string
+      description: Signup roles — `admin` is never accepted (API-020).
+      enum: [student, employer, coach]
+    AuthAccount:
+      type: object
+      required: [id, email, role]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/Role'
+    Me:
+      type: object
+      description: |
+        API-026's current-account body. Signup and signin keep `AuthAccount`; only `GET /me`
+        carries the onboarding flag and the profile stub (ADR-0030).
+      required: [id, email, role, is_onboarded]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/Role'
+        full_name:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        is_onboarded:
+          type: boolean
+    SignupRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        role:
+          $ref: '#/components/schemas/SignupRole'
+        full_name:
+          type: string
+          nullable: true
+          maxLength: 120
+    SigninRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    GoogleSigninRequest:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+        role:
+          $ref: '#/components/schemas/SignupRole'
+    PasswordResetRequest:
+      type: object
+      additionalProperties: false
+      description: |
+        `email` is optional to the handler; `{}` still returns 202 (API-024) so the endpoint
+        cannot be used to probe whether an address is registered.
+      properties:
+        email:
+          type: string
+          format: email
+    PasswordResetConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+    WorkSetup:
+      type: string
+      enum: [remote, hybrid, onsite]
+    CompensationType:
+      type: string
+      enum: [paid, unpaid]
+    InternshipStatus:
+      type: string
+      enum: [pending, open, rejected, withdrawn]
+    VerificationStatus:
+      type: string
+      enum: [not_verified, pending, verified, rejected]
+    PriceType:
+      type: string
+      description: |
+        Persisted coach price type — only `free` or `paid`. The `any` filter value exists on the
+        public coach search query only and is never stored or returned.
+      enum: [free, paid]
+    BookingStatus:
+      type: string
+      enum: [pending, confirmed, completed, cancelled]
+    PaymentStatus:
+      type: string
+      enum: [none, pending, paid, refunded, failed, expired]
+    LedgerEntryType:
+      type: string
+      enum: [earning, reversal, payout, payout_reversal]
+    UploadPurpose:
+      type: string
+      enum: [resume, avatar, company_logo]
+    ReferrerSurface:
+      type: string
+      enum: [directory, detail, share, cross_sell]
+    CompanySummary:
+      type: object
+      required: [name, slug, logo_url]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+    InternshipCard:
+      type: object
+      required: [id, slug, title, company, location, duration_weeks, is_paid, field, deadline]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Opaque id; the key for apply-click (API-003) and save/unsave (API-035/036)."
+        slug:
+          type: string
+        title:
+          type: string
+        company:
+          $ref: '#/components/schemas/CompanySummary'
+        location:
+          type: string
+        duration_weeks:
+          type: integer
+          nullable: true
+        is_paid:
+          type: boolean
+        field:
+          type: string
+        deadline:
+          type: string
+          nullable: true
+          description: Calendar date (`YYYY-MM-DD`) or null.
+    InternshipDetail:
+      type: object
+      required:
+        - id
+        - slug
+        - title
+        - company
+        - location
+        - work_setup
+        - is_paid
+        - compensation_details
+        - duration_weeks
+        - deadline
+        - field
+        - description
+        - requirements
+        - perks
+        - external_apply_url
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Opaque id; the key for apply-click (API-003) and save/unsave (API-035/036)."
+        slug:
+          type: string
+        title:
+          type: string
+        company:
+          $ref: '#/components/schemas/CompanySummary'
+        location:
+          type: string
+        work_setup:
+          $ref: '#/components/schemas/WorkSetup'
+        is_paid:
+          type: boolean
+        compensation_details:
+          type: string
+          nullable: true
+        duration_weeks:
+          type: integer
+          nullable: true
+        deadline:
+          type: string
+          nullable: true
+        field:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+        perks:
+          type: string
+          nullable: true
+        external_apply_url:
+          type: string
+          format: uri
+    CompanyCard:
+      type: object
+      required: [slug, name, logo_url, industry, location, verification_status, open_role_count]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        industry:
+          type: string
+        location:
+          type: string
+        verification_status:
+          $ref: '#/components/schemas/VerificationStatus'
+        open_role_count:
+          type: integer
+    CompanyProfile:
+      type: object
+      required:
+        - slug
+        - name
+        - logo_url
+        - industry
+        - location
+        - size
+        - website
+        - about
+        - verification_status
+        - open_internships
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        industry:
+          type: string
+        location:
+          type: string
+        size:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        about:
+          type: string
+          nullable: true
+        verification_status:
+          $ref: '#/components/schemas/VerificationStatus'
+        open_internships:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternshipCard'
+    CoachCard:
+      type: object
+      required: [slug, display_name, headline, avatar_url, price_type, expertise, rating_avg, rating_count]
+      properties:
+        slug:
+          type: string
+        display_name:
+          type: string
+        headline:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        price_type:
+          $ref: '#/components/schemas/PriceType'
+        expertise:
+          type: array
+          items:
+            type: string
+        rating_avg:
+          type: number
+          nullable: true
+        rating_count:
+          type: integer
+    CoachProfile:
+      type: object
+      required:
+        - slug
+        - display_name
+        - headline
+        - bio
+        - experience
+        - languages
+        - avatar_url
+        - price_type
+        - expertise
+        - session_types
+        - rating_avg
+        - rating_count
+      properties:
+        slug:
+          type: string
+        display_name:
+          type: string
+        headline:
+          type: string
+        bio:
+          type: string
+        experience:
+          type: string
+          nullable: true
+        languages:
+          type: array
+          items:
+            type: string
+        avatar_url:
+          type: string
+          nullable: true
+        price_type:
+          $ref: '#/components/schemas/PriceType'
+        expertise:
+          type: array
+          items:
+            type: string
+        session_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionType'
+        rating_avg:
+          type: number
+          nullable: true
+        rating_count:
+          type: integer
+        default_join_url:
+          type: string
+          description: Only populated for the coach's own view (API-061); omitted on the public read.
+        payout_channel_code:
+          type: string
+          description: Only populated for the coach's own view (API-061, ADR-0028).
+        payout_account_number_masked:
+          type: string
+          description: Account number masked to its last four digits; the full number is never returned.
+        payout_account_holder_name:
+          type: string
+          description: Only populated for the coach's own view (API-061, ADR-0028).
+    SessionType:
+      type: object
+      required: [id, name, duration_minutes, price_centavos, is_intro_call]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        duration_minutes:
+          type: integer
+          minimum: 1
+          maximum: 480
+        price_centavos:
+          type: integer
+          format: int64
+          minimum: 0
+        is_intro_call:
+          type: boolean
+    Review:
+      type: object
+      required: [rating, body, reviewer_first_name, created_at]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        body:
+          type: string
+          nullable: true
+        reviewer_first_name:
+          type: string
+          description: First name only (BR-011).
+        created_at:
+          type: string
+          format: date-time
+    PublicAvailabilitySlot:
+      type: object
+      required: [id, starts_at, ends_at]
+      properties:
+        id:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+    MyAvailabilitySlot:
+      type: object
+      required: [id, starts_at, ends_at, is_booked]
+      properties:
+        id:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        is_booked:
+          type: boolean
+    LandingResponse:
+      type: object
+      required: [featured_internships, featured_coaches]
+      properties:
+        featured_internships:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternshipCard'
+        featured_coaches:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoachCard'
+    StudentProfile:
+      type: object
+      required: [full_name, school, course, year_level, bio, avatar_key, resume_key, skills, completeness_pct]
+      properties:
+        full_name:
+          type: string
+        school:
+          type: string
+        course:
+          type: string
+        year_level:
+          type: integer
+          minimum: 1
+        bio:
+          type: string
+          nullable: true
+        avatar_key:
+          type: string
+          nullable: true
+        resume_key:
+          type: string
+          nullable: true
+        skills:
+          type: array
+          items:
+            type: string
+        completeness_pct:
+          type: integer
+    CreateStudentProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [full_name, school, course, year_level]
+      properties:
+        full_name:
+          type: string
+        school:
+          type: string
+        course:
+          type: string
+        year_level:
+          type: integer
+          minimum: 1
+        skills:
+          type: array
+          items:
+            type: string
+    UpdateStudentProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        full_name:
+          type: string
+        school:
+          type: string
+        course:
+          type: string
+        year_level:
+          type: integer
+          minimum: 1
+        bio:
+          type: string
+        avatar_key:
+          type: string
+        resume_key:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+    Dashboard:
+      type: object
+      required: [saved_count, upcoming_sessions_count, completeness_pct]
+      properties:
+        saved_count:
+          type: integer
+        upcoming_sessions_count:
+          type: integer
+        completeness_pct:
+          type: integer
+    SavedInternship:
+      type: object
+      required: [id, slug, title, company, location, duration_weeks, is_paid, field, deadline, saved_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Opaque id; the key for apply-click (API-003) and save/unsave (API-035/036)."
+        slug:
+          type: string
+        title:
+          type: string
+        company:
+          $ref: '#/components/schemas/CompanySummary'
+        location:
+          type: string
+        duration_weeks:
+          type: integer
+          nullable: true
+        is_paid:
+          type: boolean
+        field:
+          type: string
+        deadline:
+          type: string
+          nullable: true
+        saved_at:
+          type: string
+          format: date-time
+    NotificationPreference:
+      type: object
+      required: [channel_email, topic_bookings, topic_internships]
+      properties:
+        channel_email:
+          type: boolean
+        topic_bookings:
+          type: boolean
+        topic_internships:
+          type: boolean
+    Settings:
+      type: object
+      required: [email, notification_preference]
+      properties:
+        email:
+          type: string
+          format: email
+        notification_preference:
+          $ref: '#/components/schemas/NotificationPreference'
+    UpdateSettingsRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        notification_preference:
+          type: object
+          additionalProperties: false
+          properties:
+            channel_email:
+              type: boolean
+            topic_bookings:
+              type: boolean
+            topic_internships:
+              type: boolean
+    ApplyClickRequest:
+      type: object
+      additionalProperties: false
+      required: [referrer_surface]
+      properties:
+        referrer_surface:
+          $ref: '#/components/schemas/ReferrerSurface'
+    BookingResponse:
+      type: object
+      required:
+        - booking_id
+        - status
+        - payment_status
+        - price_centavos
+        - platform_fee_centavos
+        - coach_payout_centavos
+      properties:
+        booking_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        price_centavos:
+          type: integer
+          format: int64
+        platform_fee_centavos:
+          type: integer
+          format: int64
+        coach_payout_centavos:
+          type: integer
+          format: int64
+        join_url:
+          type: string
+        completed_at:
+          type: string
+          format: date-time
+        checkout_url:
+          type: string
+          description: Present only when a gateway invoice was created.
+    StudentBooking:
+      type: object
+      required:
+        - booking_id
+        - coach_slug
+        - coach_display_name
+        - slot_starts_at
+        - slot_ends_at
+        - status
+        - payment_status
+        - price_centavos
+      properties:
+        booking_id:
+          type: string
+        coach_slug:
+          type: string
+        coach_display_name:
+          type: string
+        slot_starts_at:
+          type: string
+          format: date-time
+        slot_ends_at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        price_centavos:
+          type: integer
+          format: int64
+        amount_due_centavos:
+          type: integer
+          format: int64
+          description: Present on a paid booking still awaiting checkout.
+        join_url:
+          type: string
+          description: Present on a confirmed booking.
+        completed_at:
+          type: string
+          format: date-time
+    CoachBooking:
+      type: object
+      required:
+        - booking_id
+        - student_name
+        - slot_starts_at
+        - slot_ends_at
+        - status
+        - payment_status
+        - price_centavos
+        - coach_payout_centavos
+      properties:
+        booking_id:
+          type: string
+        student_name:
+          type: string
+          nullable: true
+        slot_starts_at:
+          type: string
+          format: date-time
+        slot_ends_at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        price_centavos:
+          type: integer
+          format: int64
+        coach_payout_centavos:
+          type: integer
+          format: int64
+        join_url:
+          type: string
+        completed_at:
+          type: string
+          format: date-time
+    CreateBookingRequest:
+      type: object
+      additionalProperties: false
+      required: [coach_slug, session_type_id, slot_starts_at]
+      properties:
+        coach_slug:
+          type: string
+        session_type_id:
+          type: string
+        slot_starts_at:
+          type: string
+          format: date-time
+          description: RFC 3339; must be in the future.
+        notes:
+          type: string
+    PatchBookingRequest:
+      type: object
+      additionalProperties: false
+      required: [join_url]
+      properties:
+        join_url:
+          type: string
+          format: uri
+    CreateReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [rating]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        body:
+          type: string
+    ReviewCreated:
+      type: object
+      required: [review_id, rating, body, created_at]
+      properties:
+        review_id:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        body:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    CreateCoachProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [display_name, headline, bio, slug]
+      properties:
+        display_name:
+          type: string
+        headline:
+          type: string
+        bio:
+          type: string
+        experience:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        slug:
+          type: string
+        price_type:
+          type: string
+          enum: [free, paid]
+          default: paid
+        skills:
+          type: array
+          items:
+            type: string
+    UpdateCoachProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: string
+        headline:
+          type: string
+        bio:
+          type: string
+        experience:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        default_join_url:
+          type: string
+          format: uri
+        skills:
+          type: array
+          items:
+            type: string
+        payout_channel_code:
+          type: string
+          pattern: '^PH_[A-Z0-9_]+$'
+        payout_account_number:
+          type: string
+          pattern: '^[0-9]{6,32}$'
+        payout_account_holder_name:
+          type: string
+          maxLength: 100
+    CreateSessionTypeRequest:
+      type: object
+      additionalProperties: false
+      description: |
+        `price_centavos` is optional; omission decodes to `0` and creates a free session type.
+      required: [name, duration_minutes]
+      properties:
+        name:
+          type: string
+        duration_minutes:
+          type: integer
+          minimum: 1
+          maximum: 480
+        price_centavos:
+          type: integer
+          format: int64
+          minimum: 0
+        is_intro_call:
+          type: boolean
+    UpdateSessionTypeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        duration_minutes:
+          type: integer
+          minimum: 1
+          maximum: 480
+        price_centavos:
+          type: integer
+          format: int64
+          minimum: 0
+        is_intro_call:
+          type: boolean
+        is_active:
+          type: boolean
+    AvailabilitySlotInput:
+      type: object
+      additionalProperties: false
+      required: [starts_at, ends_at]
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+    PutAvailabilityRequest:
+      type: object
+      additionalProperties: false
+      description: |
+        `slots` is optional; omission or `null` decodes to an empty slice and clears all unbooked
+        slots (a slot with an existing booking is rejected with 422).
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilitySlotInput'
+    EarningsItem:
+      type: object
+      required:
+        - id
+        - price_centavos
+        - platform_fee_centavos
+        - coach_payout_centavos
+        - payment_status
+        - slot_starts_at
+        - created_at
+      properties:
+        id:
+          type: string
+        price_centavos:
+          type: integer
+          format: int64
+        platform_fee_centavos:
+          type: integer
+          format: int64
+        coach_payout_centavos:
+          type: integer
+          format: int64
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        slot_starts_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    LedgerEntry:
+      type: object
+      required: [id, entry_type, amount_centavos, created_at]
+      properties:
+        id:
+          type: string
+        booking_id:
+          type: string
+        payout_batch_id:
+          type: string
+        entry_type:
+          $ref: '#/components/schemas/LedgerEntryType'
+        amount_centavos:
+          type: integer
+          format: int64
+          description: Signed; payout entries are negative.
+        created_at:
+          type: string
+          format: date-time
+    PresignRequest:
+      type: object
+      additionalProperties: false
+      required: [purpose, content_type, size_bytes]
+      properties:
+        purpose:
+          $ref: '#/components/schemas/UploadPurpose'
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+          minimum: 1
+          description: |
+            Per-purpose caps — resume 10 MB; avatar 5 MB; company_logo 5 MB (ADR-0021).
+    PresignResponse:
+      type: object
+      required: [upload_url, object_key, expires_at]
+      properties:
+        upload_url:
+          type: string
+          format: uri
+        object_key:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    CreateCompanyRequest:
+      type: object
+      additionalProperties: false
+      required: [name, slug, industry, location]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        size:
+          type: string
+        website:
+          type: string
+        about:
+          type: string
+    CreatedCompany:
+      type: object
+      required: [id, slug, name, industry, location]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+    CreateInternshipRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - company_id
+        - title
+        - slug
+        - description
+        - requirements
+        - field
+        - work_setup
+        - compensation_type
+        - external_apply_url
+      properties:
+        company_id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+        perks:
+          type: string
+        field:
+          type: string
+        work_setup:
+          $ref: '#/components/schemas/WorkSetup'
+        compensation_type:
+          $ref: '#/components/schemas/CompensationType'
+        compensation_details:
+          type: string
+        duration_weeks:
+          type: integer
+        deadline:
+          type: string
+          description: '`YYYY-MM-DD`, or omitted for no deadline.'
+        external_apply_url:
+          type: string
+          format: uri
+    UpdateInternshipRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+        perks:
+          type: string
+        field:
+          type: string
+        work_setup:
+          $ref: '#/components/schemas/WorkSetup'
+        compensation_type:
+          $ref: '#/components/schemas/CompensationType'
+        compensation_details:
+          type: string
+        duration_weeks:
+          type: integer
+        deadline:
+          type: string
+          description: '`YYYY-MM-DD`.'
+        external_apply_url:
+          type: string
+          format: uri
+    AdminInternship:
+      type: object
+      required: [id, slug, title, company_id, status, external_apply_url]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        company_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/InternshipStatus'
+        external_apply_url:
+          type: string
+          format: uri
+    AdminInternshipCard:
+      type: object
+      required: [id, slug, title, company_id, status]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        company_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/InternshipStatus'
+    XenditCallback:
+      anyOf:
+        - $ref: '#/components/schemas/XenditInvoiceCallback'
+        - $ref: '#/components/schemas/XenditRefundCallback'
+        - $ref: '#/components/schemas/XenditPayoutCallback'
+      description: |
+        Xendit delivers invoice, refund and payout callbacks to the same URL; the server routes by
+        body shape. The schemas below are permissive — they document the fields the server reads,
+        not an exhaustive gateway contract.
+    XenditInvoiceCallback:
+      type: object
+      additionalProperties: true
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          description: The Xendit invoice id; correlates to `booking.gateway_ref`.
+        external_id:
+          type: string
+          description: The booking id the server set as the invoice's external id.
+        status:
+          type: string
+          description: '`PAID` confirms; `EXPIRED` expires; anything else is recorded with no transition.'
+        amount:
+          type: number
+        paid_amount:
+          type: number
+        paid_at:
+          type: string
+          format: date-time
+        payment_method:
+          type: string
+        payment_channel:
+          type: string
+    XenditRefundCallback:
+      type: object
+      additionalProperties: true
+      required: [event, data]
+      properties:
+        event:
+          type: string
+          enum: [refund.succeeded, refund.failed]
+        data:
+          type: object
+          additionalProperties: true
+          required: [invoice_id]
+          properties:
+            id:
+              type: string
+            invoice_id:
+              type: string
+              description: The invoice being refunded; correlates to `booking.gateway_ref`.
+            reference_id:
+              type: string
+            status:
+              type: string
+    XenditPayoutCallback:
+      type: object
+      additionalProperties: true
+      properties:
+        event:
+          type: string
+          description: '`payout.succeeded|failed|expired|reversed` (or `v3_payout.*`).'
+        id:
+          type: string
+          description: The Xendit payout id; correlates to `payout_batch.gateway_ref`.
+        reference_id:
+          type: string
+          description: The payout batch id the runner sent.
+        status:
+          type: string
+        failure_code:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+          description: Enveloped form nests the payout object here.

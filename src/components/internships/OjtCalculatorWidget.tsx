@@ -6,7 +6,7 @@ import {
   Coins,
   ArrowRight,
   Check,
-  Sparkles,
+  Filter,
 } from 'lucide-react';
 import { formatPesos } from '../../lib/utils';
 
@@ -34,7 +34,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
       className={`text-[#021F53] space-y-6 ${
         isModal
           ? ''
-          : 'bg-gradient-to-br from-[#021F53] to-[#002774] text-white rounded-3xl p-6 sm:p-8 border border-[#3f58b2]/30 shadow-soft relative overflow-hidden'
+          : 'bg-[#021F53] text-white rounded-2xl p-6 sm:p-8 border border-[#3f58b2]/30 shadow-soft relative overflow-hidden'
       }`}
     >
       {!isModal && (
@@ -182,7 +182,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
       </div>
 
       {/* Projection Results Bar */}
-      <div className="bg-gradient-to-r from-[#021F53] to-[#002774] text-white rounded-2xl p-5 border border-[#3f58b2]/30 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="bg-[#002774] text-white rounded-2xl p-5 border border-[#3f58b2]/30 shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="grid grid-cols-3 gap-3 sm:gap-6 divide-x divide-white/15 text-left">
           <div className="pr-2 sm:pr-4">
             <span className="text-[10.5px] font-bold text-slate-300 uppercase tracking-wider block">
@@ -226,7 +226,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
             onClick={() => onFindMatchingRoles(targetHours)}
             className="w-full md:w-auto px-6 py-3.5 bg-[#ff9b00] hover:bg-[#e08900] text-[#021F53] font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
           >
-            <Sparkles className="w-4 h-4 text-[#021F53]" />
+            <Filter className="w-4 h-4 text-[#021F53]" />
             <span>Filter Roles for {targetHours}h OJT</span>
             <ArrowRight className="w-4 h-4 text-[#021F53]" />
           </button>

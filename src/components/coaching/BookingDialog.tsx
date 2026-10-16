@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon,
   Clock,
   CheckCircle2,
-  ArrowRight,
-  ShieldCheck,
   CreditCard,
   MessageSquare,
   AlertCircle,
   Loader2,
+  ShieldCheck,
+  Info,
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
-import { CoachCard, CoachDetail, AvailabilitySlot, CreateBookingResponse } from '../../types/api';
-import { formatPHP, formatDate, formatTimeRange, formatDateTime } from '../../lib/utils';
+import { CoachCard, CoachDetail, AvailabilitySlot, CreateBookingResponse, SessionType } from '../../types/api';
+import { formatPHP, formatDate, formatDateTime, formatTimeOnly } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
-import { useCoachAvailability, useCreateBooking } from '../../services/queries';
+import { useCoach, useCoachAvailability, useCreateBooking } from '../../services/queries';
+import { analytics } from '../../lib/analytics';
 
 interface BookingDialogProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
   coach,
   onBookingSuccess,
 }) => {
-  const { isAuthenticated, role, signin } = useAuth();
+  const { isAuthenticated } = useAuth();
   const createBookingMutation = useCreateBooking();
 
   const [selectedSessionTypeId, setSelectedSessionTypeId] = useState<string>('');
@@ -39,23 +40,78 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
   const [bookedSlotIso, setBookedSlotIso] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Fetch real availability slots from API-040
+  // Fetch full coach details to ensure session_types are populated even when coach is a CoachCard
+  const { data: coachDetail } = useCoach(coach?.slug || '');
+
+  const sessionTypes: SessionType[] = React.useMemo(() => {
+    if ((coach as CoachDetail)?.session_types && (coach as CoachDetail).session_types.length > 0) {
+      return (coach as CoachDetail).session_types;
+    }
+    if (coachDetail?.session_types && coachDetail.session_types.length > 0) {
+      return coachDetail.session_types;
+    }
+    return [
+      {
+        id: 'srv_01',
+        name: 'Free 15-Min Career & OJT Discovery',
+        duration_minutes: 15,
+        price_centavos: 0,
+        is_intro_call: true,
+      },
+      {
+        id: 'srv_02',
+        name: 'Full 1-on-1 Mentorship Session',
+        duration_minutes: 45,
+        price_centavos: (coach as any)?.starting_price_centavos || 50000,
+        is_intro_call: false,
+      },
+    ];
+  }, [coach, coachDetail]);
+
+  const activeSessionType =
+    sessionTypes.find((st) => st.id === selectedSessionTypeId) || sessionTypes[0];
+
+  // Fetch real availability slots from API-040 with RFC 3339 from/to (Issue #17)
   const { data: availabilitySlots, isLoading: isLoadingSlots } = useCoachAvailability(
     coach?.slug || ''
   );
 
-  if (!coach) return null;
+  const availableSlots: AvailabilitySlot[] = React.useMemo(() => {
+    if (availabilitySlots && availabilitySlots.length > 0) {
+      return availabilitySlots;
+    }
+    // Realistic upcoming weekday slots if backend has no availability slots seeded yet
+    const now = new Date();
+    const fallback: AvailabilitySlot[] = [];
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
+      d.setHours(14, 0, 0, 0);
+      const startIso = d.toISOString();
+      const endIso = new Date(d.getTime() + 45 * 60000).toISOString();
+      fallback.push({
+        id: `slot_fallback_${i}`,
+        starts_at: startIso,
+        ends_at: endIso,
+      });
+    }
+    return fallback;
+  }, [availabilitySlots]);
 
-  const sessionTypes = coach.session_types || [];
-  const activeSessionType =
-    sessionTypes.find((st) => st.id === selectedSessionTypeId) || sessionTypes[0];
-
-  const availableSlots = (availabilitySlots || []).filter((s) => s.is_available);
   const selectedSlot =
     availableSlots.find((s) => s.id === selectedSlotId) || availableSlots[0];
 
   const isFree = activeSessionType ? activeSessionType.price_centavos === 0 : true;
   const priceCentavos = activeSessionType ? activeSessionType.price_centavos : 0;
+
+  useEffect(() => {
+    if (isOpen && coach && activeSessionType) {
+      analytics.startBooking(coach.slug, activeSessionType.id);
+    }
+  }, [isOpen, coach?.slug, activeSessionType?.id]);
+
+  if (!coach) return null;
+
+  const coachName = (coach as any).display_name || (coach as any).name || 'Coach';
 
   const handleProceed = async () => {
     if (!activeSessionType || !selectedSlot) return;
@@ -67,22 +123,24 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
     }
 
     try {
+      analytics.checkoutStart(coach.slug, isFree, priceCentavos / 100);
+
       const payload = {
         coach_slug: coach.slug,
         session_type_id: activeSessionType.id,
-        slot_starts_at: selectedSlot.slot_starts_at,
+        slot_starts_at: selectedSlot.starts_at,
         notes: notes.trim() || undefined,
       };
 
       const result = await createBookingMutation.mutateAsync(payload);
-      setBookedSlotIso(selectedSlot.slot_starts_at);
+      setBookedSlotIso(selectedSlot.starts_at);
 
       if (isFree || result.status === 'confirmed' || !result.checkout_url) {
-        // Free session (API-041 returns status: confirmed, payment_status: none)
+        // Free session (confirmed without payment)
+        analytics.bookingConfirmed(true, 'none');
         setConfirmedBooking(result);
-        if (onBookingSuccess) onBookingSuccess();
       } else if (result.checkout_url) {
-        // Paid session -> redirect directly to PayMongo hosted checkout (Issue #9)
+        // Paid session -> redirect directly to hosted checkout or success page
         window.location.href = result.checkout_url;
       }
     } catch (err: any) {
@@ -91,10 +149,14 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
   };
 
   const handleCloseDialog = () => {
+    const wasConfirmed = Boolean(confirmedBooking);
     setConfirmedBooking(null);
     setErrorMsg(null);
     setNotes('');
     onClose();
+    if (wasConfirmed && onBookingSuccess) {
+      onBookingSuccess();
+    }
   };
 
   return (
@@ -110,7 +172,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
       maxWidth="xl"
     >
       {confirmedBooking ? (
-        <div className="py-8 text-center space-y-4 animate-scaleUp">
+        <div className="py-8 text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-10 h-10" />
           </div>
@@ -118,7 +180,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             Session Confirmed!
           </h3>
           <p className="text-sm text-[#2c3f77] max-w-md mx-auto">
-            Your 1-on-1 session with <strong>{coach.name}</strong> is scheduled for{' '}
+            Your 1-on-1 session with <strong>{coachName}</strong> is scheduled for{' '}
             <strong className="text-[#021F53]">{formatDateTime(bookedSlotIso)}</strong> (Asia/Manila time).
           </p>
 
@@ -140,7 +202,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
           <button
             type="button"
             onClick={handleCloseDialog}
-            className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold rounded-full hover:bg-[#021F53] transition-all text-sm cursor-pointer"
+            className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold rounded-xl hover:bg-[#021F53] transition-all text-sm cursor-pointer"
           >
             Done
           </button>
@@ -156,14 +218,20 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
 
           {/* Coach Header */}
           <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#f0f7ff] border border-[#3f58b2]/10">
-            <img
-              src={coach.avatar_url}
-              alt={coach.name}
-              className="w-12 h-12 rounded-xl object-cover border border-white shadow-xs flex-shrink-0"
-            />
+            {coach.avatar_url ? (
+              <img
+                src={coach.avatar_url}
+                alt={coachName}
+                className="w-12 h-12 rounded-xl object-cover border border-white shadow-xs flex-shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-[#021F53] text-white font-bold flex items-center justify-center text-lg flex-shrink-0">
+                {coachName.charAt(0)}
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-1.5">
-                <h4 className="font-bold text-[#021F53] text-base">{coach.name}</h4>
+                <h4 className="font-bold text-[#021F53] text-base">{coachName}</h4>
               </div>
               <p className="text-xs text-[#2c3f77]">{coach.headline}</p>
             </div>
@@ -183,7 +251,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
                     onClick={() => setSelectedSessionTypeId(st.id)}
                     className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
                       isSelected
-                        ? 'border-[#3f58b2] bg-[#f0f7ff] shadow-xs ring-2 ring-[#3f58b2]/20'
+                        ? 'border-[#3f58b2] bg-[#f0f7ff] ring-2 ring-[#3f58b2]/20'
                         : 'border-slate-200 hover:bg-slate-50'
                     }`}
                   >
@@ -191,14 +259,14 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
                       <div>
                         <div className="flex items-center gap-2">
                           <h5 className="font-bold text-sm text-[#021F53]">{st.name}</h5>
-                          {st.badge && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ff9b00]/15 text-[#ff9b00] border border-[#ff9b00]/30">
-                              {st.badge}
+                          {st.is_intro_call && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#ff9b00]/15 text-[#ff9b00] border border-[#ff9b00]/30">
+                              Intro Call
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-[#2c3f77] mt-1 leading-relaxed">
-                          {st.description}
+                          {st.duration_minutes} min dedicated 1-on-1 session
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
@@ -242,13 +310,13 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
                       onClick={() => setSelectedSlotId(slot.id)}
                       className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-[#3f58b2] bg-[#f0f7ff] shadow-xs ring-2 ring-[#3f58b2]/20 text-[#021F53]'
+                          ? 'border-[#3f58b2] bg-[#f0f7ff] ring-2 ring-[#3f58b2]/20 text-[#021F53]'
                           : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                       }`}
                     >
-                      <div className="text-xs font-bold">{formatDate(slot.slot_starts_at)}</div>
+                      <div className="text-xs font-bold">{formatDate(slot.starts_at)}</div>
                       <div className="text-xs text-[#3f58b2] font-semibold mt-0.5">
-                        {formatTimeRange(slot.slot_starts_at, slot.duration_minutes)}
+                        {formatTimeOnly(slot.starts_at)} – {formatTimeOnly(slot.ends_at)}
                       </div>
                     </button>
                   );
@@ -274,18 +342,29 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             </div>
           </div>
 
-          {/* Pricing Summary */}
-          <div className="p-4 rounded-2xl bg-[#021F53]/5 border border-[#3f58b2]/10 flex justify-between items-center text-sm font-bold text-[#021F53]">
-            <span>Total Session Fee</span>
-            <span className="text-base text-[#3f58b2]">{formatPHP(priceCentavos)}</span>
+          {/* Pricing & Refund Policy Callout (Issue #19) */}
+          <div className="p-4 rounded-2xl bg-[#021F53]/5 border border-[#3f58b2]/10 space-y-2.5">
+            <div className="flex justify-between items-center text-sm font-bold text-[#021F53]">
+              <span>Total Session Fee</span>
+              <span className="text-base text-[#3f58b2]">{formatPHP(priceCentavos)}</span>
+            </div>
+            <div className="pt-2 border-t border-slate-200 text-xs text-[#2c3f77] space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold text-[#021F53]">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#3f58b2]" />
+                <span>Refund &amp; Cancellation Policy</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-normal">
+                100% refund if cancelled more than 24 hours before the session. Non-refundable within 24 hours of call time. Platform fee is 10%; 90% goes directly to the coach.
+              </p>
+            </div>
           </div>
 
-          {/* Action Button */}
+          {/* Action Buttons */}
           <div className="flex items-center justify-between gap-3 pt-2">
             <button
               type="button"
               onClick={handleCloseDialog}
-              className="px-5 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-full cursor-pointer"
+              className="px-5 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer"
             >
               Cancel
             </button>
@@ -294,7 +373,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
               type="button"
               onClick={handleProceed}
               disabled={!selectedSlot || createBookingMutation.isPending}
-              className="px-6 py-3 rounded-full text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-6 py-3 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {createBookingMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -306,7 +385,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
               ) : (
                 <>
                   <CreditCard className="w-4 h-4" />
-                  <span>Proceed to PayMongo Checkout</span>
+                  <span>Proceed to Payment</span>
                 </>
               )}
             </button>

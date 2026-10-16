@@ -8,7 +8,7 @@ export interface FilterState {
   setup: string; // 'all' | WorkSetup
   pay: 'all' | 'paid' | 'unpaid';
   minOjtHours: string;
-  sort: 'newest' | 'deadline_soon' | 'highest_stipend';
+  sort: 'newest' | 'deadline_soon' | 'relevance';
 }
 
 interface InternshipFiltersProps {
@@ -59,7 +59,7 @@ export const InternshipFilters: React.FC<InternshipFiltersProps> = ({
   ];
 
   return (
-    <div className={`space-y-6 ${isMobileDrawer ? '' : 'bg-white rounded-3xl p-6 border border-[#3f58b2]/10 shadow-soft'}`}>
+    <div className={`space-y-6 ${isMobileDrawer ? '' : 'bg-white rounded-2xl p-6 border border-[#3f58b2]/10 shadow-soft'}`}>
       {/* Search Header */}
       {!isMobileDrawer && (
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -180,7 +180,7 @@ export const InternshipFilters: React.FC<InternshipFiltersProps> = ({
         >
           <option value="newest">Newest Postings First</option>
           <option value="deadline_soon">Deadline Closing Soon</option>
-          <option value="highest_stipend">Highest Monthly Allowance</option>
+          <option value="relevance">Most Relevant</option>
         </select>
       </div>
 

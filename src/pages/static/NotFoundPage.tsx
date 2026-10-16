@@ -17,7 +17,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ navigate }) => {
       </p>
       <button
         onClick={() => navigate('/')}
-        className="px-6 py-3 bg-[#3f58b2] text-white font-bold text-xs rounded-full hover:bg-[#021F53] transition-all inline-flex items-center gap-1.5"
+        className="px-6 py-3 bg-[#3f58b2] text-white font-bold text-xs rounded-xl shadow-xs hover:bg-[#021F53] transition-all inline-flex items-center gap-1.5 cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Return to Homepage</span>

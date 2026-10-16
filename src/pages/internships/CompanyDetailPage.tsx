@@ -61,19 +61,16 @@ export const CompanyDetailPage: React.FC<CompanyDetailPageProps> = ({ slug, navi
       </button>
 
       {/* Main Company Header Card */}
-      <div className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-soft">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-soft">
         {/* Banner Area */}
-        <div className="h-44 sm:h-56 w-full bg-gradient-to-r from-[#021F53] via-[#002774] to-[#3f58b2] relative overflow-hidden">
-          {company.banner_url ? (
+        <div className="h-44 sm:h-56 w-full bg-[#021F53] relative overflow-hidden">
+          {(company as any).banner_url && (
             <img
-              src={company.banner_url}
+              src={(company as any).banner_url}
               alt={company.name}
               className="w-full h-full object-cover opacity-60"
             />
-          ) : (
-            <div className="absolute inset-0 grid-subtle opacity-30 pointer-events-none" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         </div>
 
         {/* Profile Info Stage */}
@@ -84,7 +81,7 @@ export const CompanyDetailPage: React.FC<CompanyDetailPageProps> = ({ slug, navi
                 <img
                   src={logoUrl}
                   alt={company.name}
-                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-4 border-white shadow-lift bg-white"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-4 border-white shadow-lift bg-white"
                 />
               </div>
 
@@ -119,23 +116,23 @@ export const CompanyDetailPage: React.FC<CompanyDetailPageProps> = ({ slug, navi
           </div>
 
           {/* About Company */}
-          {company.description && (
+          {company.about && (
             <div className="pt-4 border-t border-slate-100 space-y-2">
               <h3 className="text-sm font-bold text-[#021F53] font-headline">About the Organization</h3>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-4xl">
-                {company.description}
+                {company.about}
               </p>
             </div>
           )}
 
           {/* Perks & Benefits */}
-          {company.perks && company.perks.length > 0 && (
+          {(company as any).perks && (company as any).perks.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#3f58b2] font-accent">
                 Intern Benefits &amp; Perks
               </h3>
               <div className="flex flex-wrap gap-2">
-                {company.perks.map((perk, idx) => (
+                {((company as any).perks as string[]).map((perk: string, idx: number) => (
                   <span
                     key={idx}
                     className="stamp-badge bg-emerald-50 text-emerald-900 border border-emerald-300"
@@ -163,7 +160,7 @@ export const CompanyDetailPage: React.FC<CompanyDetailPageProps> = ({ slug, navi
         </div>
 
         {openInternships.length === 0 ? (
-          <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
+          <div className="bg-white rounded-2xl p-10 text-center border border-slate-200">
             <Briefcase className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-bold text-[#021F53]">No open internship roles currently.</p>
             <p className="text-xs text-slate-500 mt-1">Check back later or browse other partner companies.</p>

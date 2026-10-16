@@ -9,21 +9,32 @@ interface CompanyCardProps {
 
 export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) => {
   const logoUrl = company.logo_url || (company as any).logo || '';
-  const openRoles = company.open_role_count ?? (company as any).openRoleCount ?? 0;
+  const openRoles =
+    'open_role_count' in company
+      ? company.open_role_count
+      : (company.open_internships ? company.open_internships.length : 0);
+  const description = (company as any).about || (company as any).description || '';
+  const perks: string[] = (company as any).perks || [];
 
   return (
     <div
       onClick={() => onSelect(company)}
-      className="tactile-card rounded-3xl p-6 flex flex-col justify-between cursor-pointer group"
+      className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col justify-between cursor-pointer group hover:border-[#3f58b2]/40 transition-all shadow-xs"
     >
       <div className="space-y-4">
         {/* Company Header Row */}
         <div className="flex items-start gap-3.5">
-          <img
-            src={logoUrl}
-            alt={company.name}
-            className="w-13 h-13 rounded-2xl object-cover border border-slate-200 bg-white group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5"
-          />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={company.name}
+              className="w-13 h-13 rounded-2xl object-cover border border-slate-200 bg-white group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5"
+            />
+          ) : (
+            <div className="w-13 h-13 rounded-2xl bg-[#021F53] text-white font-bold flex items-center justify-center text-lg flex-shrink-0">
+              {company.name.charAt(0)}
+            </div>
+          )}
           <div className="min-w-0 space-y-1 flex-1">
             <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors font-headline leading-tight truncate">
               {company.name}
@@ -37,16 +48,16 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) =
         </div>
 
         {/* Description */}
-        {company.description && (
+        {description && (
           <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
-            {company.description}
+            {description}
           </p>
         )}
 
         {/* Perks Tags */}
-        {company.perks && company.perks.length > 0 && (
+        {perks.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {company.perks.slice(0, 2).map((perk, idx) => (
+            {perks.slice(0, 2).map((perk, idx) => (
               <span
                 key={idx}
                 className="stamp-badge bg-slate-50 text-slate-700 border border-slate-200 text-[10px]"
@@ -65,9 +76,9 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) =
           <span>{openRoles} Open Roles</span>
         </span>
 
-        <span className="font-bold text-[#021F53] group-hover:text-[#3f58b2] flex items-center gap-1 transition-colors text-xs">
+        <span className="text-xs font-bold text-[#3f58b2] group-hover:text-[#021F53] transition-colors flex items-center gap-1">
           <span>View Profile</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-[#ff9b00]" />
+          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
         </span>
       </div>
     </div>

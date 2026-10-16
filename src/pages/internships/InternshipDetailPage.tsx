@@ -1,25 +1,38 @@
 import React, { useState } from 'react';
 import {
+  ArrowLeft,
+  Building,
   MapPin,
   Clock,
+  DollarSign,
+  Share2,
   Bookmark,
   ExternalLink,
-  ArrowLeft,
   CheckCircle2,
-  Sparkles,
-  Share2,
-  Coins,
-  Loader2,
   AlertCircle,
+  Briefcase,
+  Target,
   Calendar,
+  Check,
 } from 'lucide-react';
-import { useInternship, useSavedInternships, useSaveInternship, useUnsaveInternship, useCoaches } from '../../services/queries';
-import { DeadlineCountdown } from '../../components/internships/DeadlineCountdown';
+import { useInternship, useCoaches, useSaveInternship, useUnsaveInternship, useSavedInternships } from '../../services/queries';
+import { formatPesos } from '../../lib/utils';
 import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
 import { BookingDialog } from '../../components/coaching/BookingDialog';
-import { formatPesos } from '../../lib/utils';
-import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
-import { useAuth } from '../../context/AuthContext';
+import { DeadlineCountdown } from '../../components/internships/DeadlineCountdown';
+import { CoachCard } from '../../types/api';
+
+// Safe list converter: if value is already an array, use it; if it is a string, split by newlines/bullets.
+const toList = (val: unknown): string[] => {
+  if (Array.isArray(val)) return val.filter(Boolean);
+  if (typeof val === 'string') {
+    return val
+      .split(/\r?\n|•|\*|;/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  return [];
+};
 
 interface InternshipDetailPageProps {
   slug: string;
@@ -27,48 +40,47 @@ interface InternshipDetailPageProps {
 }
 
 export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug, navigate }) => {
-  const { isAuthenticated } = useAuth();
   const { data: internship, isLoading, error } = useInternship(slug);
+  const { data: coachesData } = useCoaches();
   const { data: savedList = [] } = useSavedInternships();
+
   const saveMutation = useSaveInternship();
   const unsaveMutation = useUnsaveInternship();
-  const { data: coachesData } = useCoaches();
 
   const [isLeavingModalOpen, setIsLeavingModalOpen] = useState(false);
-  const [selectedCoachForBooking, setSelectedCoachForBooking] = useState<CoachCardType | CoachDetail | null>(null);
+  const [selectedCoachForBooking, setSelectedCoachForBooking] = useState<CoachCard | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-3">
-        <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2] mx-auto" />
-        <p className="text-xs font-semibold text-slate-500">Loading internship details...</p>
+      <div className="max-w-5xl mx-auto px-4 py-16 text-center">
+        <div className="w-10 h-10 border-4 border-[#3f58b2] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-sm font-bold text-[#021F53]">Loading internship dossier...</p>
       </div>
     );
   }
 
   if (error || !internship) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
-        <h2 className="text-2xl font-bold text-[#021F53]">Internship Not Found</h2>
-        <p className="text-sm text-slate-500">
-          This listing may have been closed, withdrawn, or is no longer available.
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
+        <h2 className="text-xl font-bold text-[#021F53]">Internship Not Found</h2>
+        <p className="text-xs text-slate-500">
+          This role listing might have expired or been filled.
         </p>
         <button
-          type="button"
           onClick={() => navigate('/internships')}
-          className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold text-xs rounded-full hover:bg-[#021F53] cursor-pointer"
+          className="px-6 py-2.5 bg-[#3f58b2] text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-[#021F53]"
         >
-          Return to Directory
+          Back to Directory
         </button>
       </div>
     );
   }
 
-  const isSaved = savedList.some((item) => item.id === internship.id);
+  const isSaved = savedList.some((s) => s.id === internship.id);
 
   const handleToggleSave = () => {
-    if (!isAuthenticated) return;
     if (isSaved) {
       unsaveMutation.mutate(internship.id);
     } else {
@@ -76,7 +88,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
     }
   };
 
-  const handleShare = () => {
+  const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -84,7 +96,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
 
   const coaches = coachesData?.items || [];
   const recommendedCoach =
-    coaches.find((c) => c.slug === internship.recommended_coach_slug) || coaches[0] || null;
+    coaches.find((c) => c.slug === (internship as any).recommended_coach_slug) || coaches[0] || null;
 
   const logoUrl = internship.company.logo_url || (internship.company as any).logo || '';
 
@@ -100,14 +112,20 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
       </button>
 
       {/* Main Header Card */}
-      <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#3f58b2]/15 shadow-soft space-y-6">
+      <div className="bg-white rounded-2xl p-6 sm:p-10 border border-[#3f58b2]/15 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-100">
           <div className="flex items-start gap-5">
-            <img
-              src={logoUrl}
-              alt={internship.company.name}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-slate-100 shadow-md flex-shrink-0"
-            />
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={internship.company.name}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-slate-100 shadow-xs flex-shrink-0"
+              />
+            ) : (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#021F53] text-white font-bold flex items-center justify-center text-xl flex-shrink-0">
+                {internship.company.name.charAt(0)}
+              </div>
+            )}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
@@ -118,7 +136,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
                 </button>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-headline">
                 {internship.title}
               </h1>
 
@@ -129,12 +147,16 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
                 </div>
                 <span>•</span>
                 <span className="capitalize">{internship.work_setup} Work Setup</span>
-                <span>•</span>
-                <span>{internship.duration_weeks} Weeks Duration</span>
-                {internship.ojt_hours && (
+                {internship.duration_weeks && (
                   <>
                     <span>•</span>
-                    <span>{internship.ojt_hours} OJT Practicum Hours</span>
+                    <span>{internship.duration_weeks} Weeks Duration</span>
+                  </>
+                )}
+                {(internship as any).ojt_hours && (
+                  <>
+                    <span>•</span>
+                    <span>{(internship as any).ojt_hours} OJT Practicum Hours</span>
                   </>
                 )}
               </div>
@@ -144,35 +166,38 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
           {/* Action CTAs */}
           <div className="flex sm:flex-col items-center gap-3 w-full sm:w-auto">
             <button
-              type="button"
               onClick={() => setIsLeavingModalOpen(true)}
-              className="flex-1 sm:flex-none w-full px-8 py-3.5 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-44 py-3 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Apply on Company Site</span>
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="w-3.5 h-3.5" />
             </button>
 
             <div className="flex items-center gap-2 w-full">
               <button
                 type="button"
                 onClick={handleToggleSave}
-                className={`flex-1 py-2.5 px-4 rounded-full border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   isSaved
-                    ? 'bg-[#f0f7ff] text-[#3f58b2] border-[#3f58b2]'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current text-[#3f58b2]' : ''}`} />
-                <span>{isSaved ? 'Saved Role' : 'Save'}</span>
+                <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-emerald-600' : ''}`} />
+                <span>{isSaved ? 'Saved' : 'Save'}</span>
               </button>
 
               <button
                 type="button"
-                onClick={handleShare}
-                className="p-2.5 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                onClick={handleCopyLink}
+                className="py-2.5 px-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 title="Copy share link"
               >
-                <Share2 className="w-4 h-4" />
+                {copiedLink ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <Share2 className="w-3.5 h-3.5" />
+                )}
               </button>
             </div>
           </div>
@@ -185,8 +210,8 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
               Allowance &amp; Stipend
             </span>
             <span className="text-sm font-bold text-[#021F53] mt-0.5 block">
-              {internship.is_paid && internship.stipend_amount
-                ? `${formatPesos(internship.stipend_amount)} / ${internship.stipend_period || 'month'}`
+              {internship.is_paid
+                ? internship.compensation_details || 'Paid Allowance'
                 : 'Unpaid / For Credit'}
             </span>
           </div>
@@ -196,7 +221,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
               Application Deadline
             </span>
             <div className="mt-0.5">
-              <DeadlineCountdown deadlineIso={internship.deadline} />
+              <DeadlineCountdown deadlineIso={internship.deadline || undefined} />
             </div>
           </div>
 
@@ -211,10 +236,10 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
 
           <div>
             <span className="text-[10px] text-[#2c3f77] uppercase tracking-wider font-bold block">
-              Status
+              Work Setup
             </span>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block mt-0.5 capitalize">
-              {internship.status}
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-md inline-block mt-0.5 capitalize">
+              {internship.work_setup}
             </span>
           </div>
         </div>
@@ -225,7 +250,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
         <div className="lg:col-span-8 space-y-8">
           {/* Overview */}
           {internship.description && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-3">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-3">
               <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
                 About the Role &amp; Team
               </h2>
@@ -235,34 +260,34 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
             </div>
           )}
 
-          {/* Responsibilities */}
-          {(internship.responsibilities || []).length > 0 && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-4">
+          {/* Requirements (Safely parsed string via toList) */}
+          {internship.requirements && (
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-4">
               <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
-                What You Will Do
+                Candidate Requirements
               </h2>
               <ul className="space-y-2.5">
-                {internship.responsibilities.map((item, idx) => (
-                  <li key={idx} className="text-xs sm:text-sm text-slate-700 flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>{item}</span>
+                {toList(internship.requirements).map((req, idx) => (
+                  <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                    <CheckCircle2 className="w-4 h-4 text-[#3f58b2] shrink-0 mt-0.5" />
+                    <span>{req}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
-          {/* Requirements */}
-          {(internship.requirements || []).length > 0 && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-4">
+          {/* Perks */}
+          {internship.perks && (
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-4">
               <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
-                What They Are Looking For
+                Internship Perks &amp; Learning Opportunities
               </h2>
               <ul className="space-y-2.5">
-                {internship.requirements.map((item, idx) => (
-                  <li key={idx} className="text-xs sm:text-sm text-slate-700 flex items-start gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[#3f58b2] shrink-0 mt-1.5" />
-                    <span>{item}</span>
+                {toList(internship.perks).map((perk, idx) => (
+                  <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>{perk}</span>
                   </li>
                 ))}
               </ul>
@@ -270,35 +295,32 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
           )}
         </div>
 
-        {/* Sidebar: Recommended Coach & Outbound Notice */}
+        {/* Sidebar */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Outbound Notice (BR-001) */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-soft space-y-3">
-            <h3 className="text-sm font-bold text-[#021F53] font-headline">
-              Official Outbound Gateway
-            </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              iSkolar Vocation maintains zero student resumes on its servers. You will apply directly on {internship.company.name}'s careers site.
+          {/* Apply Card */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4 text-center">
+            <h3 className="text-sm font-bold text-[#021F53] font-headline">Interested in this Role?</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Applications are reviewed on a rolling basis. Ensure your resume and portfolio are updated before applying.
             </p>
             <button
-              type="button"
               onClick={() => setIsLeavingModalOpen(true)}
-              className="w-full py-3 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] font-bold text-xs rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="w-full py-3 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Apply Directly</span>
+              <span>Apply on Company Site</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {/* Cross-sell Coach */}
           {recommendedCoach && (
-            <div className="bg-gradient-to-br from-[#021F53] to-[#3f58b2] rounded-3xl p-6 text-white shadow-soft space-y-4">
+            <div className="bg-[#021F53] rounded-2xl p-6 text-white shadow-xs border border-[#3f58b2]/30 space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold text-[#ff9b00]">
-                <Sparkles className="w-4 h-4" />
+                <Target className="w-4 h-4 text-[#ff9b00]" />
                 <span>Prepare for Technical Screening</span>
               </div>
               <p className="text-xs text-slate-200 leading-relaxed">
-                Book a 1-on-1 mock interview with <strong>{recommendedCoach.name}</strong> ({recommendedCoach.headline}) to practice coding and behavioral questions before applying.
+                Book a 1-on-1 mock interview with <strong>{recommendedCoach.display_name}</strong> ({recommendedCoach.headline}) to practice coding and behavioral questions before applying.
               </p>
               <button
                 type="button"
@@ -317,13 +339,13 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
         isOpen={isLeavingModalOpen}
         onClose={() => setIsLeavingModalOpen(false)}
         internship={internship}
+        referrerSurface="detail"
       />
 
       <BookingDialog
         isOpen={!!selectedCoachForBooking}
         onClose={() => setSelectedCoachForBooking(null)}
-        coach={selectedCoachForBooking}
-        onBookingSuccess={() => navigate('/app/bookings')}
+        coach={selectedCoachForBooking as any}
       />
     </div>
   );

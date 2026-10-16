@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { UserRole, UserSession } from '../types/api';
 import { api, ApiError } from '../lib/api';
 
@@ -19,6 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<UserSession | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -72,6 +74,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // ignore
     } finally {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('vocation_session_id');
+        localStorage.removeItem('vocation_dev_user');
+      }
+      queryClient.clear();
       setUser(null);
       setIsLoading(false);
     }

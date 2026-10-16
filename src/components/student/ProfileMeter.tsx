@@ -1,29 +1,34 @@
 import React from 'react';
-import { CheckCircle2, Circle, Sparkles, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Circle, TrendingUp, ArrowRight } from 'lucide-react';
 
 interface ProfileMeterProps {
   completenessPct?: number;
   onEditProfile: () => void;
+  targetOjtHours?: number;
+  completedOjtHours?: number;
 }
 
 export const ProfileMeter: React.FC<ProfileMeterProps> = ({
   completenessPct = 75,
   onEditProfile,
+  targetOjtHours,
+  completedOjtHours,
 }) => {
+  const isTargetSet = Boolean(targetOjtHours && targetOjtHours > 0);
   const checklist = [
     { label: 'Basic Info & Photo', done: completenessPct >= 20, weight: 20 },
     { label: 'University & Degree', done: completenessPct >= 40, weight: 20 },
-    { label: 'Year Level & Target OJT Hours', done: completenessPct >= 60, weight: 20 },
+    { label: `Year Level & Target OJT Hours${isTargetSet ? ` (${targetOjtHours}h)` : ''}`, done: completenessPct >= 60 || isTargetSet, weight: 20 },
     { label: 'Skills Added', done: completenessPct >= 80, weight: 20 },
     { label: 'Resume Key Added', done: completenessPct >= 100, weight: 20 },
   ];
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-[#3f58b2]/10 shadow-soft space-y-5">
+    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-soft space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-[#f0f7ff] text-[#3f58b2] flex items-center justify-center font-bold">
-            <Sparkles className="w-4 h-4 text-[#ff9b00]" />
+            <TrendingUp className="w-4 h-4 text-[#3f58b2]" />
           </div>
           <div>
             <h3 className="font-bold text-[#021F53] text-sm sm:text-base font-headline">
@@ -40,7 +45,7 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({
       {/* Progress Bar */}
       <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5">
         <div
-          className="h-full bg-gradient-to-r from-[#607ef2] via-[#3f58b2] to-[#ff9b00] rounded-full transition-all duration-700"
+          className="h-full bg-[#3f58b2] rounded-full transition-all duration-700"
           style={{ width: `${completenessPct}%` }}
         />
       </div>

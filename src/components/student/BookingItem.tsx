@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Clock,
   Video,
@@ -7,76 +7,104 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  XCircle,
+  RotateCcw,
+  ShieldAlert,
 } from 'lucide-react';
-import { BookingItem as BookingItemType } from '../../types/api';
-import { formatDateTime, formatPHP } from '../../lib/utils';
+import { StudentBooking } from '../../types/api';
+import { formatDateTime, formatPHP, formatTimeOnly } from '../../lib/utils';
+import { Modal } from '../common/Modal';
 
 interface BookingItemProps {
-  booking: BookingItemType;
-  onPay: (booking: BookingItemType) => void;
-  onReview: (booking: BookingItemType) => void;
+  booking: StudentBooking;
+  onPay: (bookingId: string) => void;
+  onCancel: (booking: StudentBooking) => void;
+  onReview?: (booking: StudentBooking) => void;
 }
 
-export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onReview }) => {
+export const BookingItem: React.FC<BookingItemProps> = ({
+  booking,
+  onPay,
+  onCancel,
+  onReview,
+}) => {
   const getStatusBadge = () => {
+    if (booking.status === 'cancelled') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+          <XCircle className="w-3 h-3 text-slate-500" />
+          <span>Cancelled {booking.payment_status === 'refunded' ? '(Refunded)' : ''}</span>
+        </span>
+      );
+    }
+
+    if (booking.payment_status === 'failed') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+          <AlertCircle className="w-3 h-3 text-rose-500" />
+          <span>Payment Failed</span>
+        </span>
+      );
+    }
+
+    if (booking.payment_status === 'expired') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+          <AlertCircle className="w-3 h-3 text-amber-600" />
+          <span>Payment Expired</span>
+        </span>
+      );
+    }
+
     switch (booking.status) {
       case 'confirmed':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
             <span>Confirmed</span>
           </span>
         );
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
-            <AlertCircle className="w-3.5 h-3.5 text-[#ff9b00]" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200">
+            <AlertCircle className="w-3 h-3 text-[#ff9b00]" />
             <span>Pending Payment</span>
           </span>
         );
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/20">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/20">
+            <CheckCircle2 className="w-3 h-3" />
             <span>Completed</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
-            <span>Cancelled</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+            <span>{booking.status}</span>
           </span>
         );
     }
   };
 
-  const avatarUrl = booking.coach_avatar_url || (booking as any).coachAvatar || '';
-  const coachName = booking.coach_name || (booking as any).coachName || '';
-  const coachRole = booking.coach_role || (booking as any).coachRole || '';
-  const sessionTypeName = booking.session_type_name || (booking as any).sessionTypeName || '';
-  const sessionDuration = booking.session_duration || (booking as any).sessionDuration || 45;
-  const slotStartsAt = booking.slot_starts_at || (booking as any).slotStartsAt || '';
-  const priceCentavos = booking.price_centavos ?? (booking as any).priceCentavos ?? 0;
-  const joinUrl = booking.join_url || (booking as any).joinUrl;
+  const coachName = booking.coach_display_name || 'Coach';
+  const priceCentavos = booking.amount_due_centavos ?? booking.price_centavos;
+  const isCancellable =
+    booking.status === 'confirmed' || booking.status === 'pending';
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-[#3f58b2]/30 transition-all space-y-4">
+    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-[#3f58b2]/30 transition-all space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div className="flex items-start gap-3.5">
-          <img
-            src={avatarUrl}
-            alt={coachName}
-            className="w-12 h-12 rounded-xl object-cover border border-slate-200 flex-shrink-0"
-          />
+          <div className="w-12 h-12 rounded-xl bg-[#021F53] text-white font-bold flex items-center justify-center text-base flex-shrink-0">
+            {coachName.charAt(0)}
+          </div>
           <div>
-            <div className="text-[10px] font-bold text-[#3f58b2] uppercase tracking-wider">
-              {coachRole}
-            </div>
-            <h4 className="text-base font-bold text-[#021F53] font-headline mt-0.5">
-              {sessionTypeName}
+            <h4 className="text-base font-bold text-[#021F53]">
+              1-on-1 Mentorship with {coachName}
             </h4>
             <p className="text-xs text-slate-600 mt-0.5">
-              Coach: <strong>{coachName}</strong> ({sessionDuration} mins)
+              Coach: <strong>{coachName}</strong>
             </p>
           </div>
         </div>
@@ -84,29 +112,27 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
         <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-start gap-1.5">
           {getStatusBadge()}
           <span className="text-xs font-bold text-[#021F53]">
-            {formatPHP(priceCentavos)}
+            {formatPHP(booking.price_centavos)}
           </span>
         </div>
       </div>
 
-      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 text-[#021F53] font-semibold">
           <Clock className="w-3.5 h-3.5 text-[#3f58b2]" />
-          <span>{formatDateTime(slotStartsAt)}</span>
+          <span>{formatDateTime(booking.slot_starts_at)}</span>
         </div>
 
-        {booking.notes && (
-          <div className="text-slate-500 italic max-w-sm truncate text-[11px]">
-            Goal: "{booking.notes}"
-          </div>
-        )}
+        <div className="text-slate-500 text-[11px]">
+          Ref: <span className="font-mono">{booking.booking_id.slice(0, 8)}</span>
+        </div>
       </div>
 
       {/* Action Row */}
       <div className="pt-1 flex flex-wrap items-center justify-end gap-2">
-        {booking.status === 'confirmed' && joinUrl && (
+        {booking.status === 'confirmed' && booking.join_url && (
           <a
-            href={joinUrl}
+            href={booking.join_url}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -117,18 +143,31 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
           </a>
         )}
 
-        {booking.status === 'pending' && (
+        {(booking.status === 'pending' ||
+          booking.payment_status === 'failed' ||
+          booking.payment_status === 'expired') && (
           <button
             type="button"
-            onClick={() => onPay(booking)}
+            onClick={() => onPay(booking.booking_id)}
             className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <CreditCard className="w-3.5 h-3.5" />
-            <span>Complete PayMongo Payment</span>
+            <span>{booking.payment_status === 'failed' || booking.payment_status === 'expired' ? 'Retry Payment' : 'Complete Payment'}</span>
           </button>
         )}
 
-        {booking.status === 'completed' && !booking.has_reviewed && (
+        {isCancellable && (
+          <button
+            type="button"
+            onClick={() => onCancel(booking)}
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            <span>Cancel Session</span>
+          </button>
+        )}
+
+        {booking.status === 'completed' && onReview && (
           <button
             type="button"
             onClick={() => onReview(booking)}
@@ -137,13 +176,6 @@ export const BookingItem: React.FC<BookingItemProps> = ({ booking, onPay, onRevi
             <Star className="w-3.5 h-3.5 fill-[#ff9b00] text-[#ff9b00]" />
             <span>Rate This Session</span>
           </button>
-        )}
-
-        {booking.status === 'completed' && booking.has_reviewed && (
-          <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1 py-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Review Submitted</span>
-          </span>
         )}
       </div>
     </div>

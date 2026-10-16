@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import {
@@ -8,16 +9,26 @@ import {
   CompanyDetail,
   CoachCard,
   CoachDetail,
+  CoachProfile,
   CoachReview,
-  AvailabilitySlot,
+  PublicAvailabilitySlot,
+  MyAvailabilitySlot,
   UserSession,
   StudentDashboardData,
   StudentProfile,
+  CreateStudentProfileRequest,
   BookingItem,
+  CoachBooking,
   CreateBookingRequest,
+  BookingResponse,
   CreateBookingResponse,
-  ResumeCheckoutResponse,
   CreateReviewRequest,
+  CreateCoachProfileRequest,
+  UpdateCoachProfileRequest,
+  SessionType,
+  EarningsItem,
+  EarningsMeta,
+  PasswordResetConfirmRequest,
 } from '../types/api';
 
 // Keys
@@ -36,6 +47,10 @@ export const queryKeys = {
   studentDashboard: ['studentDashboard'] as const,
   savedInternships: ['savedInternships'] as const,
   studentBookings: (when?: 'upcoming' | 'past') => ['studentBookings', when] as const,
+  coachSessions: ['coachSessions'] as const,
+  coachAvailabilityMe: ['coachAvailabilityMe'] as const,
+  coachEarnings: ['coachEarnings'] as const,
+  coachSessionTypes: ['coachSessionTypes'] as const,
   adminInternships: (status?: string) => ['adminInternships', status] as const,
 };
 
@@ -105,6 +120,7 @@ export function useCompanies(params?: { q?: string; page?: number; per_page?: nu
       const res = await api.get<CompanyCard[]>('/companies', params);
       return { items: res.data || [], meta: res.meta };
     },
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -158,17 +174,26 @@ export function useCoachReviews(slug: string) {
   });
 }
 
+// Public availability query with required RFC 3339 from & to timestamps (API-040 / Issue #17)
 export function useCoachAvailability(slug: string, from?: string, to?: string) {
+  const stableWindow = useMemo(() => {
+    const now = new Date();
+    const f = from || new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0)).toISOString();
+    const t = to || new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 30, 0, 0, 0)).toISOString();
+    return { from: f, to: t };
+  }, [from, to]);
+
   return useQuery({
-    queryKey: queryKeys.coachAvailability(slug, from, to),
+    queryKey: queryKeys.coachAvailability(slug, stableWindow.from, stableWindow.to),
     queryFn: async () => {
-      const res = await api.get<AvailabilitySlot[]>(`/coaches/${slug}/availability`, {
-        from,
-        to,
+      const res = await api.get<PublicAvailabilitySlot[]>(`/coaches/${slug}/availability`, {
+        from: stableWindow.from,
+        to: stableWindow.to,
       });
       return res.data || [];
     },
     enabled: Boolean(slug),
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -182,6 +207,22 @@ export function useCurrentUser() {
     },
     retry: false,
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function usePasswordResetRequest() {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      return api.post('/auth/password-reset/request', { email });
+    },
+  });
+}
+
+export function usePasswordResetConfirm() {
+  return useMutation({
+    mutationFn: async (payload: PasswordResetConfirmRequest) => {
+      return api.post('/auth/password-reset/confirm', payload);
+    },
   });
 }
 
@@ -242,6 +283,31 @@ export function useStudentBookings(when?: 'upcoming' | 'past') {
   });
 }
 
+export function useCreateStudentProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateStudentProfileRequest) => {
+      const res = await api.post<StudentProfile>('/me/student-profile', payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+      queryClient.invalidateQueries({ queryKey: queryKeys.studentDashboard });
+    },
+  });
+}
+
+export function useStudentProfile() {
+  return useQuery({
+    queryKey: ['studentProfile'],
+    queryFn: async () => {
+      const res = await api.get<StudentProfile>('/me/student-profile');
+      return res.data;
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
 export function useUpdateStudentProfile() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -251,6 +317,7 @@ export function useUpdateStudentProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+      queryClient.invalidateQueries({ queryKey: ['studentProfile'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.studentDashboard });
     },
   });
@@ -264,6 +331,8 @@ export function useUpdateSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+      queryClient.invalidateQueries({ queryKey: ['studentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
     },
   });
 }
@@ -286,8 +355,23 @@ export function useCreateBooking() {
 export function useResumeCheckout() {
   return useMutation({
     mutationFn: async (bookingId: string) => {
-      const res = await api.post<ResumeCheckoutResponse>(`/bookings/${bookingId}/checkout`);
+      const res = await api.post<BookingResponse>(`/bookings/${bookingId}/checkout`);
       return res.data;
+    },
+  });
+}
+
+export function useCancelBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      const res = await api.post<BookingResponse>(`/bookings/${bookingId}/cancel`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['studentBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['coachSessions'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.studentDashboard });
     },
   });
 }
@@ -307,6 +391,77 @@ export function useCreateReview() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['studentBookings'] });
       queryClient.invalidateQueries({ queryKey: ['coach-reviews'] });
+    },
+  });
+}
+
+// Coach Portal Queries (Issue #18)
+export function useCoachSessions() {
+  return useQuery({
+    queryKey: queryKeys.coachSessions,
+    queryFn: async () => {
+      const res = await api.get<CoachBooking[]>('/me/sessions');
+      return res.data || [];
+    },
+  });
+}
+
+export function useCoachAvailabilityMe() {
+  return useQuery({
+    queryKey: queryKeys.coachAvailabilityMe,
+    queryFn: async () => {
+      const res = await api.get<MyAvailabilitySlot[]>('/me/availability');
+      return res.data || [];
+    },
+  });
+}
+
+export function usePublishAvailability() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (slots: { starts_at: string; ends_at: string }[]) => {
+      const res = await api.put<MyAvailabilitySlot[]>('/me/availability', { slots });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.coachAvailabilityMe });
+      queryClient.invalidateQueries({ queryKey: ['coach-availability'] });
+    },
+  });
+}
+
+export function useCoachEarnings() {
+  return useQuery({
+    queryKey: queryKeys.coachEarnings,
+    queryFn: async () => {
+      const res = await api.get<EarningsItem[]>('/me/earnings');
+      return {
+        items: res.data || [],
+        meta: res.meta as EarningsMeta | undefined,
+      };
+    },
+  });
+}
+
+export function useCoachSessionTypes() {
+  return useQuery({
+    queryKey: queryKeys.coachSessionTypes,
+    queryFn: async () => {
+      const res = await api.get<SessionType[]>('/me/session-types');
+      return res.data || [];
+    },
+  });
+}
+
+export function useCreateCoachProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateCoachProfileRequest) => {
+      const res = await api.post<CoachProfile>('/me/coach-profile', payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     },
   });
 }
