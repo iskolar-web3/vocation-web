@@ -17,7 +17,7 @@ interface StudentOnboardingPageProps {
 }
 
 export const StudentOnboardingPage: React.FC<StudentOnboardingPageProps> = ({ navigate }) => {
-  const { user } = useAuth();
+  const { user, refetchUser } = useAuth();
   const createProfileMutation = useCreateStudentProfile();
 
   const [fullName, setFullName] = useState(user?.full_name || '');
@@ -59,6 +59,9 @@ export const StudentOnboardingPage: React.FC<StudentOnboardingPageProps> = ({ na
         skills,
         target_ojt_hours: Number(targetOjtHours) || 300,
       });
+
+      // Refetch user session so AuthContext immediately reflects is_onboarded: true
+      await refetchUser();
 
       // Once onboarded, navigate to the student dashboard
       navigate('/app');

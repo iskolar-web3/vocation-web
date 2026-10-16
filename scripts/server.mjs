@@ -358,10 +358,33 @@ function getInitialDB() {
     saved_internships: {
       'student@iskolar.ph': ['int_01', 'int_02'],
     },
+    coach_profiles: {
+      'coach@iskolar.ph': {
+        slug: 'engr-mark-villanueva',
+        display_name: 'Engr. Mark Villanueva',
+        headline: 'Senior Staff Software Engineer at Grab · Ex-Shopee · Top Career Coach',
+        bio: 'Over 9 years of engineering experience across Southeast Asia unicorn tech companies. Mentored 120+ Filipino students and career shifters into junior & mid-level engineering roles with a 90% placement rate.',
+        experience: '9+ years staff software engineer at Grab, Shopee, Voyager Innovations.',
+        languages: ['English', 'Filipino'],
+        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
+        price_type: 'paid',
+        expertise: ['Technical Coding Interviews', 'System Design', 'Backend Engineering', 'Resume Review'],
+        skills: ['Technical Coding Interviews', 'System Design', 'Backend Engineering', 'Resume Review'],
+        session_types: SEED_COACHES[0].session_types,
+        rating_avg: 4.95,
+        rating_count: 48,
+        default_join_url: 'https://meet.google.com/abc-defg-hij',
+        payout_channel_code: 'BDO',
+        payout_account_number_masked: '**** 1234',
+        payout_account_holder_name: 'Mark Villanueva',
+      },
+    },
+    coach_availability: {},
     bookings: [
       {
         booking_id: 'bkg_demo_01',
         student_email: 'student@iskolar.ph',
+        student_display_name: 'Clarisse Salazar',
         coach_slug: 'engr-mark-villanueva',
         coach_display_name: 'Engr. Mark Villanueva',
         slot_starts_at: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
@@ -612,11 +635,15 @@ export const server = http.createServer(async (req, res) => {
         ...body,
         target_ojt_hours: body?.target_ojt_hours !== undefined ? Number(body.target_ojt_hours) : (current.target_ojt_hours || 300),
         completed_ojt_hours: body?.completed_ojt_hours !== undefined ? Number(body.completed_ojt_hours) : (current.completed_ojt_hours || 180),
+        completeness_pct: 100,
       };
       db.student_profiles[email] = updated;
 
-      if (body?.full_name && db.accounts[email]) {
-        db.accounts[email].full_name = body.full_name;
+      if (db.accounts[email]) {
+        if (body?.full_name) {
+          db.accounts[email].full_name = body.full_name;
+        }
+        db.accounts[email].is_onboarded = true;
       }
       saveDB();
 
@@ -798,6 +825,253 @@ export const server = http.createServer(async (req, res) => {
     if (cleanPath.startsWith('bookings/') && (cleanPath.endsWith('/checkout') || cleanPath.endsWith('/resume-checkout')) && method === 'POST') {
       const bookingId = cleanPath.replace('bookings/', '').replace('/resume-checkout', '').replace('/checkout', '');
       sendJson(200, { checkout_url: `/checkout/success?booking_id=${bookingId}` }, 'Checkout resumed');
+      return;
+    }
+
+    // 5.1 Coach Self-Service Routes (API-060, API-061, API-062, API-063, API-064, API-067)
+    if (cleanPath === 'me/coach-profile' && method === 'POST') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const displayName = (body?.display_name || user?.full_name || 'Coach').trim();
+      const slug = (body?.slug || displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')).trim();
+      const skills = body?.skills || ['Career Guidance', 'Resume Review'];
+
+      const newProfile = {
+        slug,
+        display_name: displayName,
+        headline: body?.headline || 'Industry Career Coach & Mentor',
+        bio: body?.bio || '',
+        experience: body?.experience || null,
+        languages: body?.languages || ['English', 'Filipino'],
+        avatar_url: user?.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
+        price_type: body?.price_type || 'paid',
+        expertise: skills,
+        skills,
+        session_types: [
+          {
+            id: `srv_${Date.now()}_1`,
+            name: 'Free 15-Min Career & OJT Discovery',
+            duration_minutes: 15,
+            price_centavos: 0,
+            is_intro_call: true,
+          },
+          {
+            id: `srv_${Date.now()}_2`,
+            name: '1-on-1 Mentorship & Coaching Session',
+            duration_minutes: 45,
+            price_centavos: body?.price_type === 'free' ? 0 : 100000,
+            is_intro_call: false,
+          },
+        ],
+        rating_avg: 5.0,
+        rating_count: 0,
+        default_join_url: 'https://meet.google.com/abc-defg-hij',
+      };
+
+      db.coach_profiles[email] = newProfile;
+
+      // Add or update in db.coaches
+      const existingIdx = db.coaches.findIndex((c) => c.slug === slug || c.id === slug);
+      const coachCard = {
+        id: `coach_${Date.now()}`,
+        name: displayName,
+        display_name: displayName,
+        slug,
+        headline: newProfile.headline,
+        avatar_url: newProfile.avatar_url,
+        current_role: newProfile.headline.split('·')[0].trim(),
+        company: 'Independent Coach',
+        location: 'Metro Manila / Remote',
+        bio: newProfile.bio,
+        expertise: skills,
+        experience_years: 5,
+        rating: 5.0,
+        review_count: 0,
+        starting_price_centavos: newProfile.session_types[0]?.price_centavos || 0,
+        session_types: newProfile.session_types,
+      };
+
+      if (existingIdx >= 0) {
+        db.coaches[existingIdx] = { ...db.coaches[existingIdx], ...coachCard };
+      } else {
+        db.coaches.push(coachCard);
+      }
+
+      if (db.accounts[email]) {
+        db.accounts[email].full_name = displayName;
+        db.accounts[email].is_onboarded = true;
+      }
+
+      saveDB();
+      sendJson(201, newProfile, 'Coach profile created');
+      return;
+    }
+
+    if (cleanPath === 'me/coach-profile' && method === 'PATCH') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const current = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'] || {};
+      const updated = {
+        ...current,
+        ...body,
+        expertise: body?.skills || current?.expertise || [],
+        payout_account_number_masked: body?.payout_account_number ? `**** ${body.payout_account_number.slice(-4)}` : current?.payout_account_number_masked,
+      };
+      db.coach_profiles[email] = updated;
+
+      if (body?.display_name && db.accounts[email]) {
+        db.accounts[email].full_name = body.display_name;
+      }
+
+      const coachIdx = db.coaches.findIndex((c) => c.slug === updated.slug);
+      if (coachIdx >= 0) {
+        db.coaches[coachIdx] = {
+          ...db.coaches[coachIdx],
+          display_name: updated.display_name,
+          name: updated.display_name,
+          headline: updated.headline,
+          bio: updated.bio,
+          expertise: updated.expertise,
+        };
+      }
+
+      saveDB();
+      sendJson(200, updated, 'Coach profile updated');
+      return;
+    }
+
+    if (cleanPath === 'me/coach-profile' && method === 'GET') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
+      sendJson(200, profile);
+      return;
+    }
+
+    if (cleanPath === 'me/availability' && method === 'GET') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
+      const slug = profile?.slug || 'engr-mark-villanueva';
+      const slots = db.coach_availability[slug] || generateAvailabilitySlots();
+      sendJson(200, slots, 'ok', { total: slots.length });
+      return;
+    }
+
+    if (cleanPath === 'me/availability' && method === 'PUT') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
+      const slug = profile?.slug || 'engr-mark-villanueva';
+      const inputSlots = (body?.slots || []).map((s, idx) => ({
+        id: `slot_custom_${Date.now()}_${idx}`,
+        starts_at: s.starts_at,
+        ends_at: s.ends_at,
+        is_booked: false,
+      }));
+      db.coach_availability[slug] = inputSlots;
+      saveDB();
+      sendJson(200, inputSlots, 'Availability updated', { total: inputSlots.length });
+      return;
+    }
+
+    if (cleanPath === 'me/sessions' && method === 'GET') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
+      const slug = profile?.slug || 'engr-mark-villanueva';
+      const when = parsedUrl.searchParams.get('when') || 'upcoming';
+      const now = Date.now();
+
+      const coachBookings = db.bookings.filter((b) => b.coach_slug === slug);
+      let filtered = coachBookings;
+      if (when === 'upcoming') {
+        filtered = coachBookings.filter((b) => {
+          const isNotCancelledOrCompleted = b.status !== 'cancelled' && b.status !== 'completed';
+          const sessionEndTime = new Date(b.slot_ends_at || b.slot_starts_at).getTime();
+          return isNotCancelledOrCompleted && sessionEndTime >= now;
+        });
+      } else if (when === 'past') {
+        filtered = coachBookings.filter((b) => {
+          const isCancelledOrCompleted = b.status === 'cancelled' || b.status === 'completed';
+          const sessionEndTime = new Date(b.slot_ends_at || b.slot_starts_at).getTime();
+          return isCancelledOrCompleted || sessionEndTime < now;
+        });
+      }
+
+      const formatted = filtered.map((b) => ({
+        id: b.booking_id,
+        booking_id: b.booking_id,
+        student_display_name: b.student_display_name || 'Clarisse Salazar',
+        student_email: b.student_email || 'student@iskolar.ph',
+        slot_starts_at: b.slot_starts_at,
+        slot_ends_at: b.slot_ends_at,
+        status: b.status,
+        payment_status: b.payment_status,
+        price_centavos: b.price_centavos,
+        join_url: b.join_url || 'https://meet.google.com/abc-defg-hij',
+      }));
+
+      sendJson(200, formatted, 'ok', { total: formatted.length });
+      return;
+    }
+
+    if (cleanPath === 'me/earnings' && method === 'GET') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
+      const slug = profile?.slug || 'engr-mark-villanueva';
+
+      const coachBookings = db.bookings.filter((b) => b.coach_slug === slug);
+      const items = coachBookings.map((b) => ({
+        id: `earn_${b.booking_id}`,
+        booking_id: b.booking_id,
+        price_centavos: b.price_centavos,
+        platform_fee_centavos: Math.round(b.price_centavos * 0.1),
+        coach_payout_centavos: Math.round(b.price_centavos * 0.9),
+        payment_status: b.payment_status,
+        slot_starts_at: b.slot_starts_at,
+        created_at: b.slot_starts_at,
+      }));
+
+      const totalPaidCentavos = items
+        .filter((i) => i.payment_status === 'paid')
+        .reduce((sum, i) => sum + i.coach_payout_centavos, 0);
+
+      sendJson(200, items, 'ok', {
+        balance: {
+          available_centavos: totalPaidCentavos,
+          in_transit_centavos: 0,
+          paid_out_centavos: 0,
+          pending_centavos: 0,
+        },
+      });
+      return;
+    }
+
+    if (cleanPath === 'me/session-types' && method === 'GET') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
+      sendJson(200, profile?.session_types || []);
+      return;
+    }
+
+    if (cleanPath === 'me/session-types' && method === 'POST') {
+      const user = getAuthUser(req) || db.accounts['coach@iskolar.ph'];
+      const email = user?.email || 'coach@iskolar.ph';
+      const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
+      const newType = {
+        id: `srv_${Date.now()}`,
+        name: body?.name || 'New Mentorship Session',
+        duration_minutes: Number(body?.duration_minutes) || 45,
+        price_centavos: Number(body?.price_centavos) || 0,
+        is_intro_call: Boolean(body?.is_intro_call),
+      };
+      if (!profile.session_types) profile.session_types = [];
+      profile.session_types.push(newType);
+      saveDB();
+      sendJson(201, newType, 'Session type created');
       return;
     }
 

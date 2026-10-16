@@ -90,14 +90,14 @@ export const App: React.FC = () => {
 
       // Student Onboarding Guard (Issue #16)
       if (isAuthenticated && user?.role === 'student') {
-        if (!user.is_onboarded && pathOnly.startsWith('/app') && pathOnly !== '/app/onboarding') {
+        if (!user.is_onboarded && pathOnly.startsWith('/app') && pathOnly !== '/app/onboarding' && pathOnly !== '/onboarding') {
           return <StudentOnboardingPage navigate={navigate} />;
         }
       }
 
       // Coach Onboarding Guard (Issue #18)
       if (isAuthenticated && user?.role === 'coach') {
-        if (!user.is_onboarded && pathOnly.startsWith('/coach') && pathOnly !== '/coach/onboarding') {
+        if (!user.is_onboarded && pathOnly.startsWith('/coach') && pathOnly !== '/coach/onboarding' && pathOnly !== '/onboarding/coach') {
           return <CoachOnboardingPage navigate={navigate} />;
         }
       }
@@ -190,7 +190,7 @@ export const App: React.FC = () => {
     }
 
     // Student Onboarding & Account
-    if (pathOnly === '/app/onboarding') {
+    if (pathOnly === '/app/onboarding' || pathOnly === '/onboarding') {
       return <StudentOnboardingPage navigate={navigate} />;
     }
     if (pathOnly === '/app') {
@@ -207,7 +207,7 @@ export const App: React.FC = () => {
     }
 
     // Coach Onboarding & Dashboard
-    if (pathOnly === '/coach/onboarding') {
+    if (pathOnly === '/coach/onboarding' || pathOnly === '/onboarding/coach') {
       return <CoachOnboardingPage navigate={navigate} />;
     }
     if (pathOnly.startsWith('/coach')) {

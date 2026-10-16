@@ -621,17 +621,188 @@ export async function handleDevMockRequest<T>(
         ...user,
         full_name: updated.full_name || user.full_name,
         avatar_url: updated.avatar_url || user.avatar_url,
+        is_onboarded: true,
       };
       setStored(STORAGE_KEYS.USER, updatedUser);
 
       const accounts = getStored<Record<string, any>>(STORAGE_KEYS.ACCOUNTS, INITIAL_ACCOUNTS);
       if (accounts[email]) {
         accounts[email].full_name = updated.full_name || accounts[email].full_name;
+        accounts[email].is_onboarded = true;
         setStored(STORAGE_KEYS.ACCOUNTS, accounts);
       }
     }
 
     return { message: 'Profile updated', data: updated as unknown as T };
+  }
+
+  // Coach Self-Service Endpoints (API-060, API-061, API-062, API-063, API-064, API-067)
+  if (cleanPath === 'me/coach-profile' && methodUpper === 'POST') {
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const email = user?.email?.toLowerCase() || 'coach@iskolar.ph';
+    const displayName = (body?.display_name || user?.full_name || 'Coach').trim();
+    const slug = (body?.slug || displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')).trim();
+    const skills = body?.skills || ['Career Guidance', 'Resume Review'];
+
+    const newProfile = {
+      slug,
+      display_name: displayName,
+      headline: body?.headline || 'Industry Career Coach & Mentor',
+      bio: body?.bio || '',
+      experience: body?.experience || null,
+      languages: body?.languages || ['English', 'Filipino'],
+      avatar_url: user?.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
+      price_type: body?.price_type || 'paid',
+      expertise: skills,
+      skills,
+      session_types: [
+        {
+          id: `srv_${Date.now()}_1`,
+          name: 'Free 15-Min Career & OJT Discovery',
+          duration_minutes: 15,
+          price_centavos: 0,
+          is_intro_call: true,
+        },
+        {
+          id: `srv_${Date.now()}_2`,
+          name: '1-on-1 Mentorship & Coaching Session',
+          duration_minutes: 45,
+          price_centavos: body?.price_type === 'free' ? 0 : 100000,
+          is_intro_call: false,
+        },
+      ],
+      rating_avg: 5.0,
+      rating_count: 0,
+      default_join_url: 'https://meet.google.com/abc-defg-hij',
+    };
+
+    if (user) {
+      setStored(STORAGE_KEYS.USER, { ...user, full_name: displayName, is_onboarded: true });
+    }
+    const accounts = getStored<Record<string, any>>(STORAGE_KEYS.ACCOUNTS, INITIAL_ACCOUNTS);
+    if (accounts[email]) {
+      accounts[email].full_name = displayName;
+      accounts[email].is_onboarded = true;
+      setStored(STORAGE_KEYS.ACCOUNTS, accounts);
+    }
+
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    const existingIdx = coaches.findIndex((c) => c.slug === slug || c.id === slug);
+    const coachCard = {
+      id: `coach_${Date.now()}`,
+      name: displayName,
+      display_name: displayName,
+      slug,
+      headline: newProfile.headline,
+      avatar_url: newProfile.avatar_url,
+      current_role: newProfile.headline.split('·')[0].trim(),
+      company: 'Independent Coach',
+      location: 'Metro Manila / Remote',
+      bio: newProfile.bio,
+      expertise: skills,
+      experience_years: 5,
+      rating: 5.0,
+      review_count: 0,
+      starting_price_centavos: newProfile.session_types[0]?.price_centavos || 0,
+      session_types: newProfile.session_types,
+    };
+    if (existingIdx >= 0) {
+      coaches[existingIdx] = { ...coaches[existingIdx], ...coachCard };
+    } else {
+      coaches.push(coachCard);
+    }
+    setStored(STORAGE_KEYS.COACHES, coaches);
+
+    return { message: 'Coach profile created', data: newProfile as unknown as T };
+  }
+
+  if (cleanPath === 'me/coach-profile' && methodUpper === 'PATCH') {
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    const updated = { ...coaches[0], ...body };
+    return { message: 'Coach profile updated', data: updated as unknown as T };
+  }
+
+  if (cleanPath === 'me/coach-profile' && methodUpper === 'GET') {
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    return { message: 'ok', data: coaches[0] as unknown as T };
+  }
+
+  if (cleanPath === 'me/availability' && methodUpper === 'GET') {
+    const slots = [
+      { id: 'slot_m1', starts_at: new Date(Date.now() + 86400000).toISOString(), ends_at: new Date(Date.now() + 86400000 + 45 * 60000).toISOString(), is_booked: false },
+      { id: 'slot_m2', starts_at: new Date(Date.now() + 86400000 * 2).toISOString(), ends_at: new Date(Date.now() + 86400000 * 2 + 45 * 60000).toISOString(), is_booked: false },
+    ];
+    return { message: 'ok', data: slots as unknown as T, meta: { page: 1, per_page: 20, total: slots.length } };
+  }
+
+  if (cleanPath === 'me/availability' && methodUpper === 'PUT') {
+    const slots = (body?.slots || []).map((s: any, idx: number) => ({
+      id: `slot_c_${Date.now()}_${idx}`,
+      starts_at: s.starts_at,
+      ends_at: s.ends_at,
+      is_booked: false,
+    }));
+    return { message: 'Availability updated', data: slots as unknown as T, meta: { page: 1, per_page: 20, total: slots.length } };
+  }
+
+  if (cleanPath === 'me/sessions' && methodUpper === 'GET') {
+    const allBookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+    const formatted = allBookings.map((b) => ({
+      id: b.booking_id,
+      booking_id: b.booking_id,
+      student_display_name: 'Clarisse Salazar',
+      student_email: b.student_email || 'student@iskolar.ph',
+      slot_starts_at: b.slot_starts_at,
+      slot_ends_at: b.slot_ends_at,
+      status: b.status,
+      payment_status: b.payment_status,
+      price_centavos: b.price_centavos,
+      join_url: b.join_url || 'https://meet.google.com/abc-defg-hij',
+    }));
+    return { message: 'ok', data: formatted as unknown as T, meta: { page: 1, per_page: 20, total: formatted.length } };
+  }
+
+  if (cleanPath === 'me/earnings' && methodUpper === 'GET') {
+    const allBookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+    const items = allBookings.map((b) => ({
+      id: `earn_${b.booking_id}`,
+      booking_id: b.booking_id,
+      price_centavos: b.price_centavos,
+      platform_fee_centavos: Math.round(b.price_centavos * 0.1),
+      coach_payout_centavos: Math.round(b.price_centavos * 0.9),
+      payment_status: b.payment_status,
+      slot_starts_at: b.slot_starts_at,
+      created_at: b.slot_starts_at,
+    }));
+    const totalPaid = items.filter((i) => i.payment_status === 'paid').reduce((sum, i) => sum + i.coach_payout_centavos, 0);
+    return {
+      message: 'ok',
+      data: items as unknown as T,
+      meta: {
+        balance: {
+          available_centavos: totalPaid,
+          in_transit_centavos: 0,
+          paid_out_centavos: 0,
+          pending_centavos: 0,
+        },
+      } as any,
+    };
+  }
+
+  if (cleanPath === 'me/session-types' && methodUpper === 'GET') {
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    return { message: 'ok', data: (coaches[0]?.session_types || []) as unknown as T };
+  }
+
+  if (cleanPath === 'me/session-types' && methodUpper === 'POST') {
+    const newType = {
+      id: `srv_${Date.now()}`,
+      name: body?.name || 'New Mentorship Session',
+      duration_minutes: Number(body?.duration_minutes) || 45,
+      price_centavos: Number(body?.price_centavos) || 0,
+      is_intro_call: Boolean(body?.is_intro_call),
+    };
+    return { message: 'Session type created', data: newType as unknown as T };
   }
 
   if (cleanPath === 'me/settings' && methodUpper === 'GET') {

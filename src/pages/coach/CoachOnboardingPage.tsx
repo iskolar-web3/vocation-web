@@ -17,14 +17,21 @@ interface CoachOnboardingPageProps {
 }
 
 export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ navigate }) => {
-  const { user } = useAuth();
+  const { user, refetchUser } = useAuth();
   const createCoachMutation = useCreateCoachProfile();
 
   const [displayName, setDisplayName] = useState(user?.full_name || '');
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
   const [experience, setExperience] = useState('');
-  const [slug, setSlug] = useState('');
+  const [slug, setSlug] = useState(() => {
+    return user?.full_name
+      ? user.full_name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+      : '';
+  });
   const [priceType, setPriceType] = useState<'free' | 'paid'>('paid');
   const [skills, setSkills] = useState<string[]>(['Career Guidance', 'Resume Review']);
   const [newSkill, setNewSkill] = useState('');
@@ -55,7 +62,15 @@ export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ naviga
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!displayName.trim() || !headline.trim() || !bio.trim() || !slug.trim()) {
+    const finalSlug = (
+      slug.trim() ||
+      displayName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+    );
+
+    if (!displayName.trim() || !headline.trim() || !bio.trim() || !finalSlug) {
       setErrorMsg('Please fill in all required coach profile fields.');
       return;
     }
@@ -72,10 +87,13 @@ export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ naviga
         bio: bio.trim(),
         experience: experience.trim() || undefined,
         languages: ['English', 'Filipino'],
-        slug: slug.trim().toLowerCase(),
+        slug: finalSlug.trim().toLowerCase(),
         price_type: priceType,
         skills,
       });
+
+      // Refetch user session so AuthContext immediately reflects is_onboarded: true
+      await refetchUser();
 
       navigate('/coach');
     } catch (err: any) {
