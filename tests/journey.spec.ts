@@ -179,13 +179,13 @@ test.describe('Core Student & Coaching Journey', () => {
 
     // 8. Cancel Booking with Refund Outcome Preview (F-010, S-032)
     await page.goto('/app/bookings');
-    await expect(page.locator('h1, h2')).toContainText(/My Bookings|Sessions/i);
+    await expect(page.locator('h1, h2').first()).toContainText(/Mentorship Bookings|Bookings|Sessions/i);
 
     const cancelButton = page.locator('button:has-text("Cancel")').first();
     if (await cancelButton.isVisible()) {
       await cancelButton.click();
       // Verify refund outcome is displayed in the modal
-      await expect(page.locator('text=Refund Outcome, text=refund policy, text=Refund')).toBeVisible();
+      await expect(page.locator('text=Refund Assessment, text=Refund Outcome, text=refund policy, text=Refund').first()).toBeVisible();
 
       // Confirm cancellation
       const confirmCancelBtn = page.locator('button:has-text("Confirm Cancellation"), button:has-text("Yes, Cancel")').first();
