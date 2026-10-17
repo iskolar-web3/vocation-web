@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bookmark, ArrowLeft, Loader2 } from 'lucide-react';
 import { useSavedInternships } from '../../services/queries';
+import { useAuth } from '../../context/AuthContext';
 import { InternshipCard } from '../../components/internships/InternshipCard';
 import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
 import { InternshipCard as InternshipCardType, InternshipDetail } from '../../types/api';
@@ -10,7 +11,8 @@ interface SavedInternshipsPageProps {
 }
 
 export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navigate }) => {
-  const { data: savedRoles = [], isLoading } = useSavedInternships();
+  const { role } = useAuth();
+  const { data: savedRoles = [], isLoading } = useSavedInternships({ enabled: role === 'student' });
   const [selectedInternship, setSelectedInternship] = useState<InternshipCardType | InternshipDetail | null>(null);
 
   return (

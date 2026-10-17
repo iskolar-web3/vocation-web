@@ -62,7 +62,7 @@ test.describe('Core Student & Coaching Journey', () => {
 
     // 3. Browse Internships (S-001)
     await page.goto('/internships');
-    await expect(page.locator('h1, h2')).toContainText(/Internship|Directory|Opportunities/i);
+    await expect(page.locator('h1').first()).toContainText(/Internship|Directory|Opportunities/i);
 
     // Find and click the first internship card
     const firstInternshipCard = page.locator('.stream-row, .tactile-card').first();

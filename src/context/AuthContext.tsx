@@ -11,7 +11,7 @@ interface AuthContextType {
   userName: string;
   userEmail: string;
   avatar: string;
-  signin: (credentials: { email: string; password: string }) => Promise<void>;
+  signin: (credentials: { email: string; password: string }) => Promise<UserSession | null>;
   signup: (payload: { email: string; password: string; role: UserRole; full_name?: string }) => Promise<void>;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
@@ -40,14 +40,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchSession();
   }, [fetchSession]);
 
-  const signin = async ({ email, password }: { email: string; password: string }) => {
+  const signin = async ({ email, password }: { email: string; password: string }): Promise<UserSession | null> => {
     setIsLoading(true);
     try {
       await api.post('/auth/signin', { email, password });
-      await fetchSession();
+      const res = await api.get<UserSession>('/me');
+      setUser(res.data);
+      return res.data;
     } catch (err) {
       setIsLoading(false);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 

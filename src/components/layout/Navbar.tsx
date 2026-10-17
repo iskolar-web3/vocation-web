@@ -25,8 +25,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // TanStack queries for badges (only enabled if student)
-  const { data: savedList } = useSavedInternships();
-  const { data: studentBookings } = useStudentBookings('upcoming');
+  const isStudent = isAuthenticated && role === 'student';
+  const { data: savedList } = useSavedInternships({ enabled: isStudent });
+  const { data: studentBookings } = useStudentBookings('upcoming', { enabled: isStudent });
 
   const savedCount = savedList?.length || 0;
   const pendingCount = (studentBookings || []).filter(

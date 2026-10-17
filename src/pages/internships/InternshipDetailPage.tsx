@@ -16,6 +16,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useInternship, useCoaches, useSaveInternship, useUnsaveInternship, useSavedInternships } from '../../services/queries';
+import { useAuth } from '../../context/AuthContext';
 import { formatPesos } from '../../lib/utils';
 import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
 import { BookingDialog } from '../../components/coaching/BookingDialog';
@@ -40,9 +41,12 @@ interface InternshipDetailPageProps {
 }
 
 export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug, navigate }) => {
+  const { isAuthenticated, role } = useAuth();
+  const isStudent = isAuthenticated && role === 'student';
+
   const { data: internship, isLoading, error } = useInternship(slug);
   const { data: coachesData } = useCoaches();
-  const { data: savedList = [] } = useSavedInternships();
+  const { data: savedList = [] } = useSavedInternships({ enabled: isStudent });
 
   const saveMutation = useSaveInternship();
   const unsaveMutation = useUnsaveInternship();
@@ -78,9 +82,10 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
     );
   }
 
-  const isSaved = savedList.some((s) => s.id === internship.id);
+  const isSaved = isStudent && savedList.some((s) => s.id === internship.id);
 
   const handleToggleSave = () => {
+    if (!isStudent) return;
     if (isSaved) {
       unsaveMutation.mutate(internship.id);
     } else {
@@ -174,23 +179,25 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
             </button>
 
             <div className="flex items-center gap-2 w-full">
-              <button
-                type="button"
-                onClick={handleToggleSave}
-                className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  isSaved
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-emerald-600' : ''}`} />
-                <span>{isSaved ? 'Saved' : 'Save'}</span>
-              </button>
+              {role !== 'coach' && (
+                <button
+                  type="button"
+                  onClick={handleToggleSave}
+                  className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    isSaved
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-emerald-600' : ''}`} />
+                  <span>{isSaved ? 'Saved' : 'Save'}</span>
+                </button>
+              )}
 
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="py-2.5 px-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2.5 px-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-none"
                 title="Copy share link"
               >
                 {copiedLink ? (
@@ -198,6 +205,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
                 ) : (
                   <Share2 className="w-3.5 h-3.5" />
                 )}
+                <span className="sm:hidden text-xs">Share</span>
               </button>
             </div>
           </div>
@@ -312,8 +320,8 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
             </button>
           </div>
 
-          {/* Cross-sell Coach */}
-          {recommendedCoach && (
+          {/* Cross-sell Coach (for students only) */}
+          {role !== 'coach' && recommendedCoach && (
             <div className="bg-[#021F53] rounded-2xl p-6 text-white shadow-xs border border-[#3f58b2]/30 space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold text-[#ff9b00]">
                 <Target className="w-4 h-4 text-[#ff9b00]" />

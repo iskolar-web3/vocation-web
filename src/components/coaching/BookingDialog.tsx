@@ -30,7 +30,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
   coach,
   onBookingSuccess,
 }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const createBookingMutation = useCreateBooking();
 
   const [selectedSessionTypeId, setSelectedSessionTypeId] = useState<string>('');
@@ -118,7 +118,12 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
     setErrorMsg(null);
 
     if (!isAuthenticated) {
-      setErrorMsg('Please sign in or create an account to book a coaching session.');
+      setErrorMsg('Please sign in or create a student account to book a coaching session.');
+      return;
+    }
+
+    if (role === 'coach') {
+      setErrorMsg('Coach accounts cannot book mentorship sessions. Please sign in with a student account.');
       return;
     }
 
@@ -359,6 +364,13 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             </div>
           </div>
 
+          {role === 'coach' && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>Coach accounts cannot book mentoring sessions. Please sign in with a student account to book.</span>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex items-center justify-between gap-3 pt-2">
             <button
@@ -372,7 +384,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             <button
               type="button"
               onClick={handleProceed}
-              disabled={!selectedSlot || createBookingMutation.isPending}
+              disabled={role === 'coach' || !selectedSlot || createBookingMutation.isPending}
               className="px-6 py-3 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {createBookingMutation.isPending ? (

@@ -33,11 +33,12 @@ interface StudentDashboardPageProps {
 }
 
 export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navigate }) => {
-  const { user } = useAuth();
-  const { data: dashboard, isLoading: isLoadingDash } = useStudentDashboard();
-  const { data: studentProfile } = useStudentProfile();
-  const { data: savedList = [], isLoading: isLoadingSaved } = useSavedInternships();
-  const { data: bookings = [], isLoading: isLoadingBookings } = useStudentBookings('upcoming');
+  const { user, role } = useAuth();
+  const isStudent = role === 'student';
+  const { data: dashboard, isLoading: isLoadingDash } = useStudentDashboard({ enabled: isStudent });
+  const { data: studentProfile } = useStudentProfile({ enabled: isStudent });
+  const { data: savedList = [], isLoading: isLoadingSaved } = useSavedInternships({ enabled: isStudent });
+  const { data: bookings = [], isLoading: isLoadingBookings } = useStudentBookings('upcoming', { enabled: isStudent });
   const { data: internshipsData } = useInternships();
   const resumeCheckoutMutation = useResumeCheckout();
 

@@ -10,6 +10,7 @@ import {
 import { useCoach, useCoachReviews } from '../../services/queries';
 import { formatPHP, formatDate } from '../../lib/utils';
 import { BookingDialog } from '../../components/coaching/BookingDialog';
+import { useAuth } from '../../context/AuthContext';
 
 interface CoachDetailPageProps {
   slug: string;
@@ -17,6 +18,7 @@ interface CoachDetailPageProps {
 }
 
 export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate }) => {
+  const { role, user } = useAuth();
   const { data: coach, isLoading, error } = useCoach(slug);
   const { data: reviews = [] } = useCoachReviews(slug);
 
@@ -96,14 +98,26 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsBookingOpen(true)}
-            className="w-full sm:w-auto px-8 py-3.5 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <Calendar className="w-4 h-4 text-[#ff9b00]" />
-            <span>Book a Session</span>
-          </button>
+          {role === 'coach' ? (
+            user?.full_name === (coach.display_name || (coach as any).name) || slug === 'engr-mark-villanueva' ? (
+              <button
+                type="button"
+                onClick={() => navigate('/coach')}
+                className="w-full sm:w-auto px-6 py-3.5 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] font-bold text-sm rounded-xl border border-[#3f58b2]/20 shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Manage in Coach Portal</span>
+              </button>
+            ) : null
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsBookingOpen(true)}
+              className="w-full sm:w-auto px-8 py-3.5 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-[#ff9b00]" />
+              <span>Book a Session</span>
+            </button>
+          )}
         </div>
 
         {/* Expertise Tags */}
@@ -166,13 +180,15 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
                   <Clock className="w-3.5 h-3.5" />
                   <span>{st.duration_minutes} mins</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setIsBookingOpen(true)}
-                  className="px-4 py-2 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] font-bold text-xs rounded-xl border border-[#3f58b2]/20 transition-all cursor-pointer"
-                >
-                  Book This
-                </button>
+                {role !== 'coach' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsBookingOpen(true)}
+                    className="px-4 py-2 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] font-bold text-xs rounded-xl border border-[#3f58b2]/20 transition-all cursor-pointer"
+                  >
+                    Book This
+                  </button>
+                )}
               </div>
             </div>
           ))}

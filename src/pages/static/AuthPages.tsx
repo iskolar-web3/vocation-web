@@ -34,6 +34,19 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
     }
   }, []);
 
+  // Redirect already authenticated users to their role workspace
+  useEffect(() => {
+    if (user && mode !== 'reset') {
+      if (user.role === 'coach') {
+        navigate(user.is_onboarded ? '/coach' : '/coach/onboarding');
+      } else if (user.role === 'admin') {
+        navigate('/admin/listings');
+      } else {
+        navigate(user.is_onboarded ? '/app' : '/app/onboarding');
+      }
+    }
+  }, [user, mode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -60,13 +73,17 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
           setResetSent(true);
         }
       } else if (mode === 'signin') {
-        await signin({ email, password });
-        // Redirect check handled by route or caller
+        const session = await signin({ email, password });
+        // Role-based post-signin redirect
         const redirectParam = new URLSearchParams(window.location.search).get('redirect');
         if (redirectParam) {
           navigate(redirectParam);
+        } else if (session?.role === 'coach') {
+          navigate(session.is_onboarded ? '/coach' : '/coach/onboarding');
+        } else if (session?.role === 'admin') {
+          navigate('/admin/listings');
         } else {
-          navigate('/app');
+          navigate(session?.is_onboarded ? '/app' : '/app/onboarding');
         }
       } else if (mode === 'signup') {
         if (!agreeLegal) {

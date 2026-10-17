@@ -184,6 +184,72 @@ async function runTests() {
     const foundCoach = coachesData.data.find((c) => c.slug === coachSlug);
     assert(Boolean(foundCoach), 'Newly onboarded coach appears in public /coaches directory');
 
+    // 9. Verify 0 Initial Saved Internships for both accounts
+    const studentSavedInitRes = await fetch(`${baseUrl}/me/saved`, {
+      headers: { 'X-Session-Id': studentSessionId },
+    });
+    const studentSavedInit = await studentSavedInitRes.json();
+    assert(Array.isArray(studentSavedInit.data) && studentSavedInit.data.length === 0, 'New student account starts with 0 saved internships');
+
+    const coachSavedInitRes = await fetch(`${baseUrl}/me/saved`, {
+      headers: { 'X-Session-Id': coachSessionId },
+    });
+    const coachSavedInit = await coachSavedInitRes.json();
+    assert(Array.isArray(coachSavedInit.data) && coachSavedInit.data.length === 0, 'Coach account has 0 saved internships');
+
+    // 10. Role Isolation Tests: Coach account must NOT access student features
+    // A. Coach cannot bookmark/save internships
+    const coachSaveRes = await fetch(`${baseUrl}/me/saved/int_01`, {
+      method: 'PUT',
+      headers: { 'X-Session-Id': coachSessionId },
+    });
+    assert(coachSaveRes.status === 403, 'PUT /me/saved/int_01 by coach returns 403 Forbidden');
+
+    // B. Coach cannot access student dashboard
+    const coachDashRes = await fetch(`${baseUrl}/me/dashboard`, {
+      headers: { 'X-Session-Id': coachSessionId },
+    });
+    assert(coachDashRes.status === 403, 'GET /me/dashboard by coach returns 403 Forbidden');
+
+    // C. Coach cannot book mentorship sessions
+    const coachBookRes = await fetch(`${baseUrl}/bookings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-Id': coachSessionId,
+      },
+      body: JSON.stringify({
+        coach_slug: 'engr-mark-villanueva',
+        session_type_id: 'srv_01',
+      }),
+    });
+    assert(coachBookRes.status === 403, 'POST /bookings by coach returns 403 Forbidden');
+
+    // 11. Student Save & Unsave Lifecycle
+    const studentSaveRes = await fetch(`${baseUrl}/me/saved/int_01`, {
+      method: 'PUT',
+      headers: { 'X-Session-Id': studentSessionId },
+    });
+    assert(studentSaveRes.status === 200, 'Student can save an internship');
+
+    const studentSavedAfterRes = await fetch(`${baseUrl}/me/saved`, {
+      headers: { 'X-Session-Id': studentSessionId },
+    });
+    const studentSavedAfter = await studentSavedAfterRes.json();
+    assert(studentSavedAfter.data.length === 1 && studentSavedAfter.data[0].id === 'int_01', 'Student has exactly 1 saved internship after save');
+
+    const studentUnsaveRes = await fetch(`${baseUrl}/me/saved/int_01`, {
+      method: 'DELETE',
+      headers: { 'X-Session-Id': studentSessionId },
+    });
+    assert(studentUnsaveRes.status === 200, 'Student can unsave an internship');
+
+    const studentSavedFinalRes = await fetch(`${baseUrl}/me/saved`, {
+      headers: { 'X-Session-Id': studentSessionId },
+    });
+    const studentSavedFinal = await studentSavedFinalRes.json();
+    assert(studentSavedFinal.data.length === 0, 'Student has 0 saved internships after unsave');
+
     console.log(`\n================================`);
     console.log(`Results: ${passed} passed, ${failed} failed`);
     console.log(`================================`);

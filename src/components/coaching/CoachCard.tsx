@@ -2,6 +2,7 @@ import React from 'react';
 import { Star, Calendar } from 'lucide-react';
 import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
 import { formatPHP } from '../../lib/utils';
+import { useAuth } from '../../context/AuthContext';
 
 interface CoachCardProps {
   coach: CoachCardType | CoachDetail;
@@ -16,6 +17,9 @@ export const CoachCard: React.FC<CoachCardProps> = ({
   onBook,
   layout = 'grid',
 }) => {
+  const { role, user } = useAuth();
+  const isSelf = user?.role === 'coach' && (coach.slug === 'engr-mark-villanueva' || coach.display_name === user.full_name);
+
   const sessionTypes = ('session_types' in coach ? coach.session_types : []) || [];
   const hasFreeSession = coach.price_type === 'free' || sessionTypes.some((st) => st.price_centavos === 0);
   const paidPrices = sessionTypes.filter((st) => st.price_centavos > 0).map((st) => st.price_centavos);
@@ -83,17 +87,30 @@ export const CoachCard: React.FC<CoachCardProps> = ({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onBook(coach);
-            }}
-            className="px-4 py-2 bg-[#021F53] hover:bg-[#3f58b2] text-white text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" />
-            <span>Book 1-on-1</span>
-          </button>
+          {role === 'coach' ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(coach);
+              }}
+              className="px-4 py-2 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] text-xs font-bold rounded-xl transition-all border border-[#3f58b2]/20 cursor-pointer"
+            >
+              <span>{isSelf ? 'My Profile' : 'View Profile'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBook(coach);
+              }}
+              className="px-4 py-2 bg-[#021F53] hover:bg-[#3f58b2] text-white text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" />
+              <span>Book 1-on-1</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -170,17 +187,30 @@ export const CoachCard: React.FC<CoachCardProps> = ({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onBook(coach);
-          }}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#021F53] hover:bg-[#3f58b2] shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-        >
-          <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" />
-          <span>Book Session</span>
-        </button>
+        {role === 'coach' ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(coach);
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-[#3f58b2] bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white border border-[#3f58b2]/20 transition-all cursor-pointer"
+          >
+            <span>{isSelf ? 'My Profile' : 'View Profile'}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBook(coach);
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#021F53] hover:bg-[#3f58b2] shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" />
+            <span>Book Session</span>
+          </button>
+        )}
       </div>
     </div>
   );

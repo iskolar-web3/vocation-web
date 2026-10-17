@@ -63,6 +63,36 @@ export const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Synchronize browser history URL if cross-role route attempted
+  useEffect(() => {
+    if (isLoadingAuth || !isAuthenticated || !user) return;
+    const [pathOnly] = currentPath.split('?');
+
+    if (user.role !== 'admin' && pathOnly.startsWith('/admin')) {
+      const target = user.role === 'coach' ? '/coach' : '/app';
+      if (currentPath !== target) {
+        navigate(target);
+      }
+      return;
+    }
+
+    if (user.role === 'coach') {
+      if (pathOnly.startsWith('/app') || pathOnly === '/onboarding') {
+        const target = user.is_onboarded ? '/coach' : '/coach/onboarding';
+        if (currentPath !== target) {
+          navigate(target);
+        }
+      }
+    } else if (user.role === 'student') {
+      if (pathOnly.startsWith('/coach') || pathOnly === '/onboarding/coach') {
+        const target = user.is_onboarded ? '/app' : '/app/onboarding';
+        if (currentPath !== target) {
+          navigate(target);
+        }
+      }
+    }
+  }, [currentPath, user, isAuthenticated, isLoadingAuth]);
+
   // Router resolution with strict Route Guards (Issue #16 & docs/sitemap.md §5)
   const renderRoute = () => {
     if (isMaintenance) {
@@ -80,7 +110,7 @@ export const App: React.FC = () => {
     const [pathOnly, queryString] = currentPath.split('?');
     const searchParams = new URLSearchParams(queryString || '');
 
-    // 1. Route Guards for Protected Zones
+    // 1. Route Guards for Protected Zones (docs/sitemap.md §5)
     if (!isLoadingAuth) {
       if (pathOnly.startsWith('/app') || pathOnly.startsWith('/coach') || pathOnly.startsWith('/admin')) {
         if (!isAuthenticated) {
@@ -88,18 +118,40 @@ export const App: React.FC = () => {
         }
       }
 
-      // Student Onboarding Guard (Issue #16)
+      // Role isolation: Coach cannot enter Student zone (/app/* or /onboarding)
+      if (isAuthenticated && user?.role === 'coach') {
+        if (pathOnly.startsWith('/app') || pathOnly === '/onboarding') {
+          return user.is_onboarded ? (
+            <CoachDashboardPage navigate={navigate} />
+          ) : (
+            <CoachOnboardingPage navigate={navigate} />
+          );
+        }
+        if (!user.is_onboarded && pathOnly.startsWith('/coach') && pathOnly !== '/coach/onboarding' && pathOnly !== '/onboarding/coach') {
+          return <CoachOnboardingPage navigate={navigate} />;
+        }
+      }
+
+      // Role isolation: Student cannot enter Coach zone (/coach/* or /onboarding/coach)
       if (isAuthenticated && user?.role === 'student') {
+        if (pathOnly.startsWith('/coach') || pathOnly === '/onboarding/coach') {
+          return user.is_onboarded ? (
+            <StudentDashboardPage navigate={navigate} />
+          ) : (
+            <StudentOnboardingPage navigate={navigate} />
+          );
+        }
         if (!user.is_onboarded && pathOnly.startsWith('/app') && pathOnly !== '/app/onboarding' && pathOnly !== '/onboarding') {
           return <StudentOnboardingPage navigate={navigate} />;
         }
       }
 
-      // Coach Onboarding Guard (Issue #18)
-      if (isAuthenticated && user?.role === 'coach') {
-        if (!user.is_onboarded && pathOnly.startsWith('/coach') && pathOnly !== '/coach/onboarding' && pathOnly !== '/onboarding/coach') {
-          return <CoachOnboardingPage navigate={navigate} />;
+      // Role isolation: non-admins cannot enter Admin zone (/admin/*)
+      if (isAuthenticated && user?.role !== 'admin' && pathOnly.startsWith('/admin')) {
+        if (user?.role === 'coach') {
+          return <CoachDashboardPage navigate={navigate} />;
         }
+        return <StudentDashboardPage navigate={navigate} />;
       }
     }
 

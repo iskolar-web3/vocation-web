@@ -29,8 +29,8 @@ interface StudentProfileSettingsPageProps {
 export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProps> = ({
   navigate,
 }) => {
-  const { user, refetchUser } = useAuth();
-  const { data: studentProfile } = useStudentProfile();
+  const { user, role, refetchUser } = useAuth();
+  const { data: studentProfile } = useStudentProfile({ enabled: role === 'student' });
   const updateProfileMutation = useUpdateStudentProfile();
   const updateSettingsMutation = useUpdateSettings();
 

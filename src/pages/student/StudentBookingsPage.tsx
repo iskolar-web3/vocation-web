@@ -11,6 +11,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useStudentBookings, useResumeCheckout, useCancelBooking } from '../../services/queries';
+import { useAuth } from '../../context/AuthContext';
 import { BookingItem } from '../../components/student/BookingItem';
 import { RatingModal } from '../../components/common/RatingModal';
 import { Modal } from '../../components/common/Modal';
@@ -22,8 +23,9 @@ interface StudentBookingsPageProps {
 }
 
 export const StudentBookingsPage: React.FC<StudentBookingsPageProps> = ({ navigate }) => {
+  const { role } = useAuth();
   const [activeWhen, setActiveWhen] = useState<'upcoming' | 'past'>('upcoming');
-  const { data: allBookings = [], isLoading, error } = useStudentBookings();
+  const { data: allBookings = [], isLoading, error } = useStudentBookings(undefined, { enabled: role === 'student' });
 
   const resumeCheckoutMutation = useResumeCheckout();
   const cancelBookingMutation = useCancelBooking();

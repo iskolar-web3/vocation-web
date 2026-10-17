@@ -362,7 +362,7 @@ const STORAGE_KEYS = {
   COMPANIES: 'vocation_dev_companies',
   COACHES: 'vocation_dev_coaches',
   BOOKINGS: 'vocation_dev_bookings',
-  SAVED_BY_USER: 'vocation_dev_saved_by_user',
+  SAVED_BY_USER: 'vocation_dev_saved_by_user_v2',
   PROFILES: 'vocation_dev_profiles',
   SETTINGS: 'vocation_dev_settings',
 };
@@ -405,9 +405,7 @@ const INITIAL_PROFILES: Record<string, any> = {
   'student@iskolar.ph': INITIAL_STUDENT_PROFILE,
 };
 
-const INITIAL_SAVED_BY_USER: Record<string, string[]> = {
-  'student@iskolar.ph': ['int_01', 'int_02'],
-};
+const INITIAL_SAVED_BY_USER: Record<string, string[]> = {};
 
 const INITIAL_BOOKINGS: any[] = [
   {
@@ -1011,6 +1009,12 @@ export async function handleDevMockRequest<T>(
     ).toISOString();
 
     const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    if (user?.role !== 'student') {
+      return {
+        message: 'Coach accounts cannot book mentorship sessions. Only students can book.',
+        error: { code: 'FORBIDDEN', message: 'Forbidden' },
+      } as unknown as ApiFetchResult<T>;
+    }
     const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
 
     const newBooking: BookingItem & { student_email?: string } = {
@@ -1135,21 +1139,30 @@ export async function handleDevMockRequest<T>(
 
   if (cleanPath === 'me/saved' && methodUpper === 'GET') {
     const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
-    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    if (user?.role !== 'student') {
+      return { message: 'ok', data: [] as unknown as T };
+    }
+    const email = user.email?.toLowerCase();
     const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
-    const savedIds = savedByUser[email] ?? ['int_01', 'int_02'];
+    const savedIds = (email ? savedByUser[email] : null) ?? [];
     const all = getStored<InternshipDetail[]>(STORAGE_KEYS.INTERNSHIPS, INITIAL_INTERNSHIPS);
     const saved = all.filter((i) => savedIds.includes(i.id));
     return { message: 'ok', data: saved as unknown as T };
   }
 
   if (cleanPath.startsWith('me/saved/') && methodUpper === 'PUT') {
-    const id = cleanPath.replace('me/saved/', '');
     const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
-    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    if (user?.role !== 'student') {
+      return {
+        message: 'Only student accounts can save internships',
+        error: { code: 'FORBIDDEN', message: 'Forbidden' },
+      } as unknown as ApiFetchResult<T>;
+    }
+    const id = cleanPath.replace('me/saved/', '');
+    const email = user.email?.toLowerCase();
     const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
-    const current = savedByUser[email] ?? ['int_01', 'int_02'];
-    if (!current.includes(id)) {
+    const current = (email ? savedByUser[email] : null) ?? [];
+    if (!current.includes(id) && email) {
       savedByUser[email] = [...current, id];
       setStored(STORAGE_KEYS.SAVED_BY_USER, savedByUser);
     }
@@ -1157,24 +1170,38 @@ export async function handleDevMockRequest<T>(
   }
 
   if (cleanPath.startsWith('me/saved/') && methodUpper === 'DELETE') {
-    const id = cleanPath.replace('me/saved/', '');
     const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
-    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    if (user?.role !== 'student') {
+      return {
+        message: 'Only student accounts can unsave internships',
+        error: { code: 'FORBIDDEN', message: 'Forbidden' },
+      } as unknown as ApiFetchResult<T>;
+    }
+    const id = cleanPath.replace('me/saved/', '');
+    const email = user.email?.toLowerCase();
     const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
-    const current = savedByUser[email] ?? ['int_01', 'int_02'];
-    savedByUser[email] = current.filter((x) => x !== id);
-    setStored(STORAGE_KEYS.SAVED_BY_USER, savedByUser);
+    const current = (email ? savedByUser[email] : null) ?? [];
+    if (email) {
+      savedByUser[email] = current.filter((x) => x !== id);
+      setStored(STORAGE_KEYS.SAVED_BY_USER, savedByUser);
+    }
     return { message: 'Internship removed from bookmarks', data: { saved: false } as unknown as T };
   }
 
   if (cleanPath === 'me/dashboard' && methodUpper === 'GET') {
     const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
-    const email = user?.email?.toLowerCase() || 'student@iskolar.ph';
+    if (user?.role !== 'student') {
+      return {
+        message: 'Student dashboard is restricted to student accounts',
+        error: { code: 'FORBIDDEN', message: 'Forbidden' },
+      } as unknown as ApiFetchResult<T>;
+    }
+    const email = user.email?.toLowerCase();
     const savedByUser = getStored<Record<string, string[]>>(STORAGE_KEYS.SAVED_BY_USER, INITIAL_SAVED_BY_USER);
-    const savedIds = savedByUser[email] ?? ['int_01', 'int_02'];
+    const savedIds = (email ? savedByUser[email] : null) ?? [];
 
     const allBookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
-    const userBookings = allBookings.filter((b) => !b.student_email || b.student_email.toLowerCase() === email);
+    const userBookings = allBookings.filter((b) => b.student_email && b.student_email.toLowerCase() === email);
     const now = Date.now();
     const upcomingSessions = userBookings.filter((b) => {
       const isNotCancelledOrCompleted = b.status !== 'cancelled' && b.status !== 'completed';
@@ -1183,7 +1210,7 @@ export async function handleDevMockRequest<T>(
     });
 
     const profiles = getStored<Record<string, any>>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
-    const profile = profiles[email] || INITIAL_STUDENT_PROFILE;
+    const profile = (email ? profiles[email] : null) || INITIAL_STUDENT_PROFILE;
 
     const data: StudentDashboardData = {
       saved_count: savedIds.length,

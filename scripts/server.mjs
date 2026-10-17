@@ -355,9 +355,7 @@ function getInitialDB() {
         },
       },
     },
-    saved_internships: {
-      'student@iskolar.ph': ['int_01', 'int_02'],
-    },
+    saved_internships: {},
     coach_profiles: {
       'coach@iskolar.ph': {
         slug: 'engr-mark-villanueva',
@@ -608,7 +606,11 @@ export const server = http.createServer(async (req, res) => {
     // 2. Student Profile & Settings
     if (cleanPath === 'me/student-profile' && method === 'GET') {
       const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
+      if (!user || user.role !== 'student') {
+        sendJson(404, null, 'Student profile not found');
+        return;
+      }
+      const email = user.email;
       const profile = db.student_profiles[email] || {
         full_name: user?.full_name || 'Clarisse Salazar',
         email,
@@ -628,7 +630,11 @@ export const server = http.createServer(async (req, res) => {
 
     if (cleanPath === 'me/student-profile' && (method === 'PATCH' || method === 'POST')) {
       const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
+      if (!user || user.role !== 'student') {
+        sendJson(403, null, 'Only student accounts can create or update a student profile');
+        return;
+      }
+      const email = user.email;
       const current = db.student_profiles[email] || {};
       const updated = {
         ...current,
@@ -689,8 +695,12 @@ export const server = http.createServer(async (req, res) => {
 
     // 3. Saved Internships
     if (cleanPath === 'me/saved' && method === 'GET') {
-      const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
+      const user = getAuthUser(req);
+      if (!user || user.role !== 'student') {
+        sendJson(200, []);
+        return;
+      }
+      const email = user.email;
       const savedIds = db.saved_internships[email] || [];
       const saved = db.internships.filter((i) => savedIds.includes(i.id));
       sendJson(200, saved);
@@ -698,9 +708,13 @@ export const server = http.createServer(async (req, res) => {
     }
 
     if (cleanPath.startsWith('me/saved/') && method === 'PUT') {
+      const user = getAuthUser(req);
+      if (!user || user.role !== 'student') {
+        sendJson(403, null, 'Only students can bookmark internships');
+        return;
+      }
       const id = cleanPath.replace('me/saved/', '');
-      const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
+      const email = user.email;
       const current = db.saved_internships[email] || [];
       if (!current.includes(id)) {
         db.saved_internships[email] = [...current, id];
@@ -711,9 +725,13 @@ export const server = http.createServer(async (req, res) => {
     }
 
     if (cleanPath.startsWith('me/saved/') && method === 'DELETE') {
+      const user = getAuthUser(req);
+      if (!user || user.role !== 'student') {
+        sendJson(403, null, 'Only students can unsave internships');
+        return;
+      }
       const id = cleanPath.replace('me/saved/', '');
-      const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
+      const email = user.email;
       const current = db.saved_internships[email] || [];
       db.saved_internships[email] = current.filter((x) => x !== id);
       saveDB();
@@ -723,10 +741,14 @@ export const server = http.createServer(async (req, res) => {
 
     // 4. Student Dashboard
     if (cleanPath === 'me/dashboard' && method === 'GET') {
-      const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
+      const user = getAuthUser(req);
+      if (!user || user.role !== 'student') {
+        sendJson(403, null, 'Student dashboard is restricted to student accounts');
+        return;
+      }
+      const email = user.email;
       const savedIds = db.saved_internships[email] || [];
-      const userBookings = db.bookings.filter((b) => !b.student_email || b.student_email === email);
+      const userBookings = db.bookings.filter((b) => b.student_email === email);
       const now = Date.now();
       const upcomingSessions = userBookings.filter((b) => {
         const isNotCancelledOrCompleted = b.status !== 'cancelled' && b.status !== 'completed';
@@ -745,9 +767,13 @@ export const server = http.createServer(async (req, res) => {
 
     // 5. Bookings
     if (cleanPath === 'me/bookings' && method === 'GET') {
-      const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
-      const userBookings = db.bookings.filter((b) => !b.student_email || b.student_email === email);
+      const user = getAuthUser(req);
+      if (!user || user.role !== 'student') {
+        sendJson(200, []);
+        return;
+      }
+      const email = user.email;
+      const userBookings = db.bookings.filter((b) => b.student_email === email);
       const when = parsedUrl.searchParams.get('when');
       const now = Date.now();
 
@@ -771,8 +797,12 @@ export const server = http.createServer(async (req, res) => {
     }
 
     if (cleanPath === 'bookings' && method === 'POST') {
-      const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
-      const email = user?.email || 'student@iskolar.ph';
+      const user = getAuthUser(req);
+      if (!user || user.role !== 'student') {
+        sendJson(403, null, 'Coach accounts cannot book mentorship sessions. Only students can book.');
+        return;
+      }
+      const email = user.email;
       const coach = db.coaches.find((c) => c.slug === body?.coach_slug) || db.coaches[0];
       const sessionType = coach?.session_types?.find((s) => s.id === body?.session_type_id) || coach?.session_types?.[0];
       const isFree = (sessionType?.price_centavos || 0) === 0;

@@ -72,4 +72,40 @@ test.describe('Coach Onboarding & Portal Journey', () => {
     await page.locator('button:has-text("My Availability")').click();
     await expect(page.locator('button:has-text("Add Availability Slot")')).toBeVisible();
   });
+
+  test('coach account has strictly NO student features and 0 auto-saved companies', async ({
+    page,
+  }) => {
+    // Sign in as coach
+    await page.goto('/signin');
+    await page.locator('input[type="email"]').fill('coach@iskolar.ph');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button[type="submit"]').click();
+
+    // Verify coach is redirected to /coach and NOT /app
+    await expect(page).toHaveURL(/\/coach/);
+    await expect(page.locator('h1')).toContainText(/Coach Dashboard|Mark/i);
+
+    // 1. Attempting to visit student routes (/app, /app/saved, /app/bookings) redirects back to /coach
+    await page.goto('/app');
+    await expect(page).toHaveURL(/\/coach/);
+
+    await page.goto('/app/saved');
+    await expect(page).toHaveURL(/\/coach/);
+
+    await page.goto('/app/bookings');
+    await expect(page).toHaveURL(/\/coach/);
+
+    // 2. Navbar does not expose student dashboard or student links
+    await expect(page.locator('text=Student Dashboard')).not.toBeVisible();
+
+    // 3. Internship directory does not render bookmark buttons for coach
+    await page.goto('/internships');
+    await expect(page.locator('button[title*="Save"]')).toHaveCount(0);
+
+    // 4. Coaches directory does not render "Book 1-on-1" or "Book Session" buttons for coach
+    await page.goto('/coaches');
+    await expect(page.locator('button:has-text("Book 1-on-1")')).toHaveCount(0);
+    await expect(page.locator('button:has-text("Book Session")')).toHaveCount(0);
+  });
 });

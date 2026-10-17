@@ -227,23 +227,25 @@ export function usePasswordResetConfirm() {
 }
 
 // Student Dashboard & Profiles
-export function useStudentDashboard() {
+export function useStudentDashboard(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.studentDashboard,
     queryFn: async () => {
       const res = await api.get<StudentDashboardData>('/me/dashboard');
       return res.data;
     },
+    enabled: options?.enabled !== undefined ? options.enabled : true,
   });
 }
 
-export function useSavedInternships() {
+export function useSavedInternships(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.savedInternships,
     queryFn: async () => {
       const res = await api.get<InternshipCard[]>('/me/saved');
       return res.data || [];
     },
+    enabled: options?.enabled !== undefined ? options.enabled : true,
   });
 }
 
@@ -273,13 +275,14 @@ export function useUnsaveInternship() {
   });
 }
 
-export function useStudentBookings(when?: 'upcoming' | 'past') {
+export function useStudentBookings(when?: 'upcoming' | 'past', options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.studentBookings(when),
     queryFn: async () => {
       const res = await api.get<BookingItem[]>('/me/bookings', { when });
       return res.data || [];
     },
+    enabled: options?.enabled !== undefined ? options.enabled : true,
   });
 }
 
@@ -297,13 +300,14 @@ export function useCreateStudentProfile() {
   });
 }
 
-export function useStudentProfile() {
+export function useStudentProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['studentProfile'],
     queryFn: async () => {
       const res = await api.get<StudentProfile>('/me/student-profile');
       return res.data;
     },
+    enabled: options?.enabled !== undefined ? options.enabled : true,
     staleTime: 1000 * 60 * 2,
   });
 }

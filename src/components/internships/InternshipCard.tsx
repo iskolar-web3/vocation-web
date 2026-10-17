@@ -28,16 +28,17 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
   layout = 'grid',
   isSelected = false,
 }) => {
-  const { isAuthenticated } = useAuth();
-  const { data: savedList = [] } = useSavedInternships();
+  const { isAuthenticated, role } = useAuth();
+  const isStudent = isAuthenticated && role === 'student';
+  const { data: savedList = [] } = useSavedInternships({ enabled: isStudent });
   const saveMutation = useSaveInternship();
   const unsaveMutation = useUnsaveInternship();
 
-  const isSaved = savedList.some((item) => item.id === internship.id);
+  const isSaved = isStudent && savedList.some((item) => item.id === internship.id);
 
   const handleSaveToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || role === 'coach') return;
     if (isSaved) {
       unsaveMutation.mutate(internship.id);
     } else {
@@ -109,18 +110,20 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSaveToggle}
-            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
-              isSaved
-                ? 'text-[#ff9b00] bg-[#ff9b00]/10'
-                : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
-            }`}
-            title={isSaved ? 'Remove from saved' : 'Save internship'}
-          >
-            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-          </button>
+          {role !== 'coach' && (
+            <button
+              type="button"
+              onClick={handleSaveToggle}
+              className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                isSaved
+                  ? 'text-[#ff9b00] bg-[#ff9b00]/10'
+                  : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
+              }`}
+              title={isSaved ? 'Remove from saved' : 'Save internship'}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* Spec Pill Strip */}
@@ -207,18 +210,20 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
           <DeadlineCountdown deadlineIso={internship.deadline || undefined} />
 
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleSaveToggle}
-              className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                isSaved
-                  ? 'text-[#ff9b00] bg-[#ff9b00]/10'
-                  : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
-              }`}
-              title={isSaved ? 'Remove from saved' : 'Save'}
-            >
-              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-            </button>
+            {role !== 'coach' && (
+              <button
+                type="button"
+                onClick={handleSaveToggle}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  isSaved
+                    ? 'text-[#ff9b00] bg-[#ff9b00]/10'
+                    : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
+                }`}
+                title={isSaved ? 'Remove from saved' : 'Save'}
+              >
+                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+              </button>
+            )}
 
             <button
               type="button"
@@ -259,18 +264,20 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSaveToggle}
-            className={`p-2 rounded-xl transition-colors cursor-pointer ${
-              isSaved
-                ? 'text-[#ff9b00] bg-[#ff9b00]/10'
-                : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
-            }`}
-            title={isSaved ? 'Remove from saved' : 'Save'}
-          >
-            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-          </button>
+          {role !== 'coach' && (
+            <button
+              type="button"
+              onClick={handleSaveToggle}
+              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                isSaved
+                  ? 'text-[#ff9b00] bg-[#ff9b00]/10'
+                  : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
+              }`}
+              title={isSaved ? 'Remove from saved' : 'Save'}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* Spec Pill Strip */}
