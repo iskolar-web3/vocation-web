@@ -72,29 +72,18 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
     sessionTypes.find((st) => st.id === selectedSessionTypeId) || sessionTypes[0];
 
   // Fetch real availability slots from API-040 with RFC 3339 from/to (Issue #17)
-  const { data: availabilitySlots, isLoading: isLoadingSlots } = useCoachAvailability(
+  const { data: availabilitySlots, isLoading: isLoadingSlots, refetch: refetchSlots } = useCoachAvailability(
     coach?.slug || ''
   );
 
+  useEffect(() => {
+    if (isOpen && coach?.slug) {
+      refetchSlots();
+    }
+  }, [isOpen, coach?.slug, refetchSlots]);
+
   const availableSlots: AvailabilitySlot[] = React.useMemo(() => {
-    if (availabilitySlots && availabilitySlots.length > 0) {
-      return availabilitySlots;
-    }
-    // Realistic upcoming weekday slots if backend has no availability slots seeded yet
-    const now = new Date();
-    const fallback: AvailabilitySlot[] = [];
-    for (let i = 1; i <= 6; i++) {
-      const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
-      d.setHours(14, 0, 0, 0);
-      const startIso = d.toISOString();
-      const endIso = new Date(d.getTime() + 45 * 60000).toISOString();
-      fallback.push({
-        id: `slot_fallback_${i}`,
-        starts_at: startIso,
-        ends_at: endIso,
-      });
-    }
-    return fallback;
+    return availabilitySlots || [];
   }, [availabilitySlots]);
 
   const selectedSlot =

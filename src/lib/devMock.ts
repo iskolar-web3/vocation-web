@@ -365,6 +365,7 @@ const STORAGE_KEYS = {
   SAVED_BY_USER: 'vocation_dev_saved_by_user_v2',
   PROFILES: 'vocation_dev_profiles',
   SETTINGS: 'vocation_dev_settings',
+  COACH_AVAILABILITY: 'vocation_dev_coach_availability',
 };
 
 const INITIAL_ACCOUNTS: Record<string, {
@@ -726,21 +727,34 @@ export async function handleDevMockRequest<T>(
   }
 
   if (cleanPath === 'me/availability' && methodUpper === 'GET') {
-    const slots = [
-      { id: 'slot_m1', starts_at: new Date(Date.now() + 86400000).toISOString(), ends_at: new Date(Date.now() + 86400000 + 45 * 60000).toISOString(), is_booked: false },
-      { id: 'slot_m2', starts_at: new Date(Date.now() + 86400000 * 2).toISOString(), ends_at: new Date(Date.now() + 86400000 * 2 + 45 * 60000).toISOString(), is_booked: false },
-    ];
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    const currentCoach = coaches.find((c) => c.slug === 'engr-mark-villanueva' || c.name === user?.full_name) || coaches[0];
+    const slug = currentCoach?.slug || 'engr-mark-villanueva';
+    const allAvail = getStored<Record<string, any[]>>(STORAGE_KEYS.COACH_AVAILABILITY, {});
+    if (!allAvail[slug]) {
+      allAvail[slug] = generateAvailabilitySlots();
+      setStored(STORAGE_KEYS.COACH_AVAILABILITY, allAvail);
+    }
+    const slots = allAvail[slug];
     return { message: 'ok', data: slots as unknown as T, meta: { page: 1, per_page: 20, total: slots.length } };
   }
 
   if (cleanPath === 'me/availability' && methodUpper === 'PUT') {
-    const slots = (body?.slots || []).map((s: any, idx: number) => ({
-      id: `slot_c_${Date.now()}_${idx}`,
+    const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
+    const coaches = getStored<any[]>(STORAGE_KEYS.COACHES, INITIAL_COACHES);
+    const currentCoach = coaches.find((c) => c.slug === 'engr-mark-villanueva' || c.name === user?.full_name) || coaches[0];
+    const slug = currentCoach?.slug || 'engr-mark-villanueva';
+    const inputSlots = (body?.slots || []).map((s: any, idx: number) => ({
+      id: s.id || `slot_c_${Date.now()}_${idx}`,
       starts_at: s.starts_at,
       ends_at: s.ends_at,
-      is_booked: false,
+      is_booked: Boolean(s.is_booked),
     }));
-    return { message: 'Availability updated', data: slots as unknown as T, meta: { page: 1, per_page: 20, total: slots.length } };
+    const allAvail = getStored<Record<string, any[]>>(STORAGE_KEYS.COACH_AVAILABILITY, {});
+    allAvail[slug] = inputSlots;
+    setStored(STORAGE_KEYS.COACH_AVAILABILITY, allAvail);
+    return { message: 'Availability updated', data: inputSlots as unknown as T, meta: { page: 1, per_page: 20, total: inputSlots.length } };
   }
 
   if (cleanPath === 'me/sessions' && methodUpper === 'GET') {
@@ -965,8 +979,15 @@ export async function handleDevMockRequest<T>(
   }
 
   if (cleanPath.endsWith('/availability') && cleanPath.startsWith('coaches/') && methodUpper === 'GET') {
-    const slots = generateAvailabilitySlots();
-    return { message: 'ok', data: slots as unknown as T };
+    const slug = cleanPath.replace('coaches/', '').replace('/availability', '');
+    const allAvail = getStored<Record<string, any[]>>(STORAGE_KEYS.COACH_AVAILABILITY, {});
+    if (!allAvail[slug]) {
+      allAvail[slug] = generateAvailabilitySlots();
+      setStored(STORAGE_KEYS.COACH_AVAILABILITY, allAvail);
+    }
+    const slots = allAvail[slug] || [];
+    const bookableSlots = slots.filter((s: any) => !s.is_booked);
+    return { message: 'ok', data: bookableSlots as unknown as T, meta: { page: 1, per_page: 20, total: bookableSlots.length } };
   }
 
   if (cleanPath.startsWith('coaches/') && methodUpper === 'GET') {
@@ -1034,6 +1055,17 @@ export async function handleDevMockRequest<T>(
     const bookings = getStored<any[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
     setStored(STORAGE_KEYS.BOOKINGS, [newBooking, ...bookings]);
 
+    // Mark slot as booked in coach availability
+    const allAvail = getStored<Record<string, any[]>>(STORAGE_KEYS.COACH_AVAILABILITY, {});
+    const cSlug = coach ? coach.slug : bookingReq.coach_slug;
+    if (cSlug && allAvail[cSlug]) {
+      const matched = allAvail[cSlug].find((s: any) => s.starts_at === slotStartsAt);
+      if (matched) {
+        matched.is_booked = true;
+        setStored(STORAGE_KEYS.COACH_AVAILABILITY, allAvail);
+      }
+    }
+
     const res: CreateBookingResponse = {
       booking_id: bookingId,
       status: (newBooking.status === 'confirmed' ? 'confirmed' : 'pending') as 'confirmed' | 'pending',
@@ -1069,6 +1101,18 @@ export async function handleDevMockRequest<T>(
       return b;
     });
     setStored(STORAGE_KEYS.BOOKINGS, updatedBookings);
+
+    // Release slot back to available in coach availability
+    if (target?.coach_slug && target?.slot_starts_at) {
+      const allAvail = getStored<Record<string, any[]>>(STORAGE_KEYS.COACH_AVAILABILITY, {});
+      if (allAvail[target.coach_slug]) {
+        const matched = allAvail[target.coach_slug].find((s: any) => s.starts_at === target.slot_starts_at);
+        if (matched) {
+          matched.is_booked = false;
+          setStored(STORAGE_KEYS.COACH_AVAILABILITY, allAvail);
+        }
+      }
+    }
 
     const cancelledBooking = updatedBookings.find((b) => b.booking_id === bookingId) || {
       booking_id: bookingId,

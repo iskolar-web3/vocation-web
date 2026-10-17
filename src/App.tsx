@@ -63,6 +63,8 @@ export const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const isCoachZone = (path: string) => path === '/coach' || path.startsWith('/coach/');
+
   // Synchronize browser history URL if cross-role route attempted
   useEffect(() => {
     if (isLoadingAuth || !isAuthenticated || !user) return;
@@ -84,7 +86,7 @@ export const App: React.FC = () => {
         }
       }
     } else if (user.role === 'student') {
-      if (pathOnly.startsWith('/coach') || pathOnly === '/onboarding/coach') {
+      if (isCoachZone(pathOnly) || pathOnly === '/onboarding/coach') {
         const target = user.is_onboarded ? '/app' : '/app/onboarding';
         if (currentPath !== target) {
           navigate(target);
@@ -112,7 +114,7 @@ export const App: React.FC = () => {
 
     // 1. Route Guards for Protected Zones (docs/sitemap.md §5)
     if (!isLoadingAuth) {
-      if (pathOnly.startsWith('/app') || pathOnly.startsWith('/coach') || pathOnly.startsWith('/admin')) {
+      if (pathOnly.startsWith('/app') || isCoachZone(pathOnly) || pathOnly.startsWith('/admin')) {
         if (!isAuthenticated) {
           return <AuthPages mode="signin" navigate={navigate} />;
         }
@@ -127,14 +129,14 @@ export const App: React.FC = () => {
             <CoachOnboardingPage navigate={navigate} />
           );
         }
-        if (!user.is_onboarded && pathOnly.startsWith('/coach') && pathOnly !== '/coach/onboarding' && pathOnly !== '/onboarding/coach') {
+        if (!user.is_onboarded && isCoachZone(pathOnly) && pathOnly !== '/coach/onboarding' && pathOnly !== '/onboarding/coach') {
           return <CoachOnboardingPage navigate={navigate} />;
         }
       }
 
       // Role isolation: Student cannot enter Coach zone (/coach/* or /onboarding/coach)
       if (isAuthenticated && user?.role === 'student') {
-        if (pathOnly.startsWith('/coach') || pathOnly === '/onboarding/coach') {
+        if (isCoachZone(pathOnly) || pathOnly === '/onboarding/coach') {
           return user.is_onboarded ? (
             <StudentDashboardPage navigate={navigate} />
           ) : (

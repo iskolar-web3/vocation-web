@@ -193,7 +193,8 @@ export function useCoachAvailability(slug: string, from?: string, to?: string) {
       return res.data || [];
     },
     enabled: Boolean(slug),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 10,
+    refetchOnMount: 'always',
   });
 }
 
@@ -352,6 +353,9 @@ export function useCreateBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['studentBookings'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.studentDashboard });
+      queryClient.invalidateQueries({ queryKey: ['coach-availability'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coachAvailabilityMe });
+      queryClient.invalidateQueries({ queryKey: ['coachSessions'] });
     },
   });
 }
@@ -376,6 +380,8 @@ export function useCancelBooking() {
       queryClient.invalidateQueries({ queryKey: ['studentBookings'] });
       queryClient.invalidateQueries({ queryKey: ['coachSessions'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.studentDashboard });
+      queryClient.invalidateQueries({ queryKey: ['coach-availability'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coachAvailabilityMe });
     },
   });
 }
@@ -423,7 +429,7 @@ export function useCoachAvailabilityMe() {
 export function usePublishAvailability() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (slots: { starts_at: string; ends_at: string }[]) => {
+    mutationFn: async (slots: { id?: string; starts_at: string; ends_at: string; is_booked?: boolean }[]) => {
       const res = await api.put<MyAvailabilitySlot[]>('/me/availability', { slots });
       return res.data;
     },

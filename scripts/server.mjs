@@ -825,6 +825,17 @@ export const server = http.createServer(async (req, res) => {
       };
 
       db.bookings.unshift(newBooking);
+
+      // Reflect booked slot in coach availability
+      if (coach?.slug) {
+        if (!db.coach_availability[coach.slug]) {
+          db.coach_availability[coach.slug] = generateAvailabilitySlots();
+        }
+        const matchedSlot = db.coach_availability[coach.slug].find((s) => s.starts_at === slotStartsAt);
+        if (matchedSlot) {
+          matchedSlot.is_booked = true;
+        }
+      }
       saveDB();
 
       const resData = {
@@ -846,6 +857,13 @@ export const server = http.createServer(async (req, res) => {
       const target = db.bookings.find((b) => b.booking_id === bookingId);
       if (target) {
         target.status = 'cancelled';
+        // Release slot back to available
+        if (target.coach_slug && target.slot_starts_at && db.coach_availability[target.coach_slug]) {
+          const matchedSlot = db.coach_availability[target.coach_slug].find((s) => s.starts_at === target.slot_starts_at);
+          if (matchedSlot) {
+            matchedSlot.is_booked = false;
+          }
+        }
         saveDB();
       }
       sendJson(200, target || { booking_id: bookingId, status: 'cancelled' }, 'Booking cancelled successfully');
@@ -983,7 +1001,10 @@ export const server = http.createServer(async (req, res) => {
       const email = user?.email || 'coach@iskolar.ph';
       const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
       const slug = profile?.slug || 'engr-mark-villanueva';
-      const slots = db.coach_availability[slug] || generateAvailabilitySlots();
+      if (!db.coach_availability[slug]) {
+        db.coach_availability[slug] = generateAvailabilitySlots();
+      }
+      const slots = db.coach_availability[slug];
       sendJson(200, slots, 'ok', { total: slots.length });
       return;
     }
@@ -994,10 +1015,10 @@ export const server = http.createServer(async (req, res) => {
       const profile = db.coach_profiles[email] || db.coach_profiles['coach@iskolar.ph'];
       const slug = profile?.slug || 'engr-mark-villanueva';
       const inputSlots = (body?.slots || []).map((s, idx) => ({
-        id: `slot_custom_${Date.now()}_${idx}`,
+        id: s.id || `slot_custom_${Date.now()}_${idx}`,
         starts_at: s.starts_at,
         ends_at: s.ends_at,
-        is_booked: false,
+        is_booked: Boolean(s.is_booked),
       }));
       db.coach_availability[slug] = inputSlots;
       saveDB();
@@ -1185,7 +1206,30 @@ export const server = http.createServer(async (req, res) => {
     }
 
     if (cleanPath.endsWith('/availability') && cleanPath.startsWith('coaches/') && method === 'GET') {
-      sendJson(200, generateAvailabilitySlots());
+      const slug = cleanPath.replace('coaches/', '').replace('/availability', '');
+      if (!db.coach_availability[slug]) {
+        db.coach_availability[slug] = generateAvailabilitySlots();
+      }
+      const slots = db.coach_availability[slug] || [];
+      const unbookedSlots = slots.filter((s) => !s.is_booked);
+
+      const fromParam = parsedUrl.searchParams.get('from');
+      const toParam = parsedUrl.searchParams.get('to');
+      let filtered = unbookedSlots;
+      if (fromParam) {
+        const fromDate = new Date(fromParam);
+        if (!isNaN(fromDate.getTime())) {
+          filtered = filtered.filter((s) => new Date(s.ends_at || s.starts_at) >= fromDate);
+        }
+      }
+      if (toParam) {
+        const toDate = new Date(toParam);
+        if (!isNaN(toDate.getTime())) {
+          filtered = filtered.filter((s) => new Date(s.starts_at) <= toDate);
+        }
+      }
+
+      sendJson(200, filtered, 'ok', { total: filtered.length });
       return;
     }
 

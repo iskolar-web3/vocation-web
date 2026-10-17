@@ -162,6 +162,53 @@ async function runTests() {
     assert(availPutRes.status === 200, 'PUT /me/availability returns 200');
     assert(availPutData.data.length === 1, 'PUT /me/availability saved 1 slot');
 
+    // 5.1 Public Availability (API-040: GET /coaches/:slug/availability - Reflected to Student)
+    const publicAvailRes = await fetch(`${baseUrl}/coaches/${coachSlug}/availability`);
+    const publicAvailData = await publicAvailRes.json();
+    assert(publicAvailRes.status === 200, 'GET /coaches/:slug/availability returns 200');
+    assert(publicAvailData.data.length === 1, 'Public availability returns 1 bookable slot added by coach');
+    assert(publicAvailData.data[0].starts_at === startsAt, 'Public availability matches exact slot starts_at time added by coach');
+
+    // 5.2 Student Books the Added Time Slot
+    const bookSlotRes = await fetch(`${baseUrl}/bookings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-Id': studentSessionId,
+      },
+      body: JSON.stringify({
+        coach_slug: coachSlug,
+        slot_starts_at: startsAt,
+      }),
+    });
+    const bookSlotData = await bookSlotRes.json();
+    assert(bookSlotRes.status === 200, 'Student can book the coach availability slot');
+    const bookedId = bookSlotData.data.booking_id;
+
+    // 5.3 Public Availability After Booking (Booked slot must not be available to other students)
+    const publicAvailAfterBookRes = await fetch(`${baseUrl}/coaches/${coachSlug}/availability`);
+    const publicAvailAfterBookData = await publicAvailAfterBookRes.json();
+    assert(publicAvailAfterBookData.data.length === 0, 'Public availability has 0 open slots after booking');
+
+    // 5.4 Coach Availability Me After Booking (Coach sees slot marked is_booked: true)
+    const coachAvailAfterBookRes = await fetch(`${baseUrl}/me/availability`, {
+      headers: { 'X-Session-Id': coachSessionId },
+    });
+    const coachAvailAfterBookData = await coachAvailAfterBookRes.json();
+    assert(coachAvailAfterBookData.data[0].is_booked === true, 'Coach GET /me/availability shows slot as booked');
+
+    // 5.5 Student Cancels Booking (Slot is restored to available)
+    const cancelBookRes = await fetch(`${baseUrl}/bookings/${bookedId}/cancel`, {
+      method: 'POST',
+      headers: { 'X-Session-Id': studentSessionId },
+    });
+    assert(cancelBookRes.status === 200, 'Student can cancel booking');
+
+    const publicAvailAfterCancelRes = await fetch(`${baseUrl}/coaches/${coachSlug}/availability`);
+    const publicAvailAfterCancelData = await publicAvailAfterCancelRes.json();
+    assert(publicAvailAfterCancelData.data.length === 1, 'Public availability shows slot available again after cancellation');
+    assert(publicAvailAfterCancelData.data[0].starts_at === startsAt, 'Released slot starts_at matches original time');
+
     // 6. Coach Sessions (API-063: GET /me/sessions)
     const sessionsRes = await fetch(`${baseUrl}/me/sessions?when=upcoming`, {
       headers: { 'X-Session-Id': coachSessionId },

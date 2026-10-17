@@ -74,14 +74,17 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
         return;
       }
 
-      // Existing unbooked slots + new slot
-      const existingInputs = mySlots
-        .filter((s) => !s.is_booked)
-        .map((s) => ({ starts_at: s.starts_at, ends_at: s.ends_at }));
+      // Existing slots (preserve id, starts_at, ends_at, is_booked) + new slot
+      const existingInputs = mySlots.map((s) => ({
+        id: s.id,
+        starts_at: s.starts_at,
+        ends_at: s.ends_at,
+        is_booked: s.is_booked,
+      }));
 
       const updatedSlots = [
         ...existingInputs,
-        { starts_at: startsAtUtc, ends_at: endsAtUtc },
+        { starts_at: startsAtUtc, ends_at: endsAtUtc, is_booked: false },
       ];
 
       await publishAvailabilityMutation.mutateAsync(updatedSlots);
@@ -95,8 +98,8 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
   const handleRemoveSlot = async (slotId: string) => {
     try {
       const remainingSlots = mySlots
-        .filter((s) => s.id !== slotId && !s.is_booked)
-        .map((s) => ({ starts_at: s.starts_at, ends_at: s.ends_at }));
+        .filter((s) => s.id !== slotId)
+        .map((s) => ({ id: s.id, starts_at: s.starts_at, ends_at: s.ends_at, is_booked: s.is_booked }));
 
       await publishAvailabilityMutation.mutateAsync(remainingSlots);
       setPublishSuccess('Slot removed.');

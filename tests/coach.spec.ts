@@ -108,4 +108,51 @@ test.describe('Coach Onboarding & Portal Journey', () => {
     await expect(page.locator('button:has-text("Book 1-on-1")')).toHaveCount(0);
     await expect(page.locator('button:has-text("Book Session")')).toHaveCount(0);
   });
+
+  test('coach publishes new time slot and it is immediately reflected to student in booking dialog', async ({
+    page,
+  }) => {
+    // 1. Sign in as coach
+    await page.goto('/signin');
+    await page.locator('input[type="email"]').fill('coach@iskolar.ph');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/coach/);
+
+    // 2. Open My Availability tab
+    await page.locator('button:has-text("My Availability")').click();
+    const addSlotBtn = page.locator('button:has-text("Add Slot")').first();
+    await expect(addSlotBtn).toBeVisible();
+    await addSlotBtn.click();
+
+    // 3. Fill and publish slot
+    await expect(page.locator('text=Add Mentorship Availability Slot')).toBeVisible();
+    const startTimeInput = page.locator('input[type="time"]').first();
+    const endTimeInput = page.locator('input[type="time"]').last();
+    await startTimeInput.fill('16:00');
+    await endTimeInput.fill('16:45');
+    await page.locator('button[type="submit"]:has-text("Publish Slot")').click();
+
+    // Verify success banner in Coach Portal
+    await expect(page.locator('text=Availability slot successfully published')).toBeVisible();
+
+    // 4. Sign out
+    await page.locator('button[title="Sign Out"]').click();
+    await expect(page).toHaveURL(/\/$/);
+
+    // 5. Navigate to the coach's profile as a student/visitor
+    await page.goto('/coaches/engr-mark-villanueva');
+    await expect(page.locator('h1').first()).toContainText(/Engr. Mark Villanueva/i);
+
+    // 6. Open Book session modal
+    const bookBtn = page.locator('button:has-text("Book a Session"), button:has-text("Book 1-on-1"), button:has-text("Book This")').first();
+    await expect(bookBtn).toBeVisible();
+    await bookBtn.click();
+
+    // 7. Verify modal opens and displays the coach's newly published time slot (16:00 / 4:00 PM)
+    await expect(page.locator('text=Choose Available Date & Time')).toBeVisible();
+    const slotOption = page.locator('button:has-text("4:00 PM"), button:has-text("16:00")').first();
+    await expect(slotOption).toBeVisible();
+  });
 });
+
