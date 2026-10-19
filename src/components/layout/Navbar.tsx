@@ -48,11 +48,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-[#3f58b2]/10 shadow-[0_1px_3px_rgba(2,31,83,0.04)]">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#3f58b2]/15 shadow-stripe-subtle">
       {/* Top Banner */}
       <div className="bg-[#021F53] text-white px-4 sm:px-8 py-1.5 text-xs flex items-center justify-between border-b border-[#3f58b2]/20">
         <div className="flex items-center gap-2.5">
-          <span className="bg-[#ff9b00] text-[#021F53] font-bold px-2 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-accent">
+          <span className="bg-[#ff9b00] text-[#021F53] font-bold px-2 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-accent shadow-2xs">
             Vocation
           </span>
           <span className="text-slate-300 hidden md:inline text-[11px] font-medium">
@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
         <div className="flex items-center gap-3 text-[11px] text-slate-300">
           {isAuthenticated ? (
             <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               Signed in as <strong className="text-white capitalize">{user?.role}</strong>
             </span>
           ) : (
@@ -80,11 +80,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
             onClick={() => handleNav('/')}
             className="flex items-center gap-3 group focus:outline-none cursor-pointer"
           >
-            <img
-              src="/vocation-logo.svg"
-              alt="iSkolar Vocation"
-              className="w-10 h-10 rounded-2xl shadow-sm group-hover:scale-105 transition-transform"
-            />
+            <div className="p-1 rounded-2xl bg-white shadow-2xs border border-slate-200/80 group-hover:scale-105 transition-transform">
+              <img
+                src="/vocation-logo.svg"
+                alt="iSkolar Vocation"
+                className="w-8 h-8 rounded-xl object-contain"
+              />
+            </div>
             <div className="text-left">
               <span className="font-display text-xl text-[#021F53] tracking-tight block leading-tight">
                 iSkolar <span className="text-[#3f58b2]">Vocation</span>
@@ -101,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               onClick={() => handleNav('/internships')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentPath.startsWith('/internships')
-                  ? 'bg-[#f0f7ff] text-[#3f58b2] shadow-[0_1px_2px_rgba(63,88,178,0.1)]'
+                  ? 'bg-[#f0f7ff] text-[#3f58b2] shadow-2xs border border-[#3f58b2]/15'
                   : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
               }`}
             >
@@ -285,7 +287,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 </button>
                 <button
                   onClick={() => handleNav('/signup')}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-xs transition-all cursor-pointer"
+                  className="tactile-btn-honey px-4 py-2 text-xs rounded-xl flex items-center cursor-pointer"
                 >
                   Get Started
                 </button>

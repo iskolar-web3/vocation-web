@@ -194,7 +194,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               e.stopPropagation();
               onSelect(coach);
             }}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-[#3f58b2] bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white border border-[#3f58b2]/20 transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-bold text-[#3f58b2] bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white border border-[#3f58b2]/20 transition-all cursor-pointer shadow-2xs"
           >
             <span>{isSelf ? 'My Profile' : 'View Profile'}</span>
           </button>
@@ -205,7 +205,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               e.stopPropagation();
               onBook(coach);
             }}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#021F53] hover:bg-[#3f58b2] shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+            className="tactile-btn-midnight px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
           >
             <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" />
             <span>Book Session</span>

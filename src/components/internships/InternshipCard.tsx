@@ -228,7 +228,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             <button
               type="button"
               onClick={handleApplyClick}
-              className="px-4 py-2 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              className="tactile-btn-honey px-4 py-2 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
             >
               <span>Apply</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -249,11 +249,13 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
         {/* Top bar */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img
-              src={logoUrl}
-              alt={internship.company.name}
-              className="w-12 h-12 rounded-2xl object-cover border border-slate-200 bg-white group-hover:scale-105 transition-transform"
-            />
+            <div className="p-1 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs">
+              <img
+                src={logoUrl}
+                alt={internship.company.name}
+                className="w-11 h-11 rounded-xl object-cover bg-white group-hover:scale-105 transition-transform"
+              />
+            </div>
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                 {internship.company.name}
@@ -268,9 +270,9 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             <button
               type="button"
               onClick={handleSaveToggle}
-              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+              className={`p-2 rounded-xl transition-all cursor-pointer ${
                 isSaved
-                  ? 'text-[#ff9b00] bg-[#ff9b00]/10'
+                  ? 'text-[#ff9b00] bg-[#ff9b00]/10 shadow-2xs border border-[#ff9b00]/20'
                   : 'text-slate-400 hover:text-[#3f58b2] hover:bg-slate-100'
               }`}
               title={isSaved ? 'Remove from saved' : 'Save'}
@@ -322,7 +324,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
         <button
           type="button"
           onClick={handleApplyClick}
-          className="px-4 py-2 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+          className="tactile-btn-honey px-4 py-2 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
         >
           <span>Apply</span>
           <ChevronRight className="w-3.5 h-3.5" />

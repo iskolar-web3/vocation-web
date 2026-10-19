@@ -374,18 +374,20 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
               type="button"
               onClick={handleProceed}
               disabled={role === 'coach' || !selectedSlot || createBookingMutation.isPending}
-              className="px-6 py-3 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className={`${
+                isFree ? 'tactile-btn-midnight' : 'tactile-btn-honey'
+              } px-6 py-3 rounded-xl text-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-soft`}
             >
               {createBookingMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : isFree ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4 text-[#ff9b00]" />
                   <span>Confirm Free Booking</span>
                 </>
               ) : (
                 <>
-                  <CreditCard className="w-4 h-4" />
+                  <CreditCard className="w-4 h-4 text-[#021F53]" />
                   <span>Proceed to Payment</span>
                 </>
               )}

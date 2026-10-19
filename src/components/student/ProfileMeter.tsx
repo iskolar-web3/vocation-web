@@ -24,10 +24,10 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({
   ];
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-soft space-y-5">
+    <div className="tactile-card rounded-2xl p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-[#f0f7ff] text-[#3f58b2] flex items-center justify-center font-bold">
+          <div className="w-8 h-8 rounded-xl bg-[#f0f7ff] border border-[#607ef2]/20 text-[#3f58b2] flex items-center justify-center font-bold shadow-2xs">
             <TrendingUp className="w-4 h-4 text-[#3f58b2]" />
           </div>
           <div>
@@ -38,14 +38,14 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({
           </div>
         </div>
         <div className="text-right">
-          <span className="text-xl sm:text-2xl font-black text-[#3f58b2]">{completenessPct}%</span>
+          <span className="text-xl sm:text-2xl font-black text-[#3f58b2] font-display">{completenessPct}%</span>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5">
+      {/* Skeuomorphic Tactile Progress Gauge */}
+      <div className="w-full h-3.5 tactile-track p-0.5">
         <div
-          className="h-full bg-[#3f58b2] rounded-full transition-all duration-700"
+          className="h-full tactile-gauge-fill transition-all duration-700"
           style={{ width: `${completenessPct}%` }}
         />
       </div>
@@ -55,8 +55,8 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({
         {checklist.map((item, idx) => (
           <div
             key={idx}
-            className={`flex items-center justify-between text-xs p-2 rounded-xl transition-colors ${
-              item.done ? 'bg-[#f0f7ff]/50 text-slate-700' : 'bg-amber-50/60 text-amber-900'
+            className={`flex items-center justify-between text-xs p-2 rounded-xl transition-all ${
+              item.done ? 'bg-[#f0f7ff]/60 border border-[#607ef2]/15 text-slate-700' : 'bg-amber-50/70 border border-amber-200/60 text-amber-900'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({
         <button
           type="button"
           onClick={onEditProfile}
-          className="w-full py-2.5 px-4 bg-[#f0f7ff] hover:bg-[#e0efff] text-[#3f58b2] font-bold text-xs rounded-2xl border border-[#607ef2]/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          className="tactile-btn-sapphire w-full py-2.5 px-4 text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <span>Complete Remaining Details</span>
           <ArrowRight className="w-3.5 h-3.5" />
