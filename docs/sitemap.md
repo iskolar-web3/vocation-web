@@ -71,6 +71,7 @@ a PayMongo redirect never re-submits a booking.
 | S-015 | Privacy Policy | Static legal content. **Required by Google OAuth and RA 10173** | — | footer, OAuth consent screen | Public | static |
 | S-016 | Refund Policy | Static legal content. **Required by PayMongo activation** | — | footer, checkout | Public | static |
 | S-017 | Contact | How to reach iSkolar. **Required by PayMongo activation** | — | footer | Public | static |
+| S-018 | Email verification | Confirm the signup email from the verification link (API-027) | F-020 | email link | Public | verifying / verified / invalid-token / error |
 
 ### Student (session)
 
@@ -144,7 +145,8 @@ Admin enters listings at launch via S-051. Rows kept for revival.
 /                              (public)   S-001  Landing
 ├── /signin                    (public)   S-002
 ├── /signup                    (public)   S-003
-├── /reset                     (public)   S-013
+├── /reset-password            (public)   S-013  (alias /reset)
+├── /verify-email              (public)   S-018
 ├── /internships               (public)   S-004  Directory
 │   └── /internships/:slug     (public)   S-005  Detail
 ├── /companies                 (public)   S-006
@@ -213,7 +215,8 @@ PRD Q1), S-094 (operational only).
 | `/` | S-001 | — | Public | GET | **Yes** | Primary marketing surface |
 | `/signin` | S-002 | `?next=` | Public | GET | No | Redirects to role home if a session exists |
 | `/signup` | S-003 | `?role=` | Public | GET | No | |
-| `/reset` | S-013 | `?token=` | Public | GET | No | Invalid or expired token → S-013 error state, never S-090 |
+| `/reset-password` | S-013 | `?token=` | Public | GET | No | The path the server's reset email links to. `/reset` is an alias. Invalid or expired token → S-013 error state, never S-090 |
+| `/verify-email` | S-018 | `?token=` | Public | GET | No | The path the server's verification email links to. Posts the token once; invalid or expired → S-018 invalid state, never S-090 |
 | `/terms` · `/privacy` · `/refunds` · `/contact` | S-014–S-017 | — | Public | GET | **Yes** | Static. Gate PayMongo activation and the Google OAuth consent screen |
 | `/internships` | S-004 | `?q&field&setup&pay&duration&sort&page` | Public | GET | **Yes** | Filters live in the URL so a filtered view is shareable |
 | `/internships/:slug` | S-005 | `slug` | Public | GET | **Yes** | Non-`open` posting → S-090, never a preview (BR-003) |
@@ -244,7 +247,7 @@ opaque ids on owner-scoped edit routes.
 | PayMongo return URL | `/app/bookings` | after checkout, whatever the outcome | No |
 
 **Crawler / discoverability:** allow all Public routes; `noindex` on `/app/*`, `/employer/*`,
-`/coach/*`, `/admin/*`, `/signin`, `/signup`, `/reset`. Public routes are marketing surfaces, so
+`/coach/*`, `/admin/*`, `/signin`, `/signup`, `/reset-password`, `/verify-email`. Public routes are marketing surfaces, so
 the SPA choice (charter §II) needs prerendering or SSR for them to be indexable at all — flagged
 in [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) technology trade-offs.
 

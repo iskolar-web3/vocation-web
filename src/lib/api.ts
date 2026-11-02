@@ -81,16 +81,12 @@ export async function apiFetch<T>(
     }
   }
 
-  const sessionId = typeof window !== 'undefined' ? localStorage.getItem('vocation_session_id') : null;
-
+  // Auth is the HttpOnly `vocation_session` cookie the server sets (sent via
+  // credentials: 'include'). Never keep a session token in JS-readable storage.
   const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
-
-  if (sessionId) {
-    defaultHeaders['X-Session-Id'] = sessionId;
-  }
 
   const config: RequestInit = {
     method: 'GET',
@@ -129,16 +125,6 @@ export async function apiFetch<T>(
         payload?.error?.code,
         payload?.error?.details
       );
-    }
-
-    // Persist session_id on successful auth
-    if (typeof window !== 'undefined') {
-      const cleanEp = endpoint.split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
-      if ((cleanEp === 'auth/signin' || cleanEp === 'auth/signup') && payload.data && (payload.data as any).session_id) {
-        localStorage.setItem('vocation_session_id', (payload.data as any).session_id);
-      } else if (cleanEp === 'auth/signout') {
-        localStorage.removeItem('vocation_session_id');
-      }
     }
 
     return {

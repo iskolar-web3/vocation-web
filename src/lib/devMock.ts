@@ -522,6 +522,7 @@ export async function handleDevMockRequest<T>(
       role: account.role,
       avatar_url: profile?.avatar_url || account.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
       is_onboarded: account.is_onboarded ?? true,
+      email_verified: true,
     };
     setStored(STORAGE_KEYS.USER, user);
     return { message: 'Signed in successfully', data: user as unknown as T };
@@ -540,6 +541,7 @@ export async function handleDevMockRequest<T>(
       role,
       avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
       is_onboarded: false,
+      email_verified: false,
     };
     setStored(STORAGE_KEYS.ACCOUNTS, accounts);
 
@@ -550,6 +552,7 @@ export async function handleDevMockRequest<T>(
       role,
       avatar_url: accounts[email].avatar_url,
       is_onboarded: false,
+      email_verified: false,
     };
     setStored(STORAGE_KEYS.USER, user);
 

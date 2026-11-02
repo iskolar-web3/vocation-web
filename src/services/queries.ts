@@ -25,10 +25,13 @@ import {
   CreateReviewRequest,
   CreateCoachProfileRequest,
   UpdateCoachProfileRequest,
-  SessionType,
+  MySessionType,
   EarningsItem,
   EarningsMeta,
   PasswordResetConfirmRequest,
+  UpdateSettingsRequest,
+  PutAvailabilityRequest,
+  AdminInternshipCard,
 } from '../types/api';
 
 // Keys
@@ -331,7 +334,7 @@ export function useUpdateStudentProfile() {
 export function useUpdateSettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { email?: string; password?: string }) => {
+    mutationFn: async (payload: UpdateSettingsRequest) => {
       return api.patch('/me/settings', payload);
     },
     onSuccess: () => {
@@ -429,8 +432,14 @@ export function useCoachAvailabilityMe() {
 export function usePublishAvailability() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (slots: { id?: string; starts_at: string; ends_at: string; is_booked?: boolean }[]) => {
-      const res = await api.put<MyAvailabilitySlot[]>('/me/availability', { slots });
+    // API-062 replaces only the coach's unbooked slots; booked ones are kept
+    // server-side and must not be re-sent (they would overlap). Each slot is
+    // exactly { starts_at, ends_at } — the server rejects unknown fields.
+    mutationFn: async (slots: { starts_at: string; ends_at: string }[]) => {
+      const body: PutAvailabilityRequest = {
+        slots: slots.map(({ starts_at, ends_at }) => ({ starts_at, ends_at })),
+      };
+      const res = await api.put<MyAvailabilitySlot[]>('/me/availability', body);
       return res.data;
     },
     onSuccess: () => {
@@ -457,7 +466,7 @@ export function useCoachSessionTypes() {
   return useQuery({
     queryKey: queryKeys.coachSessionTypes,
     queryFn: async () => {
-      const res = await api.get<SessionType[]>('/me/session-types');
+      const res = await api.get<MySessionType[]>('/me/session-types');
       return res.data || [];
     },
   });
@@ -481,7 +490,7 @@ export function useAdminInternships(status?: string) {
   return useQuery({
     queryKey: queryKeys.adminInternships(status),
     queryFn: async () => {
-      const res = await api.get<InternshipDetail[]>('/admin/internships', { status });
+      const res = await api.get<AdminInternshipCard[]>('/admin/internships', { status });
       return res.data || [];
     },
   });

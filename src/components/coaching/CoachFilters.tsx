@@ -4,7 +4,8 @@ import { Search, RotateCcw, Award, SlidersHorizontal } from 'lucide-react';
 export interface CoachFilterState {
   q: string;
   expertise: string;
-  price: 'all' | 'free' | 'under500' | '500to1000' | '1000plus';
+  // API-020 ?price knows any/free/paid only; peso-range tiers aren't supported server-side.
+  price: 'all' | 'free' | 'paid';
 }
 
 interface CoachFiltersProps {
@@ -36,9 +37,7 @@ export const CoachFilters: React.FC<CoachFiltersProps> = ({
   const priceTiers = [
     { value: 'all', label: 'All Session Rates' },
     { value: 'free', label: 'Free Intro Sessions (₱0)' },
-    { value: 'under500', label: 'Under ₱500 / session' },
-    { value: '500to1000', label: '₱500 – ₱1,000 / session' },
-    { value: '1000plus', label: '₱1,000+ / session' },
+    { value: 'paid', label: 'Paid Sessions' },
   ];
 
   return (

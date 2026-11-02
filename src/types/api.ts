@@ -53,6 +53,7 @@ export type ApplyClickRequest = Schemas['ApplyClickRequest'];
 
 // Coaching & Availability
 export type SessionType = Schemas['SessionType'];
+export type MySessionType = Schemas['MySessionType'];
 export type CoachCard = Schemas['CoachCard'];
 export type CoachProfile = Schemas['CoachProfile'];
 export type CoachDetail = Schemas['CoachProfile'] & {
@@ -71,20 +72,9 @@ export type ReviewCreated = Schemas['ReviewCreated'];
 // Landing & Student Dashboard
 export type LandingResponse = Schemas['LandingResponse'];
 export type LandingData = Schemas['LandingResponse'];
-export type StudentProfile = Schemas['StudentProfile'] & {
-  target_ojt_hours?: number;
-  completed_ojt_hours?: number;
-  email?: string;
-  avatar_url?: string;
-};
-export type CreateStudentProfileRequest = Schemas['CreateStudentProfileRequest'] & {
-  target_ojt_hours?: number;
-  completed_ojt_hours?: number;
-};
-export type UpdateStudentProfileRequest = Schemas['UpdateStudentProfileRequest'] & {
-  target_ojt_hours?: number;
-  completed_ojt_hours?: number;
-};
+export type StudentProfile = Schemas['StudentProfile'];
+export type CreateStudentProfileRequest = Schemas['CreateStudentProfileRequest'];
+export type UpdateStudentProfileRequest = Schemas['UpdateStudentProfileRequest'];
 export type Dashboard = Schemas['Dashboard'];
 export type StudentDashboardData = Schemas['Dashboard'];
 export type SavedInternship = Schemas['SavedInternship'];

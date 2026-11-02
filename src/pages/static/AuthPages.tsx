@@ -267,7 +267,7 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
                   {mode === 'signin' && (
                     <button
                       type="button"
-                      onClick={() => navigate('/reset')}
+                      onClick={() => navigate('/reset-password')}
                       className="text-[11px] text-[#3f58b2] font-semibold hover:underline cursor-pointer"
                     >
                       Forgot password?

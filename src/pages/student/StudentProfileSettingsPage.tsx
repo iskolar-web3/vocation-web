@@ -52,6 +52,8 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Settings states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -121,6 +123,11 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
     setPasswordErrorMsg(null);
     setPasswordSuccessMsg(null);
 
+    if (!currentPassword) {
+      setPasswordErrorMsg('Please enter your current password.');
+      return;
+    }
+
     if (!newPassword.trim()) {
       setPasswordErrorMsg('Please enter a new password.');
       return;
@@ -137,14 +144,17 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
     }
 
     try {
+      // API-038: changing the password needs current_password. The email is
+      // read-only on this page, so it is never sent (Audit CON-11).
       await updateSettingsMutation.mutateAsync({
         password: newPassword,
-        email: email.trim() || undefined,
+        current_password: currentPassword,
       });
       if (refetchUser) {
         await refetchUser();
       }
       setPasswordSuccessMsg('Password changed successfully! Your account credentials have been updated.');
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setTimeout(() => setPasswordSuccessMsg(null), 4000);
@@ -415,6 +425,29 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
                 disabled
                 className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder="Enter your current password"
+                  className="w-full px-3.5 py-2.5 pr-10 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-xs font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div>

@@ -29,6 +29,7 @@ import { ModerationQueuePage } from './pages/employer/ModerationQueuePage';
 import { AuthPages } from './pages/static/AuthPages';
 import { LegalPages } from './pages/static/LegalPages';
 import { NotFoundPage } from './pages/static/NotFoundPage';
+import { VerifyEmailPage } from './pages/static/VerifyEmailPage';
 
 export const App: React.FC = () => {
   const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
@@ -169,8 +170,12 @@ export const App: React.FC = () => {
     if (pathOnly === '/signup') {
       return <AuthPages mode="signup" navigate={navigate} />;
     }
-    if (pathOnly === '/reset') {
+    // The server emails /reset-password?token= (API-025); /reset stays as an alias.
+    if (pathOnly === '/reset-password' || pathOnly === '/reset') {
       return <AuthPages mode="reset" navigate={navigate} />;
+    }
+    if (pathOnly === '/verify-email') {
+      return <VerifyEmailPage navigate={navigate} />;
     }
 
     // Legal Pages (Issue #19 & #23)
@@ -221,7 +226,8 @@ export const App: React.FC = () => {
     }
     if (pathOnly === '/coaches') {
       const expertise = searchParams.get('expertise') || '';
-      const price = (searchParams.get('price') as any) || 'all';
+      const rawPrice = searchParams.get('price');
+      const price = rawPrice === 'free' || rawPrice === 'paid' ? rawPrice : 'all';
       return (
         <CoachDirectoryPage
           navigate={navigate}
