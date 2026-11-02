@@ -121,7 +121,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         {item.field}
                         {item.duration_weeks != null && ` · ${item.duration_weeks} wks`}
-                        {` · ${item.work_setup.charAt(0).toUpperCase()}${item.work_setup.slice(1)}`}
+                        {item.work_setup && ` · ${item.work_setup.charAt(0).toUpperCase()}${item.work_setup.slice(1)}`}
                       </div>
                     </td>
                     <td className="px-5 py-4">

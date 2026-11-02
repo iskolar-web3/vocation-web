@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MailCheck, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { api, ApiError } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface VerifyEmailPageProps {
   navigate: (path: string) => void;
@@ -15,6 +16,7 @@ type VerifyState = 'verifying' | 'verified' | 'invalid' | 'error';
  * Sign-in is never blocked by an unverified email, so every state links on.
  */
 export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ navigate }) => {
+  const { user, refetchUser } = useAuth();
   const [state, setState] = useState<VerifyState>('verifying');
   const sent = useRef(false);
 
@@ -24,13 +26,19 @@ export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ navigate }) =>
     sent.current = true;
 
     const token = new URLSearchParams(window.location.search).get('token');
+    // Drop the single-use token from the address bar and history once read.
+    if (token) window.history.replaceState(null, '', window.location.pathname);
     if (!token) {
       setState('invalid');
       return;
     }
     api
       .post('/auth/verify-email', { token })
-      .then(() => setState('verified'))
+      .then(() => {
+        setState('verified');
+        // A signed-in user's email_verified changes; refresh the session.
+        if (user) void refetchUser();
+      })
       .catch((err) => {
         setState(err instanceof ApiError && (err.status === 422 || err.status === 400) ? 'invalid' : 'error');
       });

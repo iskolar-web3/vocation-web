@@ -31,6 +31,8 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
     const token = urlParams.get('token');
     if (token) {
       setResetToken(token);
+      // Keep the token in state only; drop it from the address bar and history.
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
 

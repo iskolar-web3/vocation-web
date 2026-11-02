@@ -247,7 +247,7 @@ opaque ids on owner-scoped edit routes.
 | PayMongo return URL | `/app/bookings` | after checkout, whatever the outcome | No |
 
 **Crawler / discoverability:** allow all Public routes; `noindex` on `/app/*`, `/employer/*`,
-`/coach/*`, `/admin/*`, `/signin`, `/signup`, `/reset-password`, `/verify-email`. Public routes are marketing surfaces, so
+`/coach/*`, `/admin/*`, `/signin`, `/signup`, `/reset-password` (and its `/reset` alias), `/verify-email`. Public routes are marketing surfaces, so
 the SPA choice (charter §II) needs prerendering or SSR for them to be indexable at all — flagged
 in [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) technology trade-offs.
 
