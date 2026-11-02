@@ -4,7 +4,7 @@
 # ADR-0005 — PayMongo, and the 5% take-rate exposure
 
 - **Date:** 2026-09-07
-- **Status:** **Proposed — decision required before build**
+- **Status:** **Superseded by ADR-0026 (take rate) and ADR-0027 (gateway)**
 
 ## Context
 

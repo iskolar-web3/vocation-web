@@ -4,7 +4,7 @@
 # ADR-0003 — AWS with self-managed PostgreSQL, not Supabase or Azure
 
 - **Date:** 2026-09-07
-- **Status:** Accepted
+- **Status:** Accepted *(database host superseded by [ADR-0016](ADR-0016-neon-postgres-not-rds.md); hosting superseded by [ADR-0036](ADR-0036-railway-vercel-deploy.md))*
 
 ## Context
 

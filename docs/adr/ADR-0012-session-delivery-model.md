@@ -52,6 +52,12 @@ Coaches will provide a join link (e.g., Google Meet, Zoom) when confirming the b
 
 ## Consequences
 
+**Dated clarification (2026-10-18, issue #26/#67):** A student receives a full refund only when
+cancelling more than 24 hours before start; at or within 24 hours there is no refund and the coach
+earns 90%. A coach cancelling before start always triggers a full refund. Neither party can cancel
+once the session starts, and a dispute or chargeback blocks refunds. The student receives exactly
+the amount paid; Vocation absorbs PayMongo fees.
+
 - `erd.md`, `api-spec.md`, `sitemap.md`, and `user-flow.md` must be updated to include the cancellation path.
 - The refund policy based on the 24-hour window must be enforced on the backend.
 - A background job or chron task must be introduced to auto-complete sessions 24 hours post-schedule.

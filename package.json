@@ -10,6 +10,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
+    "gen:api": "openapi-typescript docs/openapi.yaml -o src/types/schema.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

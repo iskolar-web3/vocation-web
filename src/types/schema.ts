@@ -99,7 +99,7 @@ export interface paths {
         /**
          * Request a password reset (API-024)
          * @description Public. **Always `202`**, whether or not the email exists, so it cannot be used to
-         *     enumerate accounts. Rate-limited 5 per 15 minutes per IP and per email (`429`).
+         *     enumerate accounts. When the account exists the reset link is emailed. Rate-limited 5 per 15 minutes per IP and per email, and 20 per hour per IP (`429`); only the per-account cap of 3 per hour is silent (excess sends are skipped, still `202`).
          */
         post: operations["API-024"];
         delete?: never;
@@ -119,9 +119,74 @@ export interface paths {
         put?: never;
         /**
          * Confirm a password reset (API-025)
-         * @description Public. Consumes a single-use, expiring reset token.
+         * @description Public. Consumes a single-use, expiring reset token. Revokes every session of the account.
          */
         post: operations["API-025"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify the account email (API-027)
+         * @description Public. Consumes the single-use token from the signup verification email (valid 24 hours)
+         *     and marks the account's email verified. An already-verified account, including one submitting
+         *     a previously used token, also gets `200`. An unknown or expired token, or a used token for an
+         *     unverified account, is `422`. Sign-in is never blocked by an unverified email.
+         */
+        post: operations["API-027"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend the verification email (API-028)
+         * @description Emails the signed-in account a fresh verification link. `202` when queued; `200` when the
+         *     email is already verified (nothing is sent). Rate-limited 3 per hour per account (`429`).
+         */
+        post: operations["API-028"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the password while signed in (API-029)
+         * @description Requires the current password (wrong: `403`). Limited to 5 attempts per 15 minutes per account.
+         *     On success every other session of the account is revoked; the calling session stays signed in.
+         */
+        post: operations["API-029"];
         delete?: never;
         options?: never;
         head?: never;
@@ -361,7 +426,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read the caller's student profile (API-032)
+         * @description Student role. `404` until onboarding (API-030) is done.
+         */
+        get: operations["API-032"];
         put?: never;
         /**
          * Complete student onboarding (API-030)
@@ -457,8 +526,16 @@ export interface paths {
         head?: never;
         /**
          * Update account settings (API-038)
-         * @description Student role. `email`, `password` and `notification_preference` are independently
-         *     optional and independently applied.
+         * @description Student role. `email`, `password` and `notification_preference` are independently optional and
+         *     independently applied. Changing `password`, or changing `email` to a different address, requires
+         *     `current_password`; missing or wrong current password returns `403`. Every field is validated
+         *     first (`422` for a password under 8 characters or a blank or malformed email), so a `4xx` never
+         *     leaves a partial change and a `422` does not spend the rate limit. Those changes share the
+         *     5 / 15 minute per-account budget with `POST /auth/password/change` and return `429` (with
+         *     `Retry-After`) when exceeded. A password change revokes the account's other sessions. An email
+         *     change resets `email_verified_at`, expires pending reset and verification links, emails a
+         *     verification link to the new address and a notice to the old one. Accounts without a password
+         *     (Google-only) always get `403`: they set a password through `POST /auth/password-reset/request`.
          */
         patch: operations["API-038"];
         trace?: never;
@@ -476,7 +553,7 @@ export interface paths {
          * Create a booking (API-041)
          * @description Student role. Free or intro-call sessions are written `confirmed`/`none` with no gateway
          *     call and no `checkout_url`. A paid session writes the booking first (`pending`/`pending`)
-         *     with the stored money split (BR-007/BR-008, ADR-0007), then creates a Gateway invoice and
+         *     with the stored money split (BR-007/BR-008, ADR-0007), then creates a PayMongo Checkout Session and
          *     returns `checkout_url`. Rate-limited 10/hour per account (`429`).
          */
         post: operations["API-041"];
@@ -497,8 +574,8 @@ export interface paths {
         put?: never;
         /**
          * Resume payment (API-042)
-         * @description Student owner. Mints a fresh Gateway invoice for a still-pending booking under the booking
-         *     row lock and sweeps every other pending invoice for the booking. Owner miss is `404`.
+         * @description Student owner. Expires the previously stored Checkout Session before creating a replacement for a still-pending booking under the booking
+         *     row lock. A payment already pending or processing returns `409 payment in progress`. Owner miss is `404`.
          */
         post: operations["API-042"];
         delete?: never;
@@ -540,10 +617,11 @@ export interface paths {
         /**
          * Cancel a booking (API-046)
          * @description Session; ownership checked in the handler — either the student or the coach on the booking
-         *     may cancel. A coach cancelling always refunds; a student refunds when >24h before the
+         *     may cancel before the session starts. A coach cancelling always refunds; a student refunds when >24h before the
          *     session (ADR-0012). Refunds are asynchronous; a `PENDING` gateway refund cancels the
          *     booking but leaves `payment_status=paid` until the `refund.succeeded` callback.
-         *     Also sweeps every pending invoice of the booking. A non-owner gets `404`.
+         *     A dispute on the payment or a session that has started returns `409`; the booking cannot be refunded while the dispute is open.
+         *     A non-owner gets `404`.
          */
         post: operations["API-046"];
         delete?: never;
@@ -637,7 +715,9 @@ export interface paths {
          * @description Coach role. Partial update. `slug`, `price_type` and `verification_status` are not
          *     writable. The payout destination (`payout_channel_code`, `payout_account_number`,
          *     `payout_account_holder_name`) must be supplied together; the account number is returned
-         *     masked to its last four digits (ADR-0028).
+         *     masked to its last four digits (ADR-0028). Sending any payout field also requires
+         *     `current_password` (`403` if missing, wrong, or a Google-only account) and a holder name equal
+         *     to the account's `full_name` ignoring case and spacing (`422`) (ADR-0034).
          */
         patch: operations["API-061"];
         trace?: never;
@@ -735,7 +815,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List my session types (API-067)
+         * @description Coach role. Every session type the calling coach owns, active and retired, active first and
+         *     then by price. The public coach profile (API-021) shows active ones only.
+         */
+        get: operations["API-067-list"];
         put?: never;
         /**
          * Create a session type (API-067)
@@ -852,6 +937,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Weekly coach payout list (API-078)
+         * @description Admin role. Coaches owed money now: ledger credits of sessions finished 7+ days ago with no
+         *     dispute, minus clawbacks and payouts. Coaches owed nothing are omitted (ADR-0034).
+         */
+        get: operations["API-078"];
+        put?: never;
+        /**
+         * Record a manual coach payout (API-079)
+         * @description Admin role. `amount_centavos` must equal the amount the server computes the coach is owed
+         *     now, else `409` with `details.owed_centavos`. Idempotent per `(coach, reference)`: a repeat
+         *     returns `200` with `replayed: true`; the same reference with another amount is `409`
+         *     (ADR-0034).
+         */
+        post: operations["API-079"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/clawback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claw a booking back from its coach (API-081)
+         * @description Admin role. For a refund or lost chargeback that was the coach's fault. Debits what is still
+         *     credited for the booking; repeating it is a no-op (ADR-0034).
+         */
+        post: operations["API-081"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/uploads/presign": {
         parameters: {
             query?: never;
@@ -863,8 +997,13 @@ export interface paths {
         put?: never;
         /**
          * Presign an upload (API-080)
-         * @description Session (any role). Bytes go straight to object storage; resumes land in a private
-         *     prefix. `413` over the per-purpose size cap, `415` for a disallowed content type.
+         * @description Session (any role). Returns an S3 POST policy: the client uploads with a
+         *     `multipart/form-data` POST to `url`, sending every entry of `fields` as a form field
+         *     (in any order) and the file as the **last** part named `file`. The policy pins the
+         *     exact `key` and `Content-Type` and a `content-length-range` of 1 byte to the
+         *     per-purpose cap, so storage itself rejects an empty, oversized or retyped upload.
+         *     Resumes land in a private prefix. `413` over the per-purpose size cap, `415` for a
+         *     disallowed content type, `503` when object storage is not configured.
          */
         post: operations["API-080"];
         delete?: never;
@@ -873,7 +1012,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/webhooks/Gateway": {
+    "/webhooks/paymongo": {
         parameters: {
             query?: never;
             header?: never;
@@ -883,17 +1022,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Gateway callback — the only thing that confirms a payment (API-045)
-         * @description **No session.** Authenticated solely by the `x-callback-token` header, compared in
-         *     constant time before the body is read. An unconfigured token rejects every delivery.
-         *     Gateway delivers invoice, refund and payout callbacks to this same URL, distinguished by
-         *     body shape (ADR-0027, ADR-0028).
+         * PayMongo webhook — the only thing that confirms a payment (API-045)
+         * @description **No session.** Verify the required `Paymongo-Signature` header against the exact raw body
+         *     before parsing or applying the event. Only this verified webhook confirms a paid booking.
+         *     PayMongo delivers checkout, payment failure, refund, and dispute events here.
          *
-         *     The order is the contract: verify token → insert the event idempotently into
-         *     `payment_event` → resolve/transition → always `200` once durably stored. A rejected or
-         *     unmatched event is stored with `applied_at` null, alerts, and still answers `200` so
-         *     Gateway does not retry forever and the payload is not lost. Only a token failure (`401`),
-         *     an unreadable body (`400`) or a real storage failure (`500`) deviate.
+         *     The order is the contract: verify signature → parse event → insert idempotently by `data.id`
+         *     → resolve/transition → answer `200` after durable storage. Invalid signature is `401`, an
+         *     unreadable body is `400`, and a storage failure is `500`.
          */
         post: operations["API-045"];
         delete?: never;
@@ -951,7 +1087,7 @@ export interface components {
              * @description Stable machine value.
              * @enum {string}
              */
-            code: "bad_request" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "too_large" | "unsupported_media_type" | "unprocessable" | "rate_limited" | "upstream_failed" | "unavailable" | "internal_error";
+            code: "bad_request" | "unauthenticated" | "forbidden" | "forbidden_origin" | "not_found" | "conflict" | "too_large" | "unsupported_media_type" | "unprocessable" | "rate_limited" | "upstream_failed" | "unavailable" | "internal_error";
             /** @description Field-level details for form errors. */
             details?: {
                 [key: string]: unknown;
@@ -1003,6 +1139,8 @@ export interface components {
             full_name?: string | null;
             avatar_url?: string | null;
             is_onboarded: boolean;
+            /** @description True once the account's email was verified (API-027). */
+            email_verified: boolean;
         };
         SignupRequest: {
             /** Format: email */
@@ -1031,6 +1169,13 @@ export interface components {
         PasswordResetConfirmRequest: {
             token: string;
             password: string;
+        };
+        VerifyEmailRequest: {
+            token: string;
+        };
+        PasswordChangeRequest: {
+            current_password: string;
+            new_password: string;
         };
         /** @enum {string} */
         WorkSetup: "remote" | "hybrid" | "onsite";
@@ -1073,6 +1218,7 @@ export interface components {
             location: string;
             duration_weeks: number | null;
             is_paid: boolean;
+            work_setup: components["schemas"]["WorkSetup"];
             field: string;
             /** @description Calendar date (`YYYY-MM-DD`) or null. */
             deadline: string | null;
@@ -1160,6 +1306,10 @@ export interface components {
             price_centavos: number;
             is_intro_call: boolean;
         };
+        /** @description A session type as its owning coach sees it (API-067 GET), including retired ones. */
+        MySessionType: components["schemas"]["SessionType"] & {
+            is_active: boolean;
+        };
         Review: {
             rating: number;
             body: string | null;
@@ -1196,6 +1346,10 @@ export interface components {
             avatar_key: string | null;
             resume_key: string | null;
             skills: string[];
+            /** @description Required OJT/practicum hours. Null until the student sets it. */
+            target_ojt_hours: number | null;
+            /** @description OJT hours completed so far. Starts at 0. */
+            completed_ojt_hours: number;
             completeness_pct: number;
         };
         CreateStudentProfileRequest: {
@@ -1204,6 +1358,8 @@ export interface components {
             course: string;
             year_level: number;
             skills?: string[];
+            target_ojt_hours?: number;
+            completed_ojt_hours?: number;
         };
         UpdateStudentProfileRequest: {
             full_name?: string;
@@ -1214,6 +1370,8 @@ export interface components {
             avatar_key?: string;
             resume_key?: string;
             skills?: string[];
+            target_ojt_hours?: number;
+            completed_ojt_hours?: number;
         };
         Dashboard: {
             saved_count: number;
@@ -1232,6 +1390,7 @@ export interface components {
             location: string;
             duration_weeks: number | null;
             is_paid: boolean;
+            work_setup: components["schemas"]["WorkSetup"];
             field: string;
             deadline: string | null;
             /** Format: date-time */
@@ -1247,10 +1406,12 @@ export interface components {
             email: string;
             notification_preference: components["schemas"]["NotificationPreference"];
         };
+        /** @description current_password is required when password is supplied or email is changed to a different address. */
         UpdateSettingsRequest: {
             /** Format: email */
             email?: string;
             password?: string;
+            current_password?: string;
             notification_preference?: {
                 channel_email?: boolean;
                 topic_bookings?: boolean;
@@ -1273,7 +1434,7 @@ export interface components {
             join_url?: string;
             /** Format: date-time */
             completed_at?: string;
-            /** @description Present only when a gateway invoice was created. */
+            /** @description Present only when a PayMongo Checkout Session was created. */
             checkout_url?: string;
         };
         StudentBooking: {
@@ -1366,6 +1527,45 @@ export interface components {
             payout_channel_code?: string;
             payout_account_number?: string;
             payout_account_holder_name?: string;
+            /** @description Required whenever a payout field is sent (ADR-0034). */
+            current_password?: string;
+        };
+        OwedPayout: {
+            /** Format: uuid */
+            coach_account_id: string;
+            coach_name: string;
+            /** @description The account's `full_name`. */
+            verified_name?: string | null;
+            payout_channel_code?: string | null;
+            /** @description Masked to its last four digits; the full number is never returned. */
+            payout_account_masked?: string | null;
+            payout_account_holder_name?: string | null;
+            /** Format: int64 */
+            amount_centavos: number;
+            booking_ids: string[];
+        };
+        RecordPayoutRequest: {
+            /** Format: uuid */
+            coach_account_id: string;
+            /** @description The admin's transfer reference, e.g. a GCash reference number. */
+            reference: string;
+            /** Format: int64 */
+            amount_centavos: number;
+        };
+        ManualPayout: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            coach_account_id: string;
+            reference: string;
+            /** Format: int64 */
+            amount_centavos: number;
+            /** Format: date-time */
+            created_at: string;
+            replayed: boolean;
+        };
+        ClawBackRequest: {
+            reason: string;
         };
         /** @description `price_centavos` is optional; omission decodes to `0` and creates a free session type. */
         CreateSessionTypeRequest: {
@@ -1433,8 +1633,18 @@ export interface components {
             size_bytes: number;
         };
         PresignResponse: {
-            /** Format: uri */
-            upload_url: string;
+            /**
+             * Format: uri
+             * @description The bucket endpoint to POST the multipart form to.
+             */
+            url: string;
+            /**
+             * @description Form fields to send before the file part — `key`, `Content-Type`, `policy`,
+             *     `x-amz-algorithm`, `x-amz-credential`, `x-amz-date`, `x-amz-signature`.
+             */
+            fields: {
+                [key: string]: string;
+            };
             object_key: string;
             /** Format: date-time */
             expires_at: string;
@@ -1496,61 +1706,38 @@ export interface components {
             /** Format: uri */
             external_apply_url: string;
         };
+        /**
+         * @description API-070 list item. Carries the public card's display fields so the moderation queue can
+         *     render a row without a second request.
+         */
         AdminInternshipCard: {
             id: string;
             slug: string;
             title: string;
             company_id: string;
+            company: components["schemas"]["CompanySummary"];
             status: components["schemas"]["InternshipStatus"];
+            location: string;
+            field: string;
+            work_setup: components["schemas"]["WorkSetup"];
+            is_paid: boolean;
+            duration_weeks: number | null;
         };
-        /**
-         * @description Gateway delivers invoice, refund and payout callbacks to the same URL; the server routes by
-         *     body shape. The schemas below are permissive — they document the fields the server reads,
-         *     not an exhaustive gateway contract.
-         */
-        GatewayCallback: components["schemas"]["GatewayInvoiceCallback"] | components["schemas"]["GatewayRefundCallback"] | components["schemas"]["GatewayPayoutCallback"];
-        GatewayInvoiceCallback: {
-            /** @description The Gateway invoice id; correlates to `booking.gateway_ref`. */
-            id: string;
-            /** @description The booking id the server set as the invoice's external id. */
-            external_id?: string;
-            /** @description `PAID` confirms; `EXPIRED` expires; anything else is recorded with no transition. */
-            status: string;
-            amount?: number;
-            paid_amount?: number;
-            /** Format: date-time */
-            paid_at?: string;
-            payment_method?: string;
-            payment_channel?: string;
-        } & {
-            [key: string]: unknown;
-        };
-        GatewayRefundCallback: {
-            /** @enum {string} */
-            event: "refund.succeeded" | "refund.failed";
+        PayMongoEvent: {
             data: {
-                id?: string;
-                /** @description The invoice being refunded; correlates to `booking.gateway_ref`. */
-                invoice_id: string;
-                reference_id?: string;
-                status?: string;
+                /** @description PayMongo event id (`evt_…`), used for event idempotency. */
+                id: string;
+                attributes: {
+                    /** @enum {string} */
+                    type: "checkout_session.payment.paid" | "payment.failed" | "refund.succeeded" | "dispute.created";
+                    /** @description Event resource; fields vary by event type. */
+                    data: {
+                        [key: string]: unknown;
+                    };
+                } & {
+                    [key: string]: unknown;
+                };
             } & {
-                [key: string]: unknown;
-            };
-        } & {
-            [key: string]: unknown;
-        };
-        GatewayPayoutCallback: {
-            /** @description `payout.succeeded|failed|expired|reversed` (or `v3_payout.*`). */
-            event?: string;
-            /** @description The Gateway payout id; correlates to `payout_batch.gateway_ref`. */
-            id?: string;
-            /** @description The payout batch id the runner sent. */
-            reference_id?: string;
-            status?: string;
-            failure_code?: string;
-            /** @description Enveloped form nests the payout object here. */
-            data?: {
                 [key: string]: unknown;
             };
         } & {
@@ -1585,7 +1772,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description Authenticated but the wrong role (`forbidden`). */
+        /** @description Authenticated but the wrong role (`forbidden`), or a write whose `Origin` is not `WEB_ORIGIN` (`forbidden_origin`, ADR-0037). */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1630,7 +1817,11 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description Disallowed upload content type (`unsupported_media_type`). */
+        /**
+         * @description `unsupported_media_type` — a disallowed upload content type, or a write
+         *     (`POST`/`PUT`/`PATCH` with a body) whose `Content-Type` is not `application/json`.
+         *     The PayMongo webhook is exempt.
+         */
         UnsupportedMediaType: {
             headers: {
                 [name: string]: unknown;
@@ -1649,7 +1840,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description Gateway or Google unreachable (`upstream_failed`). */
+        /** @description PayMongo or Google unreachable (`upstream_failed`). */
         UpstreamFailed: {
             headers: {
                 [name: string]: unknown;
@@ -1836,6 +2027,63 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             422: components["responses"]["UnprocessableEntity"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "API-027": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["EmptySuccess"];
+            400: components["responses"]["BadRequest"];
+            422: components["responses"]["UnprocessableEntity"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "API-028": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["EmptySuccess"];
+            202: components["responses"]["EmptySuccess"];
+            401: components["responses"]["Unauthenticated"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "API-029": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChangeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["EmptySuccess"];
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -2139,6 +2387,32 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    "API-032": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: components["schemas"]["StudentProfile"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     "API-030": {
         parameters: {
             query?: never;
@@ -2330,6 +2604,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -2392,7 +2667,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description Booking is no longer pending payment or PayMongo reports a payment in progress. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             500: components["responses"]["InternalError"];
             502: components["responses"]["UpstreamFailed"];
         };
@@ -2455,7 +2738,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description Payment has an open dispute or the session has started. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             500: components["responses"]["InternalError"];
             502: components["responses"]["UpstreamFailed"];
         };
@@ -2758,6 +3049,31 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    "API-067-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The coach's session types (possibly empty). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: components["schemas"]["MySessionType"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     "API-067-create": {
         parameters: {
             query?: never;
@@ -2977,6 +3293,113 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    "API-078": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owed payouts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: components["schemas"]["OwedPayout"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "API-079": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordPayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description The reference was already recorded; nothing new was written. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: components["schemas"]["ManualPayout"];
+                    };
+                };
+            };
+            /** @description Payout recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: components["schemas"]["ManualPayout"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "API-081": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IDParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClawBackRequest"];
+            };
+        };
+        responses: {
+            /** @description Clawback recorded, or nothing to claw back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: {
+                            /** Format: uuid */
+                            booking_id?: string;
+                            reason?: string;
+                        };
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     "API-080": {
         parameters: {
             query?: never;
@@ -3007,23 +3430,22 @@ export interface operations {
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["UnprocessableEntity"];
             500: components["responses"]["InternalError"];
+            503: components["responses"]["Unavailable"];
         };
     };
     "API-045": {
         parameters: {
             query?: never;
             header: {
-                /** @description Static Gateway callback token; must equal `Gateway_CALLBACK_TOKEN`. */
-                "x-callback-token": string;
-                /** @description Per-delivery idempotency key (fallback is a deterministic event key). */
-                "webhook-id"?: string;
+                /** @description PayMongo HMAC signature over the timestamp and exact raw request body. */
+                "Paymongo-Signature": string;
             };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GatewayCallback"];
+                "application/json": components["schemas"]["PayMongoEvent"];
             };
         };
         responses: {

@@ -59,5 +59,13 @@ gh api "repos/${SRC_REPO}/contents/docs/adr?ref=${REF}" --jq '.[] | select(.type
     echo "  ${out}"
   done
 
+# The OpenAPI contract is mirrored verbatim: a YAML file can't carry the HTML banner. Its
+# generated types (src/types/schema.ts) are regenerated in the same step, so the mirror and
+# the types never disagree (Audit.md CON-09).
+fetch docs/openapi.yaml > "${ROOT}/docs/openapi.yaml"
+echo "  docs/openapi.yaml"
+(cd "${ROOT}" && npm run --silent gen:api)
+echo "  src/types/schema.ts (regenerated)"
+
 gh api "repos/${SRC_REPO}/commits/${REF}" --jq '.sha' > "${ROOT}/docs/.synced-from"
 echo "Synced from $(cat "${ROOT}/docs/.synced-from")"
