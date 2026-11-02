@@ -51,7 +51,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
       return coachDetail.session_types;
     }
     // No invented fallbacks: a booking must reference one of the coach's real
-    // session types (server 404s anything else). No types → nothing bookable.
+    // session types (an unknown id is a 404; a malformed one is Audit N1, a 500). No types → nothing bookable.
     return [];
   }, [coach, coachDetail]);
 

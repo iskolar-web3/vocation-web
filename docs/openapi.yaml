@@ -1648,7 +1648,7 @@ paths:
       tags: [Admin]
       summary: List internships (API-070)
       operationId: API-070
-      description: Admin role. No status predicate unless `?status` is supplied; admin sees every status.
+      description: Admin role. No status predicate unless `?status` is supplied; admin sees every status. An unknown `?status` value is `422`.
       security:
         - sessionCookie: []
       parameters:
@@ -1679,6 +1679,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalError'
     post:

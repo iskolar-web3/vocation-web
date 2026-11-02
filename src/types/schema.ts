@@ -882,7 +882,7 @@ export interface paths {
         };
         /**
          * List internships (API-070)
-         * @description Admin role. No status predicate unless `?status` is supplied; admin sees every status.
+         * @description Admin role. No status predicate unless `?status` is supplied; admin sees every status. An unknown `?status` value is `422`.
          */
         get: operations["API-070"];
         put?: never;
@@ -3197,6 +3197,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
             500: components["responses"]["InternalError"];
         };
     };
