@@ -16,7 +16,7 @@ type VerifyState = 'verifying' | 'verified' | 'invalid' | 'error';
  * Sign-in is never blocked by an unverified email, so every state links on.
  */
 export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ navigate }) => {
-  const { user, refetchUser } = useAuth();
+  const { refetchUser } = useAuth();
   const [state, setState] = useState<VerifyState>('verifying');
   const sent = useRef(false);
 
@@ -36,8 +36,10 @@ export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ navigate }) =>
       .post('/auth/verify-email', { token })
       .then(() => {
         setState('verified');
-        // A signed-in user's email_verified changes; refresh the session.
-        if (user) void refetchUser();
+        // email_verified changed for a signed-in user. Refetch unconditionally:
+        // on a fresh load `user` may not be known yet, and a visitor's /me just
+        // 401s to null.
+        void refetchUser();
       })
       .catch((err) => {
         setState(err instanceof ApiError && (err.status === 422 || err.status === 400) ? 'invalid' : 'error');
