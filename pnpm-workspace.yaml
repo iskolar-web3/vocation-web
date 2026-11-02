@@ -1,6 +1,7 @@
-# pnpm 10+ blocks dependency build scripts until they are approved. These two need theirs:
-# esbuild fetches its platform binary (Vite), lefthook installs the git hooks.
-# Without this file `pnpm install` fails with ERR_PNPM_IGNORED_BUILDS.
+# pnpm 11+ blocks dependency build scripts until they are approved (allowBuilds replaced
+# pnpm 10's onlyBuiltDependencies). These two need theirs: esbuild fetches its platform binary
+# (Vite), lefthook installs the git hooks. Without this file `pnpm install` fails with
+# ERR_PNPM_IGNORED_BUILDS. npm users are unaffected: CI and package-lock.json stay on npm.
 allowBuilds:
   esbuild: true
   lefthook: true
