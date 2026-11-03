@@ -4,7 +4,7 @@
 # Methods — every computed number and its equation
 
 **Maintained by:** Alexandre Nevero (PM)
-**Last updated:** 2026-09-21
+**Last updated:** 2026-10-01
 
 <!--
 Canonical owner of **every computed number**: its equation, its inputs, its rounding, and where it
@@ -51,7 +51,7 @@ platform_fee = ROUND(price × take_rate, 2)
 | Input | Source | Note |
 |---|---|---|
 | `price` | `session_type.price`, snapshotted onto the booking at creation | A later price change never touches an existing booking |
-| `take_rate` | `booking.take_rate`, `numeric(5,4)`, captured at creation | **Stored per booking, never read live.** `payments.DefaultTakeRate = "0.0500"` supplies today's value |
+| `take_rate` | `booking.take_rate`, `numeric(5,4)`, captured at creation | **Stored per booking, never read live.** `payments.DefaultTakeRate = "0.1000"` supplies the current value |
 
 **Evaluated:** `payments.Split()` at booking creation.
 **Re-checked:** `CONSTRAINT booking_platform_fee_matches_rate CHECK (platform_fee = ROUND(price * take_rate, 2))`.
@@ -64,14 +64,17 @@ Owned by **BR-008** / [ADR-0007](adr/ADR-0007-money-split-derived-by-subtraction
 coach_payout = price − platform_fee
 ```
 
-**Derived by subtraction. Never computed independently as `0.95 × price`.**
+**Derived by subtraction. Never computed independently as `0.90 × price`.**
 
-Rounding both halves independently makes some prices unrepresentable. At `price = 499.90`:
+Rounding both halves independently makes some prices unrepresentable. At the current 10% rate and
+`price = 10.05`:
 
 | Method | Platform | Coach | Sum |
 |---|---|---|---|
-| Both rounded independently | `ROUND(499.90 × 0.05)` = 25.00 | `ROUND(499.90 × 0.95)` = 474.91 | **499.91 ✗** |
-| Subtraction (this rule) | 25.00 | 474.90 | **499.90 ✓** |
+| Both rounded independently | `ROUND(10.05 × 0.10)` = 1.01 | `ROUND(10.05 × 0.90)` = 9.05 | **10.06 ✗** |
+| Subtraction (this rule) | 1.01 | 9.04 | **10.05 ✓** |
+
+At **₱499.90**, the current split is a **₱49.99** fee and **₱449.91** coach payout.
 
 **Re-checked:** `CONSTRAINT booking_split_sums_to_price CHECK (platform_fee + coach_payout = price)`.
 The invariant is structural — no application bug can write a row that violates it.
@@ -94,6 +97,12 @@ before the session starts — at exactly 24 hours, no refund.
 
 **Evaluated:** `coaching.RefundDue()`. **Amount:** always the full `price_centavos`; v1 has no
 partial refunds.
+
+**Timing:** PayMongo refund responses `pending` or `processing` leave `payment_status=paid`
+(cancelled + paid = refund in flight) until the verified `refund.succeeded` webhook lands. A
+`succeeded` response sets `payment_status=refunded`; `failed` (or any non-2xx) changes nothing and
+the cancel returns `502 upstream_failed`. Never mark a booking `refunded` before the gateway
+confirms it.
 
 ## 4. Completion eligibility and auto-completion
 
@@ -141,20 +150,42 @@ because a profile cannot exist without all four. The four optional fields are wo
 **Evaluated:** `computeCompletenessPct()`, in the same statement as every `CreateProfile` /
 `UpdateProfile` — never a background job.
 
-## 7. Coach earnings — API-064
+## 7. Coach earnings and balance — API-064
+
+Owned by [ADR-0028](adr/ADR-0028-payouts-and-disbursement.md).
+
+Per booking (unchanged): `price_centavos`, `platform_fee_centavos`, `coach_payout_centavos`,
+`payment_status`.
+
+Balance, read from the append-only `ledger_entry` (migration `000013`, migration `000017`) and the
+batches it pays out through:
 
 ```
-per booking:  price_centavos, platform_fee_centavos, coach_payout_centavos, payment_status
+available  = SUM(ledger_entry.amount)                          -- every entry for the coach
+in_transit = SUM(payout_batch.total_amount) over processing    -- held, not yet confirmed
+paid_out   = SUM(payout_batch.total_amount) over paid          -- money actually disbursed
+pending    = SUM(booking.coach_payout) over confirmed, paid, not-yet-completed bookings
 ```
 
-API-064 returns **one row per booking**, newest first, with no aggregate and no balance. It reads
-the `booking` table directly.
+| Entry | Sign | Written when |
+|---|---|---|
+| `earning` | `+coach_payout` | A **paid** booking completes — API-047 or the auto-complete worker, in the same transaction as the status flip |
+| `reversal` | `−coach_payout` | A completed paid booking is refunded |
+| `payout` | `−total` | A coach disbursement is recorded; payouts are manual until PayMongo Transfers is implemented |
+| `payout_reversal` | `+total` | That disbursement fails, is rejected, or is reversed by the gateway — including a bounceback after it had succeeded |
 
-> **Known gap.** This is a *list of what was earned*, not *a balance owed*. It counts every
-> booking regardless of `payment_status`, so a `pending` or `failed` booking appears alongside a
-> `paid` one. The `ledger_entry` and `payout_batch` tables exist (migration `000013`,
-> [ADR-0022](adr/ADR-0022-ledger-foundation-schema.md)) but **nothing writes to them yet**, so
-> there is no balance to read. This is `api-spec.md` Q9 and `erd.md` Q9, both still open.
+`paid_out` counts batches whose stored status is `paid` and never nets a reversal: a reversed batch
+is `failed`, so it leaves both `paid_out` and `in_transit`. `available` is the ledger sum. A payout
+cannot make it negative because the batch pays at most the positive available amount. The only
+permitted negative balance is a post-payout refund: the `reversal` still records the debt,
+and no automatic payout batch is sent. There is no payout transport until PayMongo Transfers lands; disbursements remain manual.
+
+**Evaluated:** `coaching.PGRepository.LedgerTotals()` for `available`/`in_transit`/`paid_out`;
+`PendingEarnings()` supplies `pending`.
+
+API-064 (`GET /me/earnings`) keeps `data` as the per-booking list and adds
+`meta.balance = { available_centavos, in_transit_centavos, paid_out_centavos, pending_centavos }`.
+`GET /me/earnings/ledger` returns the ledger entries newest-first, paginated.
 
 ---
 
@@ -165,13 +196,26 @@ document's fact to record.
 
 | Number | Why it is missing | Blocked on |
 |---|---|---|
-| **Platform net revenue per booking** | `platform_fee` is *gross*. Nothing anywhere models `platform_fee − gateway_fee − payout_fee`, so no code or document knows whether a booking makes money | [ADR-0005](adr/ADR-0005-paymongo-and-take-rate.md), still `Proposed` |
-| **Coach balance owed** | Requires the ledger to be written. See §7 | `api-spec.md` Q9 |
+| **Platform net revenue per booking** | `platform_fee` is *gross*. Nothing anywhere models `platform_fee − gateway_fee − payout_fee`. The fee *inputs* are now recorded in §9; the equation is still unwritten | [ADR-0026](adr/ADR-0026-take-rate-10-percent.md), [ADR-0031](adr/ADR-0031-paymongo-gateway.md) |
 | **Internship relevance sort** | `GET /internships?sort=relevance` ranks by Postgres full-text score; the weighting has never been written down | — |
-| **Break-even session price** | Depends on the gateway fee schedule, which changes with the gateway | [ADR-0005](adr/ADR-0005-paymongo-and-take-rate.md) |
+| **Break-even session price** | Issue #25 estimates ₱156 for e-wallets and ₱415 for cards at a 10% take rate; these are pending confirmation in the PayMongo merchant agreement, and the final equation remains to be recorded | [ADR-0026](adr/ADR-0026-take-rate-10-percent.md) |
 
 **The first row is the important one.** Every session in the current demo is priced ₱450 or ₱750.
 Until net revenue has an equation and an owner, nobody can say whether either price is profitable.
+
+## 9. Gateway fee inputs (PayMongo)
+
+The rates below are issue #25 estimates carried forward and remain inputs to the missing
+platform-net-revenue equation in §8. Confirm them in the PayMongo merchant agreement; no new rates
+are introduced here.
+
+| Input | Value | Note |
+|---|---|---|
+| **E-wallet transaction fee** | **2.80%** of `price`, VAT-inclusive | GCash, Maya, GrabPay. This VAT-inclusive figure needs confirmation in the PayMongo merchant agreement |
+| **Card transaction fee** | **3.248%** of `price` **+ ₱16.80**, VAT-inclusive | The fixed component makes small card payments roughly break-even — the same shape ADR-0005 warned about |
+| **Disbursement (payout) fee** | **₱11.20** per transfer | Motivates batched payouts (ADR-0013); the payout mechanism is issue #35 / ADR-0028 |
+
+Every figure needs confirmation in the PayMongo merchant agreement before launch.
 
 ## References
 

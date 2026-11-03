@@ -82,8 +82,8 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   };
 
   const detail = internship as Partial<InternshipDetail>;
-  const responsibilities = toList((detail as any).responsibilities);
   const requirements = toList(detail.requirements);
+  const responsibilities = toList((detail as any).responsibilities);
   const perks = toList(detail.perks);
   const description = detail.description || '';
   const logoUrl = internship.company.logo_url || (internship.company as any).logo || '';
@@ -168,6 +168,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
             >
               <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
             </button>
+
           </div>
         </div>
 

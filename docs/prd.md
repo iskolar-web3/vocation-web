@@ -23,7 +23,7 @@
 Vocation puts internship discovery and interview preparation under one student account. It hosts
 internship and OJT postings and links students out to each company's own application page; it
 never collects an application. Revenue comes from the adjacent transaction the student will pay
-for: a coaching session, collected through PayMongo at a stored platform take rate (`0.0500` today).
+for: a coaching session, collected through PayMongo Checkout Sessions at a stored platform take rate (`0.1000` today).
 
 Outcomes it must achieve:
 
@@ -72,7 +72,7 @@ list and [ADR-0010](adr/ADR-0010-mvp-cut-to-17-features.md).
 - **UJ-002** — *Student discovers and applies out*: filters the directory, opens a role, saves it or
   applies on the company's site. Account needed only to save.
 - **UJ-003** — *Student books a coach*: finds a coach by expertise and price, books a slot; free
-  confirms instantly, paid routes to PayMongo and confirms on payment success.
+  confirms instantly, paid routes to PayMongo Checkout Sessions and confirms only on a verified webhook.
 - **UJ-004** — *Student reviews after a session*: a completed session prompts a rating; the review
   updates the coach's public profile.
 - **UJ-005** — ~~*Employer publishes a posting*~~ **Deferred** with F-030–F-033 (ADR-0010). In v1,
@@ -113,7 +113,7 @@ status flip rather than a re-spec.
 | F-033 | ~~Edit + resubmit postings~~ | **Deferred** | Employer | ADR-0010 |
 | F-040 | Coach account access | MVP | Coach | Email/password + Google |
 | F-041 | Coach account management | MVP | Coach | Pricing, availability, sessions |
-| F-042 | Coach payout | MVP | Coach | **BR-008, BR-009.** Fee derived by subtraction (ADR-0007). Refund flow undefined — Q7. **No ledger exists** — ADR-0013 blocks Wave 4 |
+| F-042 | Coach payout | MVP | Coach | **BR-008, BR-009.** Fee derived by subtraction (ADR-0007). The ledger is written on completion and refund (append-only) and coach payouts are manual until PayMongo Transfers ([ADR-0028](adr/ADR-0028-payouts-and-disbursement.md)); refund flow undefined — Q7 |
 | F-043 | ~~Coach verification request~~ | **Deferred** | Coach | ADR-0010 — removes all government-ID handling from v1 |
 | F-050 | **Admin listing CRUD** | MVP | Admin | **Repurposed (ADR-0010).** Was employer-submission moderation; with F-032 deferred, admin creates and manages listings directly. Without it nothing can create a posting, and F-001 needs live data. **BR-003** still applies |
 | F-051 | ~~Admin coach verification review~~ | **Deferred** | Admin | ADR-0010, with F-043 |
@@ -161,13 +161,14 @@ Three govern **deferred** features and are dormant in v1, kept for revival: **BR
 **Money — the rules where a bug is not recoverable**
 
 - **BR-007** — Free sessions (a free coach, or an intro call) confirm directly as `confirmed`. Paid
-  sessions create a `pending` booking and route to PayMongo checkout; the booking becomes
-  `confirmed` only once payment succeeds. *(Sheet 2 A-02)*
-- **BR-008** — The platform retains a commission at the rate stored on the booking (`take_rate`,
-  `0.0500` today). `platform_fee = ROUND(price × take_rate, 2)` and
+  sessions create a `pending` booking and route to a PayMongo Checkout Session; the booking
+  becomes `confirmed` only once a verified webhook reports payment success.
+  *([ADR-0031](adr/ADR-0031-paymongo-gateway.md); Sheet 2 A-02)*
+- **BR-008** — The platform retains a 10% commission at the rate stored on the booking
+  (`take_rate`, `0.1000` today). `platform_fee = ROUND(price × take_rate, 2)` and
   **`coach_payout = price − platform_fee`** — the payout is derived by subtraction, never computed
-  independently as 95%, so the two always sum to `price`. Both are recorded per booking.
-  *(Sheet 2 A-02; Sheet 4 A-04; charter §I; derivation per [ADR-0007](adr/ADR-0007-money-split-derived-by-subtraction.md))*
+  independently as 90%, so the two always sum to `price`. Both are recorded per booking.
+  *(Sheet 2 A-02; Sheet 4 A-04; charter §I correction outstanding; derivation per [ADR-0007](adr/ADR-0007-money-split-derived-by-subtraction.md); rate per [ADR-0026](adr/ADR-0026-take-rate-10-percent.md))*
 - **BR-009** — `payment_status` progresses `none → pending → paid → refunded`. Refunds and
   chargebacks are reconciled through PayMongo. A transition outside this sequence is rejected **and
   alerted**, never silently dropped ([ADR-0009](adr/ADR-0009-webhook-alert-slot-fk-coach-deletion.md)).
@@ -228,7 +229,8 @@ count, tracked as Passed/Failed/Rate — that tracker is the seed of the QA plan
 - **F-011:** the profile shows bio, expertise, experience, languages, session types, rating and
   reviews; the booking dialog takes session type, day, time slot and optional notes; a free session
   confirms directly; a paid session creates a `pending` booking and routes to PayMongo checkout
-  (card / GCash / Maya / GrabPay), confirming on payment success; the student can save a coach.
+  (GCash / Maya / GrabPay / ShopeePay / QRPh), confirmed only by the verified webhook; the student can
+  save a coach. *([ADR-0031](adr/ADR-0031-paymongo-gateway.md))*
 - **F-012:** the programs list shows price or Free, duration and schedule; the detail shows
   description, week-by-week curriculum, assigned coaches and an auth-gated Enroll CTA.
 - **F-013:** a "Rate this session" prompt appears on Bookings for `completed`, unreviewed sessions;
@@ -262,8 +264,10 @@ count, tracked as Passed/Failed/Rate — that tracker is the seed of the QA plan
 - **F-041:** a coach can edit their profile, set free/paid and a rate, and manage availability, and
   can see and manage upcoming and past sessions.
 - **F-042:** paid bookings collect via PayMongo and confirm on success with `payment_status = paid`;
-  the platform retains 5% and records `coach_payout` at 95% of price; `payment_status` progresses
-  `none → pending → paid → refunded`, with refunds and chargebacks reconciled through PayMongo.
+  the platform retains 10% and derives `coach_payout` by subtraction (approximately 90% of price);
+  `payment_status` progresses
+  `none → pending → paid → refunded`; refunds are reconciled through PayMongo, while disputes block refunds.
+  *([ADR-0031](adr/ADR-0031-paymongo-gateway.md))*
 - **F-043:** the coach profile offers Apply for verification with document upload (ID, certificates
   or proof of experience) and a short statement; submitting sets status `Pending` and disables
   re-submission until resolved; the coach sees their current status among Not Verified, Pending,
@@ -296,7 +300,7 @@ Full reasoning: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/
 | Neon (managed PostgreSQL) | System of record ([ADR-0016](adr/ADR-0016-neon-postgres-not-rds.md)) | Provider outage → platform down, independently of an AWS region outage |
 | **PayMongo** | Paid booking collection, refunds, chargebacks (F-011, F-042) | Outage → paid bookings stall in `pending`; free bookings unaffected. Webhook loss → payment state diverges from reality. **The highest-consequence dependency** |
 | Google OAuth | Sign-in for all three roles (F-020, F-030, F-040) | Outage → Google sign-in fails; email/password unaffected |
-| AWS | API, static-client and upload hosting, per charter §II (database is on Neon) | Region outage → platform down |
+| Railway / Vercel / AWS S3 | API hosting (Railway), web hosting (Vercel), upload storage (S3) — [ADR-0036](adr/ADR-0036-railway-vercel-deploy.md); database is on Neon | Provider outage → that part of the platform is down |
 | Employer external apply URLs | F-004 | Dead or changed URL → student hits a 404 on someone else's site. Needs link health checking, unspecified |
 | Object storage for uploads | Resumes (F-023), verification documents (F-043), logos and avatars | Outage → uploads and document review fail |
 
@@ -311,8 +315,8 @@ Full reasoning: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/
 | Q5 | "Sort: relevance" (F-002) is undefined. Relevance against what — the student's onboarding skills, their saved roles, keyword match strength? | F-002, `methods` | PM | before F-002 |
 | Q6 | Notification preferences exist (F-023) but no story defines what is sent, on what trigger, or by what channel. | F-023 | PM | before F-023 |
 | Q7 | **Refund and chargeback flow undefined.** `payment_status` includes `refunded`; who initiates, on what policy, and what do the student and coach see? A chargeback after a coach payout means the platform is out of pocket. | F-042 | PM + Security Engineer | before payments go live |
-| Q8 | **Is the 5% take rate viable?** 5% of a peso-denominated session against a fixed PayMongo per-transaction fee may be negative on small bookings. | revenue model | PM | before build |
+| Q8 | ~~Is the 5% take rate viable?~~ **Answered:** 10% take rate with PayMongo. Issue #25 estimates break-even at ?156 for e-wallets and ?415 for cards; the figures need confirmation in the PayMongo merchant agreement ([ADR-0026](adr/ADR-0026-take-rate-10-percent.md)). | revenue model | ? | closed 2026-10-01 |
 | Q9 | When is a booking marked `completed`? BR-010 gates reviews on it and F-042 gates payout on collection, but no story says who or what sets `completed`. | F-013, F-042 | PM | before F-013 |
-| Q10 | Coach payout **mechanism** is unspecified. BR-008 records `coach_payout`, but nothing says how a coach actually receives money — PayMongo disbursement, manual bank transfer, or held balance? | F-042, `ops` | PM | before coach onboarding |
+| Q10 | ~~Coach payout **mechanism** is unspecified.~~ **Answered:** API-064 reads the gateway-neutral ledger. Coach payouts are manual until PayMongo Transfers is implemented; this transport is separate follow-up work ([ADR-0031](adr/ADR-0031-paymongo-gateway.md)). | F-042, `ops` | — | updated 2026-10-14 |
 | Q11 | RA 10173: resumes (F-023) and coach government IDs (F-043) are sensitive personal information. NPC registration is mandatory at 1,000+ affected data subjects. Is Vocation registered, and is a DPO named? | `security-compliance` | Security Engineer | before public launch |
 | Q12 | **Two developers** (Jimuelle backend, Jem frontend), **no named designer or QA**, against a full Design milestone and a JMeter/Vitest/Manual Testing milestone. Review throughput is now the binding constraint, not dev-days. | delivery feasibility, `sad` | PM | ongoing |

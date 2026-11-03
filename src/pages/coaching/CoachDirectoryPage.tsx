@@ -11,7 +11,7 @@ interface CoachDirectoryPageProps {
   navigate: (path: string) => void;
   initialQuery?: string;
   initialExpertise?: string;
-  initialPrice?: 'all' | 'free' | 'under500' | '500to1000' | '1000plus';
+  initialPrice?: 'all' | 'free' | 'paid';
   onFiltersChange?: (newFilters: CoachFilterState) => void;
 }
 
@@ -52,8 +52,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
   const [selectedCoach, setSelectedCoach] = useState<CoachCardType | CoachDetail | null>(null);
 
   // Map filters to API params
-  const apiPriceParam: 'free' | 'paid' | undefined =
-    filters.price === 'free' ? 'free' : filters.price === 'all' ? undefined : 'paid';
+  const apiPriceParam = filters.price === 'all' ? undefined : filters.price;
 
   const { data, isLoading, error } = useCoaches({
     q: filters.q || undefined,

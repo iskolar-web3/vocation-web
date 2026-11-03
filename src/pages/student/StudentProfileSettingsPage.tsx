@@ -213,6 +213,8 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
     }
 
     try {
+      // API-038: changing the password needs current_password. The email is
+      // read-only on this page, so it is never sent (Audit CON-11).
       await updateSettingsMutation.mutateAsync({
         current_password: currentPassword,
         password: newPassword,
@@ -505,6 +507,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
                   type={showCurrentPassword ? 'text' : 'password'}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
                   placeholder="Enter your current password"
                   required
                   className="w-full px-3.5 py-2.5 pr-10 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-xs font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
@@ -531,6 +534,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
                   placeholder="Enter at least 8 characters"
                   className="w-full px-3.5 py-2.5 pr-10 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-xs font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
                 />
@@ -556,6 +560,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                   placeholder="Re-type your new password"
                   className="w-full px-3.5 py-2.5 pr-10 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-xs font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
                 />

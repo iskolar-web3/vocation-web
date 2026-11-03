@@ -10,21 +10,20 @@ import {
   MapPin,
   ExternalLink,
 } from 'lucide-react';
-import { ListingStatus, InternshipDetail } from '../../types/api';
+import { ListingStatus, AdminInternshipCard } from '../../types/api';
 import { useAdminInternships, useAdminWithdrawInternship } from '../../services/queries';
-import { formatDate, formatPesos } from '../../lib/utils';
 import { Modal } from '../common/Modal';
 
 interface ModerationQueueTableProps {
-  onEditPosting?: (internship: any) => void;
-  onViewPosting?: (internship: any) => void;
+  onEditPosting?: (internship: AdminInternshipCard) => void;
+  onViewPosting?: (internship: AdminInternshipCard) => void;
 }
 
 export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
   onViewPosting,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [withdrawModalItem, setWithdrawModalItem] = useState<InternshipDetail | null>(null);
+  const [withdrawModalItem, setWithdrawModalItem] = useState<AdminInternshipCard | null>(null);
 
   const { data: internships = [], isLoading } = useAdminInternships(
     filterStatus !== 'all' ? filterStatus : undefined
@@ -119,7 +118,11 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-5 py-4">
                       <div className="font-bold text-sm text-[#021F53]">{item.title}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{item.field} · {item.duration_weeks} wks</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {item.field}
+                        {item.duration_weeks != null && ` · ${item.duration_weeks} wks`}
+                        {item.work_setup && ` · ${item.work_setup.charAt(0).toUpperCase()}${item.work_setup.slice(1)}`}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="font-semibold text-slate-800">{item.company?.name}</div>
@@ -127,14 +130,12 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                     </td>
                     <td className="px-5 py-4">
                       {item.is_paid ? (
-                        <span className="font-bold text-[#021F53]">
-                          {(item as any).compensation_details || ((item as any).stipend_amount ? `${formatPesos((item as any).stipend_amount)}/${(item as any).stipend_period || 'mo'}` : 'Paid')}
-                        </span>
+                        <span className="font-bold text-emerald-700">Paid</span>
                       ) : (
                         <span className="text-slate-400">Unpaid / Credit</span>
                       )}
                     </td>
-                    <td className="px-5 py-4">{getStatusBadge((item as any).status || 'open')}</td>
+                    <td className="px-5 py-4">{getStatusBadge(item.status)}</td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {onViewPosting && (
@@ -147,7 +148,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                             <Eye className="w-4 h-4" />
                           </button>
                         )}
-                        {(item as any).status === 'open' && (
+                        {item.status === 'open' && (
                           <button
                             type="button"
                             onClick={() => setWithdrawModalItem(item)}

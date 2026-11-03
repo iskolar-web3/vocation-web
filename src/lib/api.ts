@@ -83,6 +83,8 @@ export async function apiFetch<T>(
     }
   }
 
+  // Auth is the HttpOnly `vocation_session` cookie the server sets (sent via
+  // credentials: 'include'). Never keep a session token in JS-readable storage.
   const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -136,7 +138,6 @@ export async function apiFetch<T>(
         parsedData = parseResult.data;
       }
     }
-
     return {
       data: parsedData,
       message: payload.message || 'ok',
