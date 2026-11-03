@@ -18,7 +18,7 @@
 
 iSkolar Vocation is a mobile-first web platform pairing an internship and OJT directory with a
 marketplace of coaches. Students apply on each company's own site — the platform stores no
-applications. Revenue is a 5% commission on paid coaching, collected through PayMongo.
+applications. Revenue is a 10% commission on paid coaching, collected through PayMongo Checkout Sessions.
 
 Full brief: [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md). Scope: `Vocation Project Charter.pdf` §II.
 
@@ -92,24 +92,20 @@ end. They are read-only by design and report to you.
 
 ## Run it locally
 
-**Not yet runnable — both repositories exist but hold only docs.** Scaffolding is Sprint 0; see
-[`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md).
+The server is runnable today. Full steps live in
+[`../README.md#run-it-locally`](../README.md#run-it-locally); in short: `cp .env.example .env`,
+then `make db-up` (local Postgres 16), `make migrate-up`, `make seed` and `make run` (listens on
+`:8080`). `.env` holds every local setting and the binaries load it themselves. The client is `vocation-web` (`pnpm install && pnpm dev`).
 
-When they exist, this section owns the setup. Expected shape from charter §II:
+Before your first commit, install [golangci-lint](https://golangci-lint.run/) v2.15.0 and
+[Lefthook](https://lefthook.dev/), then run `lefthook install` once in the clone. The hooks run
+`gofmt`, `go vet` and golangci-lint before each commit, and the tests and migration-order check
+before each push ([`../README.md#git-hooks`](../README.md#git-hooks)). Run
+`golangci-lint run ./...` for the whole tree; CI's `lint` job must report 0 issues.
 
-```
-1. Prereqs: Go, Node + pnpm, Docker, PostgreSQL
-2. docker compose up          # Postgres
-3. migrate up                 # schema per erd.md
-4. seed                       # admin, a verified company with open postings,
-                              # one free + one paid coach with availability,
-                              # one pending posting so the queue is non-empty
-5. cd vocation-server && go run ./cmd/api
-6. cd vocation-web && pnpm install && pnpm dev
-7. Verify: open the client, filter the internship directory, get results
-```
-
-PayMongo has a sandbox — use it. **Never point a development environment at live payment keys.**
+PayMongo's test keys (`sk_test_…`) are the sandbox — use them. **Never point a development
+environment at live payment keys** (a live `sk_live_…` key is refused unless
+`APP_ENV=production` — [ADR-0031](adr/ADR-0031-paymongo-gateway.md)).
 
 ## Where things live
 
@@ -177,13 +173,9 @@ Being explicit so nobody assumes these exist:
 
 | Missing | Why it matters | Owner |
 |---------|----------------|-------|
-| **`qa-test-plan.md`** | The workbook already tracks Passed/Failed/Rate per acceptance criterion with **nowhere to live**. Charter M4 names JMeter, Vitest and Manual with no plan and no thresholds | PM + whoever runs QA (**unassigned** — PRD Q12) |
 | **`security-compliance.md`** | Resumes and coach government IDs are sensitive personal information under RA 10173; NPC registration is mandatory past 1,000 data subjects | Emmanuel |
-| **`methods.md`** | Every displayed number needs a stated equation: the 5%/95% split, `rating_avg`, `completeness_pct` | Project Lead |
-| **`ops.md`** | Deploy, secrets, monitoring, incidents, backup — for a system holding payment records | **Unassigned — no ops role exists** |
-| **PayMongo merchant account** | Live activation needs PH business registration, a bank account, KYC, **and live Terms/Privacy/Refund/Contact pages** (S-014–S-017). Weeks of external lead time; **blocks Wave 4** | Alexandre |
+| **PayMongo merchant account** | Live activation needs a DTI/SEC-registered entity, a bank account, KYC, **and live Terms/Privacy/Refund/Contact pages** (S-014–S-017). Weeks of external lead time; **blocks Wave 4** | Alexandre |
 | **`design-system.md`** | 30 screens across four role areas will drift. Charter M2 is a full Design milestone with **no named designer** | **Unassigned — PRD Q12** |
-| **`openapi.yaml`** | Two repos currently share only prose. Drift is a matter of time | Louigie |
 
 
 ## References

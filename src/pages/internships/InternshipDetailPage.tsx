@@ -158,12 +158,6 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
                     <span>{internship.duration_weeks} Weeks Duration</span>
                   </>
                 )}
-                {(internship as any).ojt_hours && (
-                  <>
-                    <span>•</span>
-                    <span>{(internship as any).ojt_hours} OJT Practicum Hours</span>
-                  </>
-                )}
               </div>
             </div>
           </div>

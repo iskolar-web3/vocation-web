@@ -8,10 +8,13 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { InternshipCard as InternshipCardType, InternshipDetail } from '../../types/api';
-import { formatPesos } from '../../lib/utils';
 import { DeadlineCountdown } from './DeadlineCountdown';
 import { useSavedInternships, useSaveInternship, useUnsaveInternship } from '../../services/queries';
 import { useAuth } from '../../context/AuthContext';
+
+// Cards carry only is_paid; a detail adds compensation_details (free text, e.g. "₱5,000/mo").
+const payLabel = (internship: InternshipCardType | InternshipDetail, fallback: string): string =>
+  ('compensation_details' in internship && internship.compensation_details) || fallback;
 
 interface InternshipCardProps {
   internship: InternshipCardType | InternshipDetail;
@@ -128,7 +131,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
 
         {/* Spec Pill Strip */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {(internship as any).work_setup && getSetupBadge((internship as any).work_setup)}
+          {internship.work_setup && getSetupBadge(internship.work_setup)}
           {internship.duration_weeks && (
             <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200 text-[10px] py-0 px-2">
               {internship.duration_weeks} wks
@@ -136,7 +139,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
           )}
           {internship.is_paid ? (
             <span className="stamp-badge bg-amber-50 text-amber-950 border border-amber-300 text-[10px] py-0 px-2 font-bold">
-              {(internship as any).compensation_details || ((internship as any).stipend_amount ? `${formatPesos((internship as any).stipend_amount)}/${(internship as any).stipend_period || 'mo'}` : 'Paid')}
+              {payLabel(internship, 'Paid')}
             </span>
           ) : (
             <span className="stamp-badge bg-slate-100 text-slate-600 border border-slate-200 text-[10px] py-0 px-2">
@@ -198,7 +201,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
                 <div className="flex items-center gap-1 font-bold text-amber-950 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px]">
                   <Coins className="w-3 h-3 text-[#ff9b00]" />
                   <span>
-                    {(internship as any).compensation_details || ((internship as any).stipend_amount ? `${formatPesos((internship as any).stipend_amount)}/${(internship as any).stipend_period || 'month'}` : 'Paid Allowance')}
+                    {payLabel(internship, 'Paid Allowance')}
                   </span>
                 </div>
               )}
@@ -284,7 +287,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
 
         {/* Spec Pill Strip */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {(internship as any).work_setup && getSetupBadge((internship as any).work_setup)}
+          {internship.work_setup && getSetupBadge(internship.work_setup)}
           <span className="stamp-badge bg-slate-100 text-slate-700 border border-slate-200">
             {internship.field}
           </span>
@@ -305,7 +308,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             <div className="flex items-center gap-1.5 font-bold text-amber-950">
               <Coins className="w-3.5 h-3.5 text-[#ff9b00]" />
               <span>
-                {(internship as any).compensation_details || ((internship as any).stipend_amount ? `${formatPesos((internship as any).stipend_amount)} / ${(internship as any).stipend_period || 'month'} stipend` : 'Paid Allowance')}
+                {payLabel(internship, 'Paid Allowance')}
               </span>
             </div>
           ) : (

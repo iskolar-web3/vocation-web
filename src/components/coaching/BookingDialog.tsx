@@ -50,22 +50,9 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
     if (coachDetail?.session_types && coachDetail.session_types.length > 0) {
       return coachDetail.session_types;
     }
-    return [
-      {
-        id: 'srv_01',
-        name: 'Free 15-Min Career & OJT Discovery',
-        duration_minutes: 15,
-        price_centavos: 0,
-        is_intro_call: true,
-      },
-      {
-        id: 'srv_02',
-        name: 'Full 1-on-1 Mentorship Session',
-        duration_minutes: 45,
-        price_centavos: (coach as any)?.starting_price_centavos || 50000,
-        is_intro_call: false,
-      },
-    ];
+    // No invented fallbacks: a booking must reference one of the coach's real
+    // session types (an unknown id is a 404; a malformed one is Audit N1, a 500). No types → nothing bookable.
+    return [];
   }, [coach, coachDetail]);
 
   const activeSessionType =
@@ -236,6 +223,11 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
               1. Select Session Type
             </label>
+            {sessionTypes.length === 0 && (
+              <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
+                This coach has not published any session types yet.
+              </p>
+            )}
             <div className="space-y-2">
               {sessionTypes.map((st) => {
                 const isSelected = activeSessionType?.id === st.id;
@@ -373,7 +365,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             <button
               type="button"
               onClick={handleProceed}
-              disabled={role === 'coach' || !selectedSlot || createBookingMutation.isPending}
+              disabled={role === 'coach' || !activeSessionType || !selectedSlot || createBookingMutation.isPending}
               className={`${
                 isFree ? 'tactile-btn-midnight' : 'tactile-btn-honey'
               } px-6 py-3 rounded-xl text-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-soft`}

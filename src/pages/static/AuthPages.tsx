@@ -31,6 +31,8 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
     const token = urlParams.get('token');
     if (token) {
       setResetToken(token);
+      // Keep the token in state only; drop it from the address bar and history.
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
 
@@ -267,7 +269,7 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
                   {mode === 'signin' && (
                     <button
                       type="button"
-                      onClick={() => navigate('/reset')}
+                      onClick={() => navigate('/reset-password')}
                       className="text-[11px] text-[#3f58b2] font-semibold hover:underline cursor-pointer"
                     >
                       Forgot password?

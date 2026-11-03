@@ -106,10 +106,10 @@ replace them.
 - **Outputs:** numbered reversible migrations, and the `erd.md` diff.
 - **Guardrails (never):**
   - Never drop or weaken a rule-enforcing constraint: `platform_fee + coach_payout = price`,
-    `platform_fee = ROUND(price * take_rate, 2)`, `UNIQUE (paymongo_event_id)`,
+    `platform_fee = ROUND(price * take_rate, 2)`, `UNIQUE (gateway_event_id)`,
     `UNIQUE (booking_id)` on review, or `availability_slot.booking_id` `ON DELETE RESTRICT`.
   - Never compute `coach_payout` as an independent percentage. It is `price - platform_fee`
-    (ADR-0007) — recomputing it as 95% reintroduces the unsatisfiable-constraint bug.
+    (ADR-0007) — recomputing it as 90% reintroduces the unsatisfiable-constraint bug.
   - Never add UPDATE or DELETE paths to `payment_event`, `moderation_action`, or `audit_log`.
   - Never change money column type or precision in place.
   - Never cascade-delete a booking or payment row from an account deletion (`erd.md` retention),
@@ -121,7 +121,7 @@ replace them.
 ### payments-auditor
 
 - **name:** `payments-auditor`
-- **description:** Invoke before merging any change touching bookings, PayMongo, fees, or payment state.
+- **description:** Invoke before merging any change touching bookings, the PayMongo gateway, fees, or payment state.
 - **tools:** [read]
 - **model:** deep
 - **Justification:** guardrail-enforcement — this is the one area where a bug is not recoverable by
@@ -129,20 +129,24 @@ replace them.
 - **Purpose:** adversarially review the money path against BR-007, BR-008, BR-009 and the failure
   table in [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md).
 - **Inputs:** the diff, `api-spec.md` API-041/042/045, `erd.md` booking and payment_event,
-  [`adr/ADR-0005`](adr/ADR-0005-paymongo-and-take-rate.md).
+  [`adr/ADR-0031`](adr/ADR-0031-paymongo-gateway.md).
 - **Outputs:** a findings list with a merge or block recommendation. **Writes no code.**
 - **Guardrails (never):**
   - Never approve a webhook handler that mutates state before verifying the signature.
-  - Never approve a handler without idempotency on the PayMongo event id (EV-006 is a double
+  - Never approve a handler without idempotency on the gateway event id (EV-006 is a double
     payout).
-  - Never approve a `payment_status` transition outside `none → pending → paid → refunded`, and
-    never approve a handler that rejects one *silently* — a rejected transition must alert
-    (ADR-0009).
+  - Never approve a `payment_status` transition outside the BR-009/ADR-0013 chain
+    `none → pending → paid → refunded` plus the terminal `pending → failed` / `pending → expired`
+    dead-ends, and never approve a handler that rejects one *silently* — a rejected transition must
+    alert (ADR-0009). A cancelled booking whose payment is still `paid` is a legitimate refund-in-
+    flight state (ADR-0031, PayMongo refunds are asynchronous): only the `refund.succeeded` callback
+    may mark it `refunded`, and any other `refund.*` event must be recorded unapplied and alerted.
   - Never approve confirming a booking from a browser return rather than a webhook.
   - Never approve a fee split that does not sum to `price`, is computed client-side, or derives
     `coach_payout` independently rather than by subtraction (ADR-0007).
-  - Never approve booking-then-intent code that treats the two as atomic; the ordering and the
-    orphan sweeper are the contract (ADR-0008).
+  - Never approve a Checkout Session before its booking row (ADR-0008). Re-issue expires the stored
+    Checkout Session before creating a new one, and the 24 h checkout-expiry sweeper cancels stale
+    pending bookings (ADR-0031).
 - **Done when:** every finding is resolved or explicitly accepted by the Security Engineer, and
   EV-004, EV-006 and EV-010 each have a named handling path.
 

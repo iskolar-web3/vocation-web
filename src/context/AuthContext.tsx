@@ -79,7 +79,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // ignore
     } finally {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('vocation_session_id');
         localStorage.removeItem('vocation_dev_user');
       }
       queryClient.clear();

@@ -79,7 +79,6 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   };
 
   const detail = internship as Partial<InternshipDetail>;
-  const responsibilities = toList((detail as any).responsibilities);
   const requirements = toList(detail.requirements);
   const perks = toList(detail.perks);
   const description = detail.description || '';
@@ -139,7 +138,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-xs">
             <div>
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Setup</span>
-              <span className="font-bold capitalize">{(internship as any).work_setup || 'Internship'}</span>
+              <span className="font-bold capitalize">{internship.work_setup || 'Internship'}</span>
             </div>
             <div>
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Duration</span>
@@ -149,7 +148,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Allowance</span>
               <span className="font-bold text-[#ff9b00]">
                 {internship.is_paid
-                  ? (internship as any).compensation_details || 'Paid'
+                  ? detail.compensation_details || 'Paid'
                   : 'Unpaid'}
               </span>
             </div>
@@ -190,23 +189,6 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
             <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
               {description}
             </p>
-          </div>
-        )}
-
-        {/* Key Responsibilities */}
-        {responsibilities.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
-              Key Responsibilities
-            </h3>
-            <ul className="space-y-1.5">
-              {responsibilities.map((resp, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#3f58b2] mt-1.5 shrink-0" />
-                  <span>{resp}</span>
-                </li>
-              ))}
-            </ul>
           </div>
         )}
 

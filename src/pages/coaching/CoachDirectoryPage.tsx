@@ -10,7 +10,7 @@ import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
 interface CoachDirectoryPageProps {
   navigate: (path: string) => void;
   initialExpertise?: string;
-  initialPrice?: 'all' | 'free' | 'under500' | '500to1000' | '1000plus';
+  initialPrice?: 'all' | 'free' | 'paid';
 }
 
 export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
@@ -29,13 +29,12 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
   const [selectedCoach, setSelectedCoach] = useState<CoachCardType | CoachDetail | null>(null);
 
   // Map filters to API params
-  const apiPriceParam =
-    filters.price === 'free' ? 'free' : filters.price === 'all' ? undefined : 'paid';
+  const apiPriceParam = filters.price === 'all' ? undefined : filters.price;
 
   const { data, isLoading, error } = useCoaches({
     q: filters.q || undefined,
     expertise: filters.expertise || undefined,
-    price: apiPriceParam as any,
+    price: apiPriceParam,
   });
 
   const coaches = data?.items || [];

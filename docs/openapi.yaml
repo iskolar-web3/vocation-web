@@ -22,8 +22,8 @@ info:
     - All timestamps are RFC 3339 UTC.
     - Operation ids are the permanent `API-###` ids from `api-spec.md`; where one id covers two
       operations (API-062, API-064, API-067) the id is suffixed to stay unique.
-    - `POST /webhooks/xendit` is authenticated by the Xendit `x-callback-token` header, never a
-      session, and answers `200` once an event is durably stored (ADR-0009, ADR-0027, ADR-0028).
+    - `POST /webhooks/paymongo` verifies the required `Paymongo-Signature` HMAC over the raw body before parsing;
+      only the verified webhook confirms payment (ADR-0009, ADR-0031).
 servers:
   - url: /
     description: |
@@ -192,7 +192,7 @@ paths:
       operationId: API-024
       description: |
         Public. **Always `202`**, whether or not the email exists, so it cannot be used to
-        enumerate accounts. Rate-limited 5 per 15 minutes per IP and per email (`429`).
+        enumerate accounts. When the account exists the reset link is emailed. Rate-limited 5 per 15 minutes per IP and per email, and 20 per hour per IP (`429`); only the per-account cap of 3 per hour is silent (excess sends are skipped, still `202`).
       security: []
       requestBody:
         required: true
@@ -212,7 +212,7 @@ paths:
       tags: [Auth]
       summary: Confirm a password reset (API-025)
       operationId: API-025
-      description: Public. Consumes a single-use, expiring reset token.
+      description: Public. Consumes a single-use, expiring reset token. Revokes every session of the account.
       security: []
       requestBody:
         required: true
@@ -227,6 +227,84 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      summary: Verify the account email (API-027)
+      operationId: API-027
+      description: |
+        Public. Consumes the single-use token from the signup verification email (valid 24 hours)
+        and marks the account's email verified. An already-verified account, including one submitting
+        a previously used token, also gets `200`. An unknown or expired token, or a used token for an
+        unverified account, is `422`. Sign-in is never blocked by an unverified email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/verify-email/resend:
+    post:
+      tags: [Auth]
+      summary: Resend the verification email (API-028)
+      operationId: API-028
+      description: |
+        Emails the signed-in account a fresh verification link. `202` when queued; `200` when the
+        email is already verified (nothing is sent). Rate-limited 3 per hour per account (`429`).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '202':
+          $ref: '#/components/responses/EmptySuccess'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/password/change:
+    post:
+      tags: [Auth]
+      summary: Change the password while signed in (API-029)
+      operationId: API-029
+      description: |
+        Requires the current password (wrong: `403`). Limited to 5 attempts per 15 minutes per account.
+        On success every other session of the account is revoked; the calling session stays signed in.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
@@ -608,6 +686,34 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /me/student-profile:
+    get:
+      tags: [Student]
+      summary: Read the caller's student profile (API-032)
+      operationId: API-032
+      description: Student role. `404` until onboarding (API-030) is done.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The caller's profile.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StudentProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [Student]
       summary: Complete student onboarding (API-030)
@@ -801,8 +907,16 @@ paths:
       summary: Update account settings (API-038)
       operationId: API-038
       description: |
-        Student role. `email`, `password` and `notification_preference` are independently
-        optional and independently applied.
+        Student role. `email`, `password` and `notification_preference` are independently optional and
+        independently applied. Changing `password`, or changing `email` to a different address, requires
+        `current_password`; missing or wrong current password returns `403`. Every field is validated
+        first (`422` for a password under 8 characters or a blank or malformed email), so a `4xx` never
+        leaves a partial change and a `422` does not spend the rate limit. Those changes share the
+        5 / 15 minute per-account budget with `POST /auth/password/change` and return `429` (with
+        `Retry-After`) when exceeded. A password change revokes the account's other sessions. An email
+        change resets `email_verified_at`, expires pending reset and verification links, emails a
+        verification link to the new address and a notice to the old one. Accounts without a password
+        (Google-only) always get `403`: they set a password through `POST /auth/password-reset/request`.
       security:
         - sessionCookie: []
       requestBody:
@@ -830,6 +944,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
@@ -844,7 +960,7 @@ paths:
       description: |
         Student role. Free or intro-call sessions are written `confirmed`/`none` with no gateway
         call and no `checkout_url`. A paid session writes the booking first (`pending`/`pending`)
-        with the stored money split (BR-007/BR-008, ADR-0007), then creates a Xendit invoice and
+        with the stored money split (BR-007/BR-008, ADR-0007), then creates a PayMongo Checkout Session and
         returns `checkout_url`. Rate-limited 10/hour per account (`429`).
       security:
         - sessionCookie: []
@@ -891,8 +1007,8 @@ paths:
       summary: Resume payment (API-042)
       operationId: API-042
       description: |
-        Student owner. Mints a fresh Xendit invoice for a still-pending booking under the booking
-        row lock and sweeps every other pending invoice for the booking. Owner miss is `404`.
+        Student owner. Expires the previously stored Checkout Session before creating a replacement for a still-pending booking under the booking
+        row lock. A payment already pending or processing returns `409 payment in progress`. Owner miss is `404`.
       security:
         - sessionCookie: []
       parameters:
@@ -915,7 +1031,11 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Booking is no longer pending payment or PayMongo reports a payment in progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalError'
         '502':
@@ -970,10 +1090,11 @@ paths:
       operationId: API-046
       description: |
         Session; ownership checked in the handler — either the student or the coach on the booking
-        may cancel. A coach cancelling always refunds; a student refunds when >24h before the
+        may cancel before the session starts. A coach cancelling always refunds; a student refunds when >24h before the
         session (ADR-0012). Refunds are asynchronous; a `PENDING` gateway refund cancels the
         booking but leaves `payment_status=paid` until the `refund.succeeded` callback.
-        Also sweeps every pending invoice of the booking. A non-owner gets `404`.
+        A dispute on the payment or a session that has started returns `409`; the booking cannot be refunded while the dispute is open.
+        A non-owner gets `404`.
       security:
         - sessionCookie: []
       parameters:
@@ -996,7 +1117,11 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Payment has an open dispute or the session has started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalError'
         '502':
@@ -1162,7 +1287,9 @@ paths:
         Coach role. Partial update. `slug`, `price_type` and `verification_status` are not
         writable. The payout destination (`payout_channel_code`, `payout_account_number`,
         `payout_account_holder_name`) must be supplied together; the account number is returned
-        masked to its last four digits (ADR-0028).
+        masked to its last four digits (ADR-0028). Sending any payout field also requires
+        `current_password` (`403` if missing, wrong, or a Google-only account) and a holder name equal
+        to the account's `full_name` ignoring case and spacing (`422`) (ADR-0034).
       security:
         - sessionCookie: []
       requestBody:
@@ -1372,6 +1499,36 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /me/session-types:
+    get:
+      tags: [Coach]
+      summary: List my session types (API-067)
+      operationId: API-067-list
+      description: |
+        Coach role. Every session type the calling coach owns, active and retired, active first and
+        then by price. The public coach profile (API-021) shows active ones only.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The coach's session types (possibly empty).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MySessionType'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [Coach]
       summary: Create a session type (API-067)
@@ -1491,7 +1648,7 @@ paths:
       tags: [Admin]
       summary: List internships (API-070)
       operationId: API-070
-      description: Admin role. No status predicate unless `?status` is supplied; admin sees every status.
+      description: Admin role. No status predicate unless `?status` is supplied; admin sees every status. An unknown `?status` value is `422`.
       security:
         - sessionCookie: []
       parameters:
@@ -1522,6 +1679,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalError'
     post:
@@ -1632,14 +1791,155 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /admin/payouts:
+    get:
+      tags: [Admin]
+      summary: Weekly coach payout list (API-078)
+      operationId: API-078
+      description: |
+        Admin role. Coaches owed money now: ledger credits of sessions finished 7+ days ago with no
+        dispute, minus clawbacks and payouts. Coaches owed nothing are omitted (ADR-0034).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Owed payouts.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OwedPayout'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Admin]
+      summary: Record a manual coach payout (API-079)
+      operationId: API-079
+      description: |
+        Admin role. `amount_centavos` must equal the amount the server computes the coach is owed
+        now, else `409` with `details.owed_centavos`. Idempotent per `(coach, reference)`: a repeat
+        returns `200` with `replayed: true`; the same reference with another amount is `409`
+        (ADR-0034).
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPayoutRequest'
+      responses:
+        '200':
+          description: The reference was already recorded; nothing new was written.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ManualPayout'
+        '201':
+          description: Payout recorded.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ManualPayout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /admin/bookings/{id}/clawback:
+    post:
+      tags: [Admin]
+      summary: Claw a booking back from its coach (API-081)
+      operationId: API-081
+      description: |
+        Admin role. For a refund or lost chargeback that was the coach's fault. Debits what is still
+        credited for the booking; repeating it is a no-op (ADR-0034).
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClawBackRequest'
+      responses:
+        '200':
+          description: Clawback recorded, or nothing to claw back.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          booking_id:
+                            type: string
+                            format: uuid
+                          reason:
+                            type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /uploads/presign:
     post:
       tags: [Uploads]
       summary: Presign an upload (API-080)
       operationId: API-080
       description: |
-        Session (any role). Bytes go straight to object storage; resumes land in a private
-        prefix. `413` over the per-purpose size cap, `415` for a disallowed content type.
+        Session (any role). Returns an S3 POST policy: the client uploads with a
+        `multipart/form-data` POST to `url`, sending every entry of `fields` as a form field
+        (in any order) and the file as the **last** part named `file`. The policy pins the
+        exact `key` and `Content-Type` and a `content-length-range` of 1 byte to the
+        per-purpose cap, so storage itself rejects an empty, oversized or retyped upload.
+        Resumes land in a private prefix. `413` over the per-purpose size cap, `415` for a
+        disallowed content type, `503` when object storage is not configured.
       security:
         - sessionCookie: []
       requestBody:
@@ -1673,42 +1973,35 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalError'
-  /webhooks/xendit:
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /webhooks/paymongo:
     post:
       tags: [Payments]
-      summary: Xendit callback — the only thing that confirms a payment (API-045)
+      summary: PayMongo webhook — the only thing that confirms a payment (API-045)
       operationId: API-045
       description: |
-        **No session.** Authenticated solely by the `x-callback-token` header, compared in
-        constant time before the body is read. An unconfigured token rejects every delivery.
-        Xendit delivers invoice, refund and payout callbacks to this same URL, distinguished by
-        body shape (ADR-0027, ADR-0028).
+        **No session.** Verify the required `Paymongo-Signature` header against the exact raw body
+        before parsing or applying the event. Only this verified webhook confirms a paid booking.
+        PayMongo delivers checkout, payment failure, refund, and dispute events here.
 
-        The order is the contract: verify token → insert the event idempotently into
-        `payment_event` → resolve/transition → always `200` once durably stored. A rejected or
-        unmatched event is stored with `applied_at` null, alerts, and still answers `200` so
-        Xendit does not retry forever and the payload is not lost. Only a token failure (`401`),
-        an unreadable body (`400`) or a real storage failure (`500`) deviate.
+        The order is the contract: verify signature → parse event → insert idempotently by `data.id`
+        → resolve/transition → answer `200` after durable storage. Invalid signature is `401`, an
+        unreadable body is `400`, and a storage failure is `500`.
       security: []
       parameters:
-        - name: x-callback-token
+        - name: Paymongo-Signature
           in: header
           required: true
           schema:
             type: string
-          description: Static Xendit callback token; must equal `XENDIT_CALLBACK_TOKEN`.
-        - name: webhook-id
-          in: header
-          required: false
-          schema:
-            type: string
-          description: Per-delivery idempotency key (fallback is a deterministic event key).
+          description: PayMongo HMAC signature over the timestamp and exact raw request body.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/XenditCallback'
+              $ref: '#/components/schemas/PayMongoEvent'
       responses:
         '200':
           $ref: '#/components/responses/EmptySuccess'
@@ -1826,7 +2119,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
     Forbidden:
-      description: Authenticated but the wrong role (`forbidden`).
+      description: Authenticated but the wrong role (`forbidden`), or a write whose `Origin` is not `WEB_ORIGIN` (`forbidden_origin`, ADR-0037).
       content:
         application/json:
           schema:
@@ -1856,7 +2149,10 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
     UnsupportedMediaType:
-      description: Disallowed upload content type (`unsupported_media_type`).
+      description: |
+        `unsupported_media_type` — a disallowed upload content type, or a write
+        (`POST`/`PUT`/`PATCH` with a body) whose `Content-Type` is not `application/json`.
+        The PayMongo webhook is exempt.
       content:
         application/json:
           schema:
@@ -1871,7 +2167,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
     UpstreamFailed:
-      description: Xendit or Google unreachable (`upstream_failed`).
+      description: PayMongo or Google unreachable (`upstream_failed`).
       content:
         application/json:
           schema:
@@ -1933,6 +2229,7 @@ components:
             - bad_request
             - unauthenticated
             - forbidden
+            - forbidden_origin
             - not_found
             - conflict
             - too_large
@@ -2008,7 +2305,7 @@ components:
       description: |
         API-026's current-account body. Signup and signin keep `AuthAccount`; only `GET /me`
         carries the onboarding flag and the profile stub (ADR-0030).
-      required: [id, email, role, is_onboarded]
+      required: [id, email, role, is_onboarded, email_verified]
       properties:
         id:
           type: string
@@ -2025,6 +2322,9 @@ components:
           nullable: true
         is_onboarded:
           type: boolean
+        email_verified:
+          type: boolean
+          description: True once the account's email was verified (API-027).
     SignupRequest:
       type: object
       additionalProperties: false
@@ -2081,6 +2381,23 @@ components:
         password:
           type: string
           minLength: 8
+    VerifyEmailRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+    PasswordChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+          minLength: 8
     WorkSetup:
       type: string
       enum: [remote, hybrid, onsite]
@@ -2127,7 +2444,7 @@ components:
           nullable: true
     InternshipCard:
       type: object
-      required: [id, slug, title, company, location, duration_weeks, is_paid, field, deadline]
+      required: [id, slug, title, company, location, duration_weeks, is_paid, work_setup, field, deadline]
       properties:
         id:
           type: string
@@ -2146,6 +2463,8 @@ components:
           nullable: true
         is_paid:
           type: boolean
+        work_setup:
+          $ref: '#/components/schemas/WorkSetup'
         field:
           type: string
         deadline:
@@ -2370,6 +2689,15 @@ components:
           minimum: 0
         is_intro_call:
           type: boolean
+    MySessionType:
+      description: A session type as its owning coach sees it (API-067 GET), including retired ones.
+      allOf:
+        - $ref: '#/components/schemas/SessionType'
+        - type: object
+          required: [is_active]
+          properties:
+            is_active:
+              type: boolean
     Review:
       type: object
       required: [rating, body, reviewer_first_name, created_at]
@@ -2427,7 +2755,7 @@ components:
             $ref: '#/components/schemas/CoachCard'
     StudentProfile:
       type: object
-      required: [full_name, school, course, year_level, bio, avatar_key, resume_key, skills, completeness_pct]
+      required: [full_name, school, course, year_level, bio, avatar_key, resume_key, skills, target_ojt_hours, completed_ojt_hours, completeness_pct]
       properties:
         full_name:
           type: string
@@ -2451,6 +2779,17 @@ components:
           type: array
           items:
             type: string
+        target_ojt_hours:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 10000
+          description: Required OJT/practicum hours. Null until the student sets it.
+        completed_ojt_hours:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          description: OJT hours completed so far. Starts at 0.
         completeness_pct:
           type: integer
     CreateStudentProfileRequest:
@@ -2471,6 +2810,14 @@ components:
           type: array
           items:
             type: string
+        target_ojt_hours:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        completed_ojt_hours:
+          type: integer
+          minimum: 0
+          maximum: 10000
     UpdateStudentProfileRequest:
       type: object
       additionalProperties: false
@@ -2494,6 +2841,14 @@ components:
           type: array
           items:
             type: string
+        target_ojt_hours:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        completed_ojt_hours:
+          type: integer
+          minimum: 0
+          maximum: 10000
     Dashboard:
       type: object
       required: [saved_count, upcoming_sessions_count, completeness_pct]
@@ -2506,7 +2861,7 @@ components:
           type: integer
     SavedInternship:
       type: object
-      required: [id, slug, title, company, location, duration_weeks, is_paid, field, deadline, saved_at]
+      required: [id, slug, title, company, location, duration_weeks, is_paid, work_setup, field, deadline, saved_at]
       properties:
         id:
           type: string
@@ -2525,6 +2880,8 @@ components:
           nullable: true
         is_paid:
           type: boolean
+        work_setup:
+          $ref: '#/components/schemas/WorkSetup'
         field:
           type: string
         deadline:
@@ -2555,6 +2912,7 @@ components:
     UpdateSettingsRequest:
       type: object
       additionalProperties: false
+      description: current_password is required when password is supplied or email is changed to a different address.
       properties:
         email:
           type: string
@@ -2562,6 +2920,8 @@ components:
         password:
           type: string
           minLength: 8
+        current_password:
+          type: string
         notification_preference:
           type: object
           additionalProperties: false
@@ -2611,7 +2971,7 @@ components:
           format: date-time
         checkout_url:
           type: string
-          description: Present only when a gateway invoice was created.
+          description: Present only when a PayMongo Checkout Session was created.
     StudentBooking:
       type: object
       required:
@@ -2800,6 +3160,84 @@ components:
         payout_account_holder_name:
           type: string
           maxLength: 100
+        current_password:
+          type: string
+          description: Required whenever a payout field is sent (ADR-0034).
+    OwedPayout:
+      type: object
+      required: [coach_account_id, coach_name, amount_centavos, booking_ids]
+      properties:
+        coach_account_id:
+          type: string
+          format: uuid
+        coach_name:
+          type: string
+        verified_name:
+          type: string
+          nullable: true
+          description: The account's `full_name`.
+        payout_channel_code:
+          type: string
+          nullable: true
+        payout_account_masked:
+          type: string
+          nullable: true
+          description: Masked to its last four digits; the full number is never returned.
+        payout_account_holder_name:
+          type: string
+          nullable: true
+        amount_centavos:
+          type: integer
+          format: int64
+        booking_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    RecordPayoutRequest:
+      type: object
+      additionalProperties: false
+      required: [coach_account_id, reference, amount_centavos]
+      properties:
+        coach_account_id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+          maxLength: 100
+          description: The admin's transfer reference, e.g. a GCash reference number.
+        amount_centavos:
+          type: integer
+          format: int64
+          minimum: 1
+    ManualPayout:
+      type: object
+      required: [id, coach_account_id, reference, amount_centavos, created_at, replayed]
+      properties:
+        id:
+          type: string
+          format: uuid
+        coach_account_id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        amount_centavos:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        replayed:
+          type: boolean
+    ClawBackRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          maxLength: 500
     CreateSessionTypeRequest:
       type: object
       additionalProperties: false
@@ -2925,11 +3363,19 @@ components:
             Per-purpose caps — resume 10 MB; avatar 5 MB; company_logo 5 MB (ADR-0021).
     PresignResponse:
       type: object
-      required: [upload_url, object_key, expires_at]
+      required: [url, fields, object_key, expires_at]
       properties:
-        upload_url:
+        url:
           type: string
           format: uri
+          description: The bucket endpoint to POST the multipart form to.
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Form fields to send before the file part — `key`, `Content-Type`, `policy`,
+            `x-amz-algorithm`, `x-amz-credential`, `x-amz-date`, `x-amz-signature`.
         object_key:
           type: string
         expires_at:
@@ -3057,7 +3503,10 @@ components:
           format: uri
     AdminInternshipCard:
       type: object
-      required: [id, slug, title, company_id, status]
+      description: |
+        API-070 list item. Carries the public card's display fields so the moderation queue can
+        render a row without a second request.
+      required: [id, slug, title, company_id, company, status, location, field, work_setup, is_paid, duration_weeks]
       properties:
         id:
           type: string
@@ -3067,82 +3516,43 @@ components:
           type: string
         company_id:
           type: string
+        company:
+          $ref: '#/components/schemas/CompanySummary'
         status:
           $ref: '#/components/schemas/InternshipStatus'
-    XenditCallback:
-      anyOf:
-        - $ref: '#/components/schemas/XenditInvoiceCallback'
-        - $ref: '#/components/schemas/XenditRefundCallback'
-        - $ref: '#/components/schemas/XenditPayoutCallback'
-      description: |
-        Xendit delivers invoice, refund and payout callbacks to the same URL; the server routes by
-        body shape. The schemas below are permissive — they document the fields the server reads,
-        not an exhaustive gateway contract.
-    XenditInvoiceCallback:
+        location:
+          type: string
+        field:
+          type: string
+        work_setup:
+          $ref: '#/components/schemas/WorkSetup'
+        is_paid:
+          type: boolean
+        duration_weeks:
+          type: integer
+          nullable: true
+    PayMongoEvent:
       type: object
       additionalProperties: true
-      required: [id, status]
+      required: [data]
       properties:
-        id:
-          type: string
-          description: The Xendit invoice id; correlates to `booking.gateway_ref`.
-        external_id:
-          type: string
-          description: The booking id the server set as the invoice's external id.
-        status:
-          type: string
-          description: '`PAID` confirms; `EXPIRED` expires; anything else is recorded with no transition.'
-        amount:
-          type: number
-        paid_amount:
-          type: number
-        paid_at:
-          type: string
-          format: date-time
-        payment_method:
-          type: string
-        payment_channel:
-          type: string
-    XenditRefundCallback:
-      type: object
-      additionalProperties: true
-      required: [event, data]
-      properties:
-        event:
-          type: string
-          enum: [refund.succeeded, refund.failed]
         data:
           type: object
           additionalProperties: true
-          required: [invoice_id]
+          required: [id, attributes]
           properties:
             id:
               type: string
-            invoice_id:
-              type: string
-              description: The invoice being refunded; correlates to `booking.gateway_ref`.
-            reference_id:
-              type: string
-            status:
-              type: string
-    XenditPayoutCallback:
-      type: object
-      additionalProperties: true
-      properties:
-        event:
-          type: string
-          description: '`payout.succeeded|failed|expired|reversed` (or `v3_payout.*`).'
-        id:
-          type: string
-          description: The Xendit payout id; correlates to `payout_batch.gateway_ref`.
-        reference_id:
-          type: string
-          description: The payout batch id the runner sent.
-        status:
-          type: string
-        failure_code:
-          type: string
-        data:
-          type: object
-          additionalProperties: true
-          description: Enveloped form nests the payout object here.
+              description: PayMongo event id (`evt_…`), used for event idempotency.
+            attributes:
+              type: object
+              additionalProperties: true
+              required: [type, data]
+              properties:
+                type:
+                  type: string
+                  enum: [checkout_session.payment.paid, payment.failed, refund.succeeded, dispute.created]
+                data:
+                  type: object
+                  additionalProperties: true
+                  description: Event resource; fields vary by event type.
