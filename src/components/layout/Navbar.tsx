@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSavedInternships, useStudentBookings } from '../../services/queries';
-import { useNavigate, useLocation } from '@tanstack/react-router';
 import { FontDirectionSwitcher } from '../common/FontDirectionSwitcher';
 
 interface NavbarProps {
@@ -22,10 +21,8 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPath: propCurrentPath, navigate: propNavigate }) => {
-  const routerNavigate = useNavigate();
-  const location = useLocation();
-  const currentPath = propCurrentPath ?? location.pathname;
-  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
+  const currentPath = propCurrentPath ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
+  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
   const { user, role, userName, avatar, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);

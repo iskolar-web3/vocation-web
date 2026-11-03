@@ -20,15 +20,13 @@ import { CoachCard } from '../components/coaching/CoachCard';
 import { LeavingSiteModal } from '../components/common/LeavingSiteModal';
 import { BookingDialog } from '../components/coaching/BookingDialog';
 import { InternshipCard as InternshipCardType, InternshipDetail, CoachCard as CoachCardType, CoachDetail } from '../types/api';
-import { useNavigate } from '@tanstack/react-router';
 
 interface LandingPageProps {
   navigate?: (path: string) => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ navigate: propNavigate }) => {
-  const routerNavigate = useNavigate();
-  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
+  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
   const { data: landingData, isLoading: isLoadingLanding } = useLanding();
   const { data: internshipsData, isLoading: isLoadingInternships } = useInternships();
   const { data: coachesData, isLoading: isLoadingCoaches } = useCoaches();

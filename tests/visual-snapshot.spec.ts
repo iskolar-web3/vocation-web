@@ -1,7 +1,14 @@
 import { test } from '@playwright/test';
 import path from 'node:path';
+import fs from 'node:fs';
 
-const ARTIFACT_DIR = 'C:/Users/Clarisse Salazar/.gemini/antigravity-ide/brain/68b1d663-d7bf-4449-8ab4-fca6b1bb4c69';
+const ARTIFACT_DIR =
+  process.env.ARTIFACT_DIR ||
+  path.join(process.cwd(), 'test-results', 'snapshots');
+
+if (!fs.existsSync(ARTIFACT_DIR)) {
+  fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
 
 test('capture tactile UI visual snapshots', async ({ page }) => {
   // 1. Landing Page

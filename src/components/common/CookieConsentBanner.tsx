@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Cookie } from 'lucide-react';
 import { getStoredConsent, setStoredConsent } from '../../lib/analytics';
-import { useNavigate } from '@tanstack/react-router';
 
 interface CookieConsentBannerProps {
   navigate?: (path: string) => void;
 }
 
 export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ navigate: propNavigate }) => {
-  const routerNavigate = useNavigate();
-  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
+  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { ShieldCheck, MessageSquareText } from 'lucide-react';
 import { FeedbackModal } from '../common/FeedbackModal';
-import { useNavigate } from '@tanstack/react-router';
 
 interface FooterProps {
   navigate?: (path: string) => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ navigate: propNavigate }) => {
-  const routerNavigate = useNavigate();
-  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
+  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   return (

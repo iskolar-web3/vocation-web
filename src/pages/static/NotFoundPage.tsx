@@ -1,14 +1,12 @@
 import React from 'react';
 import { Compass, ArrowLeft } from 'lucide-react';
-import { useNavigate } from '@tanstack/react-router';
 
 interface NotFoundPageProps {
   navigate?: (path: string) => void;
 }
 
 export const NotFoundPage: React.FC<NotFoundPageProps> = ({ navigate: propNavigate }) => {
-  const routerNavigate = useNavigate();
-  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
+  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
   return (
     <div className="max-w-md mx-auto px-4 py-24 text-center space-y-5">
       <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
