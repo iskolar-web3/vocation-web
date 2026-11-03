@@ -36,11 +36,11 @@ export const CheckoutCancelPage: React.FC<CheckoutCancelPageProps> = ({ navigate
     <div className="min-h-screen bg-[#f0f7ff]/30 py-12 px-4 sm:px-6">
       <div className="max-w-xl mx-auto space-y-6">
         <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs text-center space-y-5">
-          <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
             <AlertTriangle className="w-8 h-8" />
           </div>
 
-          <div className="inline-block px-3 py-1 bg-amber-50 border border-amber-200 rounded-md text-amber-800 text-xs font-semibold">
+          <div className="inline-block px-3 py-1 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-md text-[#021F53] text-xs font-semibold">
             Checkout Incomplete
           </div>
 
@@ -80,7 +80,7 @@ export const CheckoutCancelPage: React.FC<CheckoutCancelPageProps> = ({ navigate
                 type="button"
                 onClick={handleRetryCheckout}
                 disabled={resumeCheckoutMutation.isPending}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#3f58b2] text-white hover:bg-[#021F53] text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto px-6 py-2.5 tactile-btn-primary text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
               >
                 {resumeCheckoutMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

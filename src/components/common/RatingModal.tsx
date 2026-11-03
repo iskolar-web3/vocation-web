@@ -50,7 +50,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
       onClose={onClose}
       title={
         <div className="flex items-center gap-2 text-[#021F53]">
-          <Star className="w-5 h-5 text-[#ff9b00] fill-[#ff9b00]" />
+          <Star className="w-5 h-5 text-[#2563eb] fill-[#2563eb]" />
           <span>Rate Your Coaching Session</span>
         </div>
       }
@@ -90,7 +90,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
                   <Star
                     className={`w-8 h-8 ${
                       filled
-                        ? 'text-[#ff9b00] fill-[#ff9b00]'
+                        ? 'text-[#2563eb] fill-[#2563eb]'
                         : 'text-slate-300'
                     } transition-colors`}
                   />
@@ -111,7 +111,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
         <div className="space-y-2">
           <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] flex items-center justify-between">
             <span>Feedback &amp; Review (Optional)</span>
-            <span className="text-[11px] text-[#ff9b00] font-normal">
+            <span className="text-[11px] text-[#607ef2] font-normal">
               Displays with student first name only
             </span>
           </label>
@@ -131,14 +131,14 @@ export const RatingModal: React.FC<RatingModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-semibold text-[#2c3f77] hover:bg-[#f0f7ff] rounded-full transition-colors cursor-pointer"
+            className="px-5 py-2.5 text-sm font-semibold text-[#2c3f77] hover:bg-[#f0f7ff] rounded-xl transition-colors cursor-pointer"
           >
             Skip for now
           </button>
           <button
             type="submit"
             disabled={createReviewMutation.isPending}
-            className="px-6 py-2.5 text-sm font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] rounded-full shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="tactile-btn-primary px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {createReviewMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />

@@ -11,6 +11,7 @@ import {
   Clock,
   Loader2,
   AlertTriangle,
+  AlertCircle,
   CreditCard,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -62,8 +63,10 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
   const completenessPct = dashboard?.completeness_pct ?? (user?.is_onboarded ? 85 : 40);
 
   // OJT Practicum calculations
-  const targetOjtHours = studentProfile?.target_ojt_hours ?? 300;
-  const completedOjtHours = studentProfile?.completed_ojt_hours ?? 180;
+  const localTargetOjt = typeof window !== 'undefined' ? Number(localStorage.getItem('vocation_target_ojt_hours')) : null;
+  const targetOjtHours = (localTargetOjt && !Number.isNaN(localTargetOjt)) ? localTargetOjt : (studentProfile?.target_ojt_hours ?? 300);
+  const localCompletedOjt = typeof window !== 'undefined' ? Number(localStorage.getItem('vocation_completed_ojt_hours')) : null;
+  const completedOjtHours = (localCompletedOjt && !Number.isNaN(localCompletedOjt)) ? localCompletedOjt : (studentProfile?.completed_ojt_hours ?? 180);
   const ojtProgressPct = targetOjtHours > 0 ? Math.min(100, Math.round((completedOjtHours / targetOjtHours) * 100)) : 0;
   const remainingOjtHours = Math.max(0, targetOjtHours - completedOjtHours);
 
@@ -90,8 +93,8 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
         <div className="absolute top-0 right-1/4 w-72 h-72 bg-radial from-[#607ef2]/20 to-transparent pointer-events-none rounded-full blur-2xl" />
 
         <div className="space-y-1.5 relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-xs px-3 py-1 rounded-full text-[11px] font-bold text-[#ff9b00] uppercase tracking-wider font-accent border border-white/10 shadow-2xs">
-            <GraduationCap className="w-3.5 h-3.5 text-[#ff9b00]" />
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-xs px-3 py-1 rounded-md text-[11px] font-bold text-[#607ef2] uppercase tracking-wider font-accent border border-white/15 shadow-2xs">
+            <GraduationCap className="w-3.5 h-3.5 text-[#607ef2]" />
             <span>Student Command Dashboard</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-display">
@@ -106,7 +109,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
           <button
             type="button"
             onClick={() => navigate('/internships')}
-            className="tactile-btn-honey px-4 py-2 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
+            className="tactile-btn-primary px-4.5 py-2.5 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md text-white"
           >
             <Briefcase className="w-3.5 h-3.5" />
             <span>Explore Roles</span>
@@ -114,9 +117,9 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
           <button
             type="button"
             onClick={() => navigate('/coaches')}
-            className="tactile-btn-sapphire px-4 py-2 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
+            className="tactile-btn-white px-4.5 py-2.5 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md text-[#021F53]"
           >
-            <Award className="w-3.5 h-3.5 text-[#ff9b00]" />
+            <Award className="w-3.5 h-3.5 text-[#021F53]" />
             <span>Book a Coach</span>
           </button>
         </div>
@@ -126,14 +129,14 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div
           onClick={() => navigate('/app/saved')}
-          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-[#ff9b00]/40 transition-all"
+          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-[#2563eb]/40 transition-all"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Saved Roles
             </span>
-            <div className="p-1.5 rounded-xl bg-amber-50 border border-amber-200 shadow-2xs">
-              <Bookmark className="w-4 h-4 text-[#ff9b00]" />
+            <div className="p-1.5 rounded-xl bg-[#f0f7ff] border border-[#607ef2]/20 shadow-2xs">
+              <Bookmark className="w-4 h-4 text-[#2563eb]" />
             </div>
           </div>
           <div className="text-2xl font-bold text-[#021F53] font-display">
@@ -168,13 +171,13 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
 
         <div
           onClick={() => navigate('/app/profile')}
-          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-emerald-500/40 transition-colors"
+          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-[#3f58b2]/40 transition-colors"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Profile Completeness
             </span>
-            <GraduationCap className="w-4 h-4 text-emerald-600" />
+            <GraduationCap className="w-4 h-4 text-[#2563eb]" />
           </div>
           <div className="text-2xl font-bold text-[#021F53] font-display">
             {completenessPct}%
@@ -205,14 +208,14 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
 
       {/* Pending Payment Notice Banner */}
       {pendingSession && (
-        <div className="p-4 bg-amber-50/90 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs">
+        <div className="p-4 bg-[#f0f7ff] border border-[#607ef2]/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#021F53] shadow-soft">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-[#2563eb] shrink-0 mt-0.5" />
             <div>
               <p className="font-bold text-[#021F53] text-sm">
                 Action Required: Pending Mentorship Booking
               </p>
-              <p className="text-amber-800 text-xs mt-0.5">
+              <p className="text-slate-600 text-xs mt-0.5">
                 Session with <strong>{pendingSession.coach_display_name}</strong> scheduled for{' '}
                 <strong className="text-[#021F53]">{formatDateTime(pendingSession.slot_starts_at)}</strong> (Asia/Manila) is waiting for checkout completion.
               </p>
@@ -223,7 +226,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
               type="button"
               onClick={() => handleResumePayment(pendingSession.booking_id)}
               disabled={resumeCheckoutMutation.isPending}
-              className="px-4 py-2 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold rounded-xl transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+              className="tactile-btn-primary px-4.5 py-2 text-white font-bold rounded-xl shadow-sm text-xs flex items-center gap-1.5 cursor-pointer"
             >
               {resumeCheckoutMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -252,10 +255,10 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
             <div className="rounded-2xl p-6 bg-gradient-to-br from-[#021F53] via-[#092B6E] to-[#122b68] text-white border border-[#3f58b2]/40 shadow-soft space-y-4 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-radial from-[#3f58b2]/20 to-transparent pointer-events-none rounded-full blur-2xl" />
               <div className="flex items-center justify-between border-b border-white/15 pb-3 relative z-10">
-                <span className="text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" /> Next Scheduled Mentorship Call
+                <span className="text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#607ef2]" /> Next Scheduled Mentorship Call
                 </span>
-                <span className="stamp-badge bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="stamp-badge bg-[#1d4ed8]/30 text-[#93c5fd] border border-[#60a5fa]/40">
                   Confirmed
                 </span>
               </div>
@@ -270,10 +273,10 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
                       1-on-1 Career Mentorship
                     </h4>
                     <p className="text-xs text-slate-200 mt-0.5">
-                      With <strong className="text-[#ff9b00]">{nextSession.coach_display_name}</strong>
+                      With <strong className="text-white underline decoration-[#607ef2]">{nextSession.coach_display_name}</strong>
                     </p>
                     <div className="flex items-center gap-2 text-xs text-sky-200 mt-2 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-[#ff9b00]" />
+                      <Clock className="w-3.5 h-3.5 text-[#93c5fd]" />
                       <span>{formatDateTime(nextSession.slot_starts_at)} (Asia/Manila)</span>
                     </div>
                   </div>
@@ -284,7 +287,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
                     href={nextSession.join_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-3 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer self-start sm:self-center"
+                    className="tactile-btn-primary px-5 py-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer self-start sm:self-center"
                   >
                     <Video className="w-4 h-4" />
                     <span>Join Video Call</span>
@@ -294,12 +297,12 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
               </div>
             </div>
           ) : pendingSession ? (
-            <div className="tactile-card rounded-2xl p-6 bg-white border border-amber-200 shadow-soft space-y-4">
+            <div className="tactile-card rounded-2xl p-6 bg-white border border-[#607ef2]/25 shadow-soft space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider font-accent flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Mentorship Session
+                <span className="text-xs font-bold text-[#3f58b2] uppercase tracking-wider font-accent flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[#2563eb]" /> Pending Mentorship Session
                 </span>
-                <span className="stamp-badge bg-amber-100 text-amber-800 border border-amber-300">
+                <span className="stamp-badge bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/25">
                   Payment Pending
                 </span>
               </div>
@@ -312,7 +315,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
                   <p className="text-xs text-slate-600 mt-1">
                     Scheduled for {formatDateTime(pendingSession.slot_starts_at)} (Asia/Manila)
                   </p>
-                  <p className="text-xs text-amber-700 font-semibold mt-1">
+                  <p className="text-xs text-[#3f58b2] font-semibold mt-1">
                     Complete checkout to reserve your calendar slot with the coach.
                   </p>
                 </div>
@@ -321,7 +324,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
                   type="button"
                   onClick={() => handleResumePayment(pendingSession.booking_id)}
                   disabled={resumeCheckoutMutation.isPending}
-                  className="px-5 py-2.5 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-center"
+                  className="tactile-btn-primary px-5 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-center"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
                   <span>Resume Checkout</span>
@@ -348,7 +351,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-[#ff9b00]" />
+                <Bookmark className="w-4 h-4 text-[#2563eb]" />
                 <h3 className="text-lg font-bold text-[#021F53] font-headline">
                   Your Saved Shortlist ({savedCount})
                 </h3>
@@ -427,7 +430,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] font-bold px-2.5 py-1 rounded-full border border-[#607ef2]/20">
+                <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] font-bold px-2.5 py-1 rounded-md border border-[#607ef2]/20">
                   {ojtProgressPct}%
                 </span>
               </div>

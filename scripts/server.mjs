@@ -452,12 +452,13 @@ function generateAvailabilitySlots() {
 
 // Create HTTP server on port 8080
 export const server = http.createServer(async (req, res) => {
-  // CORS
-  const origin = req.headers.origin || 'http://localhost:5173';
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  // CORS - allowlisted to local dev origin (SEC-10)
+  const origin = req.headers.origin;
+  const allowedOrigin = origin === 'http://127.0.0.1:5173' ? 'http://127.0.0.1:5173' : 'http://localhost:5173';
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Session-Id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -544,8 +545,9 @@ export const server = http.createServer(async (req, res) => {
       db.sessions[sessionId] = email;
       saveDB();
 
+      const { password: _p, ...safeAccount } = account;
       res.setHeader('Set-Cookie', `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Lax`);
-      sendJson(200, { ...account, session_id: sessionId }, 'Signed in successfully');
+      sendJson(200, safeAccount, 'Signed in successfully');
       return;
     }
 
@@ -586,8 +588,9 @@ export const server = http.createServer(async (req, res) => {
       db.sessions[sessionId] = email;
       saveDB();
 
+      const { password: _p, ...safeAccount } = account;
       res.setHeader('Set-Cookie', `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Lax`);
-      sendJson(200, { ...account, session_id: sessionId }, 'Account created successfully');
+      sendJson(201, safeAccount, 'Account created successfully');
       return;
     }
 
@@ -668,8 +671,22 @@ export const server = http.createServer(async (req, res) => {
       const user = getAuthUser(req) || db.accounts['student@iskolar.ph'];
       const email = user?.email || 'student@iskolar.ph';
 
-      if (body?.password && db.accounts[email]) {
-        db.accounts[email].password = body.password;
+      if (body?.password) {
+        if (!body?.current_password || (db.accounts[email]?.password && db.accounts[email].password !== body.current_password)) {
+          sendError(400, 'Current password is required to change password.', 'invalid_current_password');
+          return;
+        }
+        if (db.accounts[email]) {
+          db.accounts[email].password = body.password;
+        }
+        // Revoke other sessions (SEC-01)
+        const cookies = parseCookies(req);
+        const currentSession = cookies.session_id;
+        for (const [sId, sEmail] of Object.entries(db.sessions)) {
+          if (sEmail === email && sId !== currentSession) {
+            delete db.sessions[sId];
+          }
+        }
       }
 
       if (body?.email && body.email.toLowerCase() !== email) {
@@ -1278,7 +1295,7 @@ server.on('error', (err) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`[iSkolar Vocation Backend API] Running on http://localhost:${PORT}`);
 });
 

@@ -37,12 +37,11 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
     setErrorMsg(null);
 
     try {
-      // Store feedback locally or send to backend feedback log
+      // DP-13: Feedback form does not store personal email in browser localStorage
       const feedbackPayload = {
         category,
         rating,
         message: message.trim(),
-        email: email.trim() || user?.email || 'anonymous',
         submitted_at: new Date().toISOString(),
       };
 
@@ -86,7 +85,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
     >
       {isSubmitted ? (
         <div className="py-8 text-center space-y-4">
-          <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-8 h-8" />
           </div>
           <h3 className="text-xl font-bold text-[#021F53] font-headline">Thank You for Your Feedback!</h3>
@@ -97,7 +96,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             <button
               type="button"
               onClick={handleReset}
-              className="px-6 py-2.5 bg-[#021F53] text-white font-bold text-xs rounded-xl hover:bg-[#3f58b2] transition-colors cursor-pointer"
+              className="tactile-btn-primary px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
             >
               Done
             </button>
@@ -146,12 +145,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                   key={star}
                   type="button"
                   onClick={() => setRating(star)}
-                  className="p-1.5 text-slate-300 hover:text-[#ff9b00] transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-300 hover:text-[#2563eb] transition-colors cursor-pointer"
                 >
                   <Star
                     className={`w-6 h-6 ${
                       star <= rating
-                        ? 'fill-[#ff9b00] text-[#ff9b00]'
+                        ? 'fill-[#2563eb] text-[#2563eb]'
                         : 'text-slate-300'
                     }`}
                   />
@@ -208,7 +207,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 bg-[#021F53] hover:bg-[#3f58b2] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="tactile-btn-primary px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

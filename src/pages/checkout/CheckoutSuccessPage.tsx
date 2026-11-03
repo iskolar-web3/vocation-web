@@ -43,7 +43,7 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ naviga
             </div>
           ) : !booking ? (
             <div className="py-8 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
                 <Clock className="w-8 h-8" />
               </div>
               <h1 className="text-2xl font-bold text-[#021F53]">Payment Received</h1>
@@ -68,10 +68,10 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ naviga
           ) : isPending ? (
             // BR-007: Show pending, NEVER confirmed until webhook verifies
             <div className="space-y-4">
-              <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
                 <Clock className="w-8 h-8 animate-pulse" />
               </div>
-              <div className="inline-block px-3 py-1 bg-amber-50 border border-amber-200 rounded-md text-amber-800 text-xs font-semibold">
+              <div className="inline-block px-3 py-1 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-md text-[#021F53] text-xs font-semibold">
                 Status: Payment Pending Verification
               </div>
               <h1 className="text-2xl font-bold text-[#021F53]">Payment Processing</h1>
@@ -107,7 +107,7 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ naviga
                 <button
                   type="button"
                   onClick={() => navigate('/app/bookings')}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-[#3f58b2] text-white hover:bg-[#021F53] text-xs font-bold rounded-xl flex items-center justify-center transition-all cursor-pointer"
+                  className="w-full sm:w-auto px-5 py-2.5 tactile-btn-primary text-white font-bold text-xs rounded-xl flex items-center justify-center shadow-md transition-all cursor-pointer"
                 >
                   Go to My Bookings
                 </button>
@@ -115,10 +115,10 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ naviga
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
-              <div className="inline-block px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-md text-emerald-800 text-xs font-semibold">
+              <div className="inline-block px-3 py-1 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-md text-[#021F53] text-xs font-semibold">
                 Status: Confirmed
               </div>
               <h1 className="text-2xl font-bold text-[#021F53]">Session Confirmed!</h1>
@@ -179,7 +179,7 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ naviga
 
         <div className="p-4 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#ff9b00]/10 text-[#ff9b00] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center flex-shrink-0">
               <MessageSquareHeart className="w-5 h-5" />
             </div>
             <div>

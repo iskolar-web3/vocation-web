@@ -64,13 +64,12 @@ links into it.
 
 ## Build & run
 
-```
-Not yet runnable — this repo is empty of application code. Scaffolding is TASK-005.
+```bash
+npm install
+npm run dev
 ```
 
-Expected: `pnpm install` → `pnpm dev`. Ported from
-[academy-web](https://github.com/iskolar-web3/academy-web): Vite 8, React 19, TanStack Router +
-Query, Tailwind 4, shadcn/ui, Biome, Vitest, pnpm.
+Stack: Vite 6, React 19, TanStack Router + Query, Tailwind 4, Biome, Playwright, npm.
 
 ## Conventions
 

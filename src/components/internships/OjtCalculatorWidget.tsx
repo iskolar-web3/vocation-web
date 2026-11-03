@@ -40,8 +40,8 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
       {!isModal && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
-              <Calculator className="w-3.5 h-3.5 text-[#ff9b00]" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/10 text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent border border-white/15">
+              <Calculator className="w-3.5 h-3.5 text-[#607ef2]" />
               <span>OJT Hours &amp; Allowance Calculator</span>
             </div>
             <h3 className="text-xl sm:text-2xl font-display font-bold text-white">
@@ -49,8 +49,8 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
             </h3>
           </div>
 
-          <div className="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-2xl border border-white/15 self-start sm:self-auto">
-            <span className="w-2 h-2 rounded-full bg-[#ff9b00] animate-pulse" />
+          <div className="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/15 self-start sm:self-auto">
+            <span className="w-2 h-2 rounded-full bg-[#607ef2] animate-pulse" />
             <span className="text-xs font-bold text-white">
               {weeklyHours === 40 ? 'Full-Time: 40 hrs/wk' : 'Part-Time: 20 hrs/wk'}
             </span>
@@ -126,7 +126,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold">Full-Time</span>
-                {weeklyHours === 40 && <Check className="w-3.5 h-3.5 text-[#ff9b00]" />}
+                {weeklyHours === 40 && <Check className="w-3.5 h-3.5 text-[#607ef2]" />}
               </div>
               <span className="text-[11px] opacity-80 mt-1">40 hrs / wk</span>
             </button>
@@ -142,7 +142,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold">Part-Time</span>
-                {weeklyHours === 20 && <Check className="w-3.5 h-3.5 text-[#ff9b00]" />}
+                {weeklyHours === 20 && <Check className="w-3.5 h-3.5 text-[#607ef2]" />}
               </div>
               <span className="text-[11px] opacity-80 mt-1">20 hrs / wk</span>
             </button>
@@ -153,10 +153,10 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
         <div className="bg-[#f0f7ff] rounded-2xl p-4 sm:p-5 border border-[#607ef2]/20 flex flex-col justify-between space-y-3 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-[#021F53] uppercase tracking-wider flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-emerald-600" />
+              <Coins className="w-4 h-4 text-[#2563eb]" />
               <span>Target Allowance</span>
             </label>
-            <span className="text-sm font-bold text-emerald-700">
+            <span className="text-sm font-bold text-[#1d4ed8]">
               {formatPesos(monthlyStipendRate)}/mo
             </span>
           </div>
@@ -169,7 +169,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
               step="1000"
               value={monthlyStipendRate}
               onChange={(e) => setMonthlyStipendRate(Number(e.target.value))}
-              className="w-full accent-emerald-600 cursor-pointer"
+              className="w-full accent-[#2563eb] cursor-pointer"
             />
 
             <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
@@ -201,7 +201,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
               Academic Pace
             </span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl sm:text-3xl font-display font-bold text-[#ff9b00]">
+              <span className="text-2xl sm:text-3xl font-display font-bold text-[#93c5fd]">
                 ~{totalMonths}
               </span>
               <span className="text-xs font-medium text-slate-300">Mos</span>
@@ -213,7 +213,7 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
               Total Earnings
             </span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-xl sm:text-2xl font-display font-bold text-emerald-400">
+              <span className="text-xl sm:text-2xl font-display font-bold text-[#93c5fd]">
                 {formatPesos(totalEstimatedEarnings)}
               </span>
             </div>
@@ -224,11 +224,11 @@ export const OjtCalculatorWidget: React.FC<OjtCalculatorWidgetProps> = ({
           <button
             type="button"
             onClick={() => onFindMatchingRoles(targetHours)}
-            className="w-full md:w-auto px-6 py-3.5 bg-[#ff9b00] hover:bg-[#e08900] text-[#021F53] font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
+            className="tactile-btn-primary w-full md:w-auto px-6 py-3.5 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
           >
-            <Filter className="w-4 h-4 text-[#021F53]" />
+            <Filter className="w-4 h-4 text-white" />
             <span>Filter Roles for {targetHours}h OJT</span>
-            <ArrowRight className="w-4 h-4 text-[#021F53]" />
+            <ArrowRight className="w-4 h-4 text-white" />
           </button>
         )}
       </div>

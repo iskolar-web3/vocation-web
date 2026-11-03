@@ -1,9 +1,26 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { createContext, useContext } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { UserRole, UserSession } from '../types/api';
-import { api, ApiError } from '../lib/api';
+import { api } from '../lib/api';
+import { UserSessionSchema } from '../lib/schemas';
 
-interface AuthContextType {
+export const meQueryOptions = () => ({
+  queryKey: ['me'] as const,
+  queryFn: async (): Promise<UserSession | null> => {
+    try {
+      const res = await api.get<UserSession>('/me', undefined, {
+        schema: UserSessionSchema,
+      });
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+  staleTime: 1000 * 60 * 5,
+  retry: false,
+});
+
+export interface AuthContextType {
   user: UserSession | null;
   role: UserRole | 'visitor';
   isAuthenticated: boolean;
@@ -21,38 +38,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<UserSession | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const fetchSession = useCallback(async () => {
-    try {
-      const res = await api.get<UserSession>('/me');
-      setUser(res.data);
-    } catch {
-      // 401 or no active session cookie
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+  const { data: user = null, isLoading, refetch } = useQuery(meQueryOptions());
 
   const signin = async ({ email, password }: { email: string; password: string }): Promise<UserSession | null> => {
-    setIsLoading(true);
-    try {
-      await api.post('/auth/signin', { email, password });
-      const res = await api.get<UserSession>('/me');
-      setUser(res.data);
-      return res.data;
-    } catch (err) {
-      setIsLoading(false);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    const res = await api.post<UserSession>('/auth/signin', { email, password });
+    const user = res.data;
+    queryClient.setQueryData(['me'], user);
+    await queryClient.invalidateQueries({ queryKey: ['me'] });
+    return user;
   };
 
   const signup = async (payload: {
@@ -61,30 +54,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role: UserRole;
     full_name?: string;
   }) => {
-    setIsLoading(true);
-    try {
-      await api.post('/auth/signup', payload);
-      await fetchSession();
-    } catch (err) {
-      setIsLoading(false);
-      throw err;
-    }
+    const res = await api.post<UserSession>('/auth/signup', payload);
+    const user = res.data;
+    queryClient.setQueryData(['me'], user);
+    await queryClient.invalidateQueries({ queryKey: ['me'] });
   };
 
   const logout = async () => {
-    setIsLoading(true);
     try {
       await api.post('/auth/signout');
     } catch {
       // ignore
     } finally {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('vocation_session_id');
         localStorage.removeItem('vocation_dev_user');
       }
+      queryClient.setQueryData(['me'], null);
+      await queryClient.invalidateQueries({ queryKey: ['me'] });
       queryClient.clear();
-      setUser(null);
-      setIsLoading(false);
     }
   };
 
@@ -97,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: user || null,
         role,
         isAuthenticated,
         isLoading,
@@ -107,7 +94,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signin,
         signup,
         logout,
-        refetchUser: fetchSession,
+        refetchUser: async () => {
+          const fresh = await queryClient.fetchQuery({ ...meQueryOptions(), staleTime: 0 });
+          queryClient.setQueryData(['me'], fresh);
+        },
       }}
     >
       {children}

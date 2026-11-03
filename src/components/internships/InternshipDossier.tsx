@@ -7,16 +7,18 @@ import {
   Bookmark,
   ExternalLink,
   CheckCircle2,
-  ChevronRight,
   Share2,
   Calendar,
   Target,
   Copy,
   Check,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { InternshipCard, InternshipDetail, CoachCard } from '../../types/api';
 import { formatPesos, formatDate, getTimeRemaining } from '../../lib/utils';
 import { useSaveInternship, useUnsaveInternship, useSavedInternships, useCoaches } from '../../services/queries';
+import { toast } from 'sonner';
 
 interface InternshipDossierProps {
   internship: InternshipCard | InternshipDetail;
@@ -56,6 +58,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   const handleCopy = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopiedLink(true);
+    toast.success('Link copied to clipboard!');
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
@@ -83,111 +86,159 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   const requirements = toList(detail.requirements);
   const perks = toList(detail.perks);
   const description = detail.description || '';
+  const logoUrl = internship.company.logo_url || (internship.company as any).logo || '';
+
+  const allowanceDisplay = internship.is_paid
+    ? (internship as any).compensation_details ||
+      ((internship as any).stipend_amount
+        ? `${formatPesos((internship as any).stipend_amount)} / ${(internship as any).stipend_period || 'mo'}`
+        : 'Paid Allowance')
+    : 'School Credit';
+
+  const ojtHoursDisplay = (internship as any).ojt_hours
+    ? `${(internship as any).ojt_hours} Practicum Hours`
+    : internship.duration_weeks
+    ? `${internship.duration_weeks} Weeks Duration`
+    : 'Full Academic Credit';
+
+  const workSetup = (internship as any).work_setup || 'Internship';
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-soft overflow-hidden sticky top-24 space-y-6">
-      {/* Dossier Header Banner */}
-      <div className="bg-[#021F53] text-white p-6 relative overflow-hidden border-b border-[#3f58b2]/30">
-        <div className="relative z-10 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="stamp-badge bg-white/15 text-[#ff9b00] border border-white/20">
-                {internship.field}
-              </span>
-              {internship.is_paid ? (
-                <span className="stamp-badge bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                  Paid Allowance
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-soft overflow-hidden flex flex-col h-[calc(100vh-6.5rem)]">
+      {/* Pinned Executive Header */}
+      <div className="shrink-0 bg-[#021F53] text-white p-5 sm:p-6 border-b border-[#3f58b2]/30 space-y-4">
+        {/* Top Company Info & Actions */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={internship.company.name}
+                className="w-12 h-12 rounded-xl object-cover bg-white border border-white/20 shadow-xs shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-[#2563eb] text-white font-bold flex items-center justify-center text-base shrink-0 shadow-xs">
+                {internship.company.name.charAt(0)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {navigate ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/companies/${internship.company.slug}`)}
+                    className="text-xs font-bold text-[#93c5fd] hover:text-white uppercase tracking-wider inline-flex items-center gap-1 transition-colors cursor-pointer group truncate"
+                    title={`View ${internship.company.name} profile`}
+                  >
+                    <span className="truncate">{internship.company.name}</span>
+                    <span className="text-[10px] opacity-75 group-hover:opacity-100 group-hover:translate-x-0.5 transition-transform">↗</span>
+                  </button>
+                ) : (
+                  <span className="text-xs font-bold text-[#93c5fd] uppercase tracking-wider truncate">
+                    {internship.company.name}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-300 bg-white/10 px-2 py-0.5 rounded-md">
+                  <ShieldCheck className="w-3 h-3 text-[#60a5fa]" />
+                  <span>Verified</span>
                 </span>
-              ) : (
-                <span className="stamp-badge bg-slate-500/20 text-slate-300 border border-slate-400/30">
-                  Unpaid / For Credit
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={handleCopy}
-                title="Copy direct posting link"
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
-              >
-                {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={handleToggleSave}
-                title="Save role to checklist"
-                className={`p-2 rounded-xl transition-all cursor-pointer ${
-                  isSaved ? 'bg-[#ff9b00] text-[#021F53]' : 'bg-white/10 hover:bg-white/20 text-white'
-                }`}
-              >
-                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-              </button>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold font-headline text-white leading-tight truncate mt-0.5">
+                {internship.title}
+              </h2>
             </div>
           </div>
 
-          <div>
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              {internship.company.name}
-            </span>
-            <h2 className="text-xl sm:text-2xl font-bold font-headline leading-tight">
-              {internship.title}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-xs">
-            <div>
-              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Setup</span>
-              <span className="font-bold capitalize">{(internship as any).work_setup || 'Internship'}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Duration</span>
-              <span className="font-bold">{internship.duration_weeks ? `${internship.duration_weeks} Wks` : 'Flexible'}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Allowance</span>
-              <span className="font-bold text-[#ff9b00]">
-                {internship.is_paid
-                  ? (internship as any).compensation_details || 'Paid'
-                  : 'Unpaid'}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-300 uppercase tracking-wider block">Deadline</span>
-              <span className="font-bold">{formatDate(internship.deadline || '')}</span>
-            </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleCopy}
+              title="Copy direct posting link"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+            >
+              {copiedLink ? <Check className="w-4 h-4 text-[#93c5fd]" /> : <Copy className="w-4 h-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleSave}
+              title="Save role to checklist"
+              className={`p-2 rounded-xl transition-all cursor-pointer ${
+                isSaved ? 'bg-[#2563eb] text-white shadow-md' : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
           </div>
         </div>
-      </div>
 
-      <div className="px-6 space-y-6">
-        {/* Outbound Application Notice */}
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200/80 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-            <ExternalLink className="w-4 h-4 text-[#ff9b00]" />
-            <span>Outbound Official Application</span>
-          </div>
-          <p className="text-[11px] text-amber-800 leading-relaxed">
-            iSkolar Vocation directs you directly to <strong>{internship.company.name}</strong>'s official portal. We do not store or intermediate student resumes.
-          </p>
+        {/* Primary Outbound Action Bar */}
+        <div className="pt-2 border-t border-white/10 space-y-2">
           <button
             type="button"
             onClick={() => onApplyOutbound(internship)}
-            className="w-full mt-2 py-3 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="tactile-btn-primary w-full py-3 px-4 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg"
           >
-            <span>Proceed to Company Portal</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Proceed to Official Company Portal</span>
+            <ExternalLink className="w-4 h-4" />
           </button>
+          <p className="text-[11px] text-slate-300 text-center leading-tight">
+            Direct apply on <strong>{internship.company.name}</strong>'s portal • No intermediate student data stored
+          </p>
+        </div>
+      </div>
+
+      {/* Dossier Scrollable Body */}
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+        {/* 4-Metric Practicum Matrix */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3.5 rounded-xl bg-[#f8fbff] border border-[#dbeafe] space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1d4ed8] uppercase tracking-wider">
+              <Coins className="w-3.5 h-3.5 text-[#2563eb]" />
+              <span>Allowance</span>
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-[#021F53] truncate" title={allowanceDisplay}>
+              {allowanceDisplay}
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#f8fbff] border border-[#dbeafe] space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1d4ed8] uppercase tracking-wider">
+              <Clock className="w-3.5 h-3.5 text-[#2563eb]" />
+              <span>Practicum Credit</span>
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-[#021F53] truncate" title={ojtHoursDisplay}>
+              {ojtHoursDisplay}
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#f8fbff] border border-[#dbeafe] space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1d4ed8] uppercase tracking-wider">
+              <MapPin className="w-3.5 h-3.5 text-[#2563eb]" />
+              <span>Setup &amp; Location</span>
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-[#021F53] truncate capitalize" title={`${workSetup} · ${internship.location}`}>
+              {workSetup} · {internship.location}
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#f8fbff] border border-[#dbeafe] space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1d4ed8] uppercase tracking-wider">
+              <Calendar className="w-3.5 h-3.5 text-[#2563eb]" />
+              <span>Intake Deadline</span>
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-[#021F53] truncate" title={formatDate(internship.deadline || '')}>
+              {internship.deadline ? formatDate(internship.deadline) : 'Rolling Intake'}
+            </div>
+          </div>
         </div>
 
         {/* Role Overview */}
         {description && (
           <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
               Role Overview
             </h3>
-            <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
+            <p className="text-xs sm:text-sm text-[#2c3f77] leading-relaxed whitespace-pre-line font-body">
               {description}
             </p>
           </div>
@@ -195,15 +246,15 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
 
         {/* Key Responsibilities */}
         {responsibilities.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
+          <div className="space-y-2.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
               Key Responsibilities
             </h3>
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {responsibilities.map((resp, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#3f58b2] mt-1.5 shrink-0" />
-                  <span>{resp}</span>
+                <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                  <span className="w-2 h-2 rounded-full bg-[#2563eb] mt-1.5 shrink-0" />
+                  <span className="leading-relaxed flex-1 break-words">{resp}</span>
                 </li>
               ))}
             </ul>
@@ -212,65 +263,75 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
 
         {/* Requirements */}
         {requirements.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
+          <div className="space-y-2.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
               Candidate Requirements
             </h3>
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {requirements.map((req, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                  <span>{req}</span>
+                <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-[#2563eb] mt-0.5 shrink-0" />
+                  <span className="leading-relaxed flex-1 break-words">{req}</span>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* Perks & Mentorship */}
+        {/* Perks & Learning Opportunities (Spacious, No Overlap) */}
         {perks.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
-              Perks &amp; Learning
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
+                Perks &amp; Learning Opportunities
+              </h3>
+              <span className="text-[10px] font-bold text-[#1d4ed8] bg-[#f0f7ff] px-2 py-0.5 rounded-md border border-[#3f58b2]/20">
+                {perks.length} Benefits
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {perks.map((perk, idx) => (
-                <span
+                <div
                   key={idx}
-                  className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[#f0f7ff] text-[#3f58b2] border border-[#607ef2]/20"
+                  className="bg-[#f8fbff] p-3 rounded-xl border border-[#dbeafe] flex items-start gap-2.5 text-xs text-slate-700 shadow-2xs hover:border-[#3f58b2]/40 transition-colors"
                 >
-                  ✓ {perk}
-                </span>
+                  <div className="w-5 h-5 rounded-md bg-white border border-[#3f58b2]/20 text-[#2563eb] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <Check className="w-3.5 h-3.5 text-[#2563eb]" />
+                  </div>
+                  <span className="font-semibold text-[#021F53] leading-snug break-words flex-1">
+                    {perk}
+                  </span>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Cross-Sell Mentorship Widget */}
+        {/* Mentorship Match Card */}
         {matchingCoaches.length > 0 && (
-          <div className="pt-4 border-t border-slate-100 space-y-3 pb-6">
+          <div className="pt-4 border-t border-slate-100 space-y-3 pb-4">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#021F53]">
-              <Target className="w-3.5 h-3.5 text-[#3f58b2]" />
+              <Target className="w-4 h-4 text-[#2563eb]" />
               <span>Need Mock Interview Prep?</span>
             </div>
-            <p className="text-[11px] text-slate-600">
-              Book a 1-on-1 mock interview with industry mentors specializing in {internship.field}:
+            <p className="text-xs text-slate-600 leading-normal">
+              Book a 1-on-1 mock interview with industry mentors specializing in <strong>{internship.field}</strong>:
             </p>
             <div className="space-y-2">
               {matchingCoaches.map((c) => (
                 <div
                   key={c.slug}
-                  className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-3"
+                  className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     {c.avatar_url ? (
                       <img
                         src={c.avatar_url}
                         alt={c.display_name}
-                        className="w-8 h-8 rounded-lg object-cover"
+                        className="w-9 h-9 rounded-lg object-cover shrink-0"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-[#021F53] text-white font-bold flex items-center justify-center text-xs">
+                      <div className="w-9 h-9 rounded-lg bg-[#021F53] text-white font-bold flex items-center justify-center text-xs shrink-0">
                         {c.display_name.charAt(0)}
                       </div>
                     )}
@@ -283,9 +344,9 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
                     <button
                       type="button"
                       onClick={() => onBookCoach(c)}
-                      className="px-3 py-1 bg-[#021F53] text-white text-[11px] font-bold rounded-lg hover:bg-[#3f58b2] transition-colors cursor-pointer"
+                      className="px-3.5 py-1.5 bg-[#021F53] hover:bg-[#2563eb] text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shrink-0"
                     >
-                      Book
+                      Book 1-on-1
                     </button>
                   )}
                 </div>

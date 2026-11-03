@@ -53,8 +53,8 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               <h3 className="text-sm sm:text-base font-bold text-[#021F53] font-headline hover:text-[#3f58b2] transition-colors">
                 {coach.display_name}
               </h3>
-              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px] font-bold text-amber-950">
-                <Star className="w-3 h-3 fill-[#ff9b00] text-[#ff9b00]" />
+              <div className="flex items-center gap-1 bg-[#f0f7ff] border border-[#607ef2]/20 px-2 py-0.5 rounded-md text-[11px] font-bold text-[#021F53]">
+                <Star className="w-3 h-3 fill-[#2563eb] text-[#2563eb]" />
                 <span>{ratingDisplay}</span>
                 <span className="text-slate-500 font-normal">({coach.rating_count})</span>
               </div>
@@ -105,9 +105,9 @@ export const CoachCard: React.FC<CoachCardProps> = ({
                 e.stopPropagation();
                 onBook(coach);
               }}
-              className="px-4 py-2 bg-[#021F53] hover:bg-[#3f58b2] text-white text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              className="tactile-btn-primary px-4.5 py-2 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
             >
-              <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" />
+              <Calendar className="w-3.5 h-3.5 text-white" />
               <span>Book 1-on-1</span>
             </button>
           )}
@@ -137,8 +137,8 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               <h3 className="text-base font-bold text-[#021F53] group-hover:text-[#3f58b2] transition-colors truncate font-headline">
                 {coach.display_name}
               </h3>
-              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-xs font-bold text-amber-950 flex-shrink-0">
-                <Star className="w-3 h-3 fill-[#ff9b00] text-[#ff9b00]" />
+              <div className="flex items-center gap-1 bg-[#f0f7ff] border border-[#607ef2]/20 px-2 py-0.5 rounded-md text-xs font-bold text-[#021F53] flex-shrink-0">
+                <Star className="w-3 h-3 fill-[#2563eb] text-[#2563eb]" />
                 <span>{ratingDisplay}</span>
                 <span className="text-slate-500 font-normal text-[10px]">({coach.rating_count})</span>
               </div>
@@ -148,7 +148,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               {coach.headline}
             </p>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              {coach.price_type === 'free' ? 'Pro-bono Mentor' : 'Verified Coach'}
+              {coach.price_type === 'free' ? 'Pro-bono Mentor' : 'Career Coach'}
             </p>
           </div>
         </div>
@@ -205,9 +205,9 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               e.stopPropagation();
               onBook(coach);
             }}
-            className="tactile-btn-midnight px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
+            className="tactile-btn-primary px-4.5 py-2 rounded-xl text-xs font-bold text-white shadow-md flex items-center gap-1.5 cursor-pointer"
           >
-            <Calendar className="w-3.5 h-3.5 text-[#ff9b00]" />
+            <Calendar className="w-3.5 h-3.5 text-white" />
             <span>Book Session</span>
           </button>
         )}

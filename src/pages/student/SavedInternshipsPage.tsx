@@ -34,7 +34,7 @@ export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navi
             Your bookmarked opportunities and upcoming application deadlines.
           </p>
         </div>
-        <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] font-bold px-3 py-1.5 rounded-full border border-[#607ef2]/20">
+        <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] font-bold px-3 py-1.5 rounded-md border border-[#607ef2]/20">
           {savedRoles.length} Saved
         </span>
       </div>
@@ -45,7 +45,7 @@ export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navi
         </div>
       ) : savedRoles.length === 0 ? (
         <div className="bg-white rounded-2xl p-16 text-center border border-[#3f58b2]/10 shadow-soft space-y-4">
-          <div className="w-16 h-16 rounded-full bg-[#f0f7ff] text-[#ff9b00] flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
             <Bookmark className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-bold text-[#021F53]">No Saved Internships Yet</h3>
@@ -55,7 +55,7 @@ export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navi
           <button
             type="button"
             onClick={() => navigate('/internships')}
-            className="px-6 py-2.5 bg-[#3f58b2] text-white font-bold text-xs rounded-xl shadow-xs hover:bg-[#021F53] cursor-pointer"
+            className="tactile-btn-primary px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
           >
             Explore Directory
           </button>

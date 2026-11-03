@@ -87,8 +87,8 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
               </h1>
               <p className="text-sm font-semibold text-[#3f58b2]">{coach.headline}</p>
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
-                <div className="flex items-center gap-1 text-amber-900 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                  <Star className="w-3.5 h-3.5 fill-[#ff9b00] text-[#ff9b00]" />
+                <div className="flex items-center gap-1 text-[#021F53] font-bold bg-[#f0f7ff] px-2 py-0.5 rounded-md border border-[#607ef2]/20">
+                  <Star className="w-3.5 h-3.5 fill-[#2563eb] text-[#2563eb]" />
                   <span>{ratingAvg}</span>
                   <span className="text-slate-400 font-normal">({coach.rating_count} reviews)</span>
                 </div>
@@ -112,9 +112,9 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
             <button
               type="button"
               onClick={() => setIsBookingOpen(true)}
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="tactile-btn-primary w-full sm:w-auto px-8 py-3.5 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Calendar className="w-4 h-4 text-[#ff9b00]" />
+              <Calendar className="w-4 h-4 text-white" />
               <span>Book a Session</span>
             </button>
           )}
@@ -164,7 +164,7 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
                     {formatPHP(st.price_centavos)}
                   </div>
                   {st.is_intro_call && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#ff9b00]/15 text-[#ff9b00] border border-[#ff9b00]/30">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#f0f7ff] text-[#1d4ed8] border border-[#607ef2]/30">
                       Intro Call
                     </span>
                   )}
@@ -223,9 +223,9 @@ export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate
                 className="bg-white rounded-2xl p-6 border border-[#3f58b2]/10 shadow-xs space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-[#ff9b00]">
+                  <div className="flex items-center gap-1 text-[#2563eb]">
                     {Array.from({ length: rev.rating }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-[#ff9b00]" />
+                      <Star key={i} className="w-4 h-4 fill-[#2563eb]" />
                     ))}
                   </div>
                   <span className="text-[11px] text-slate-400">{formatDate(rev.created_at)}</span>

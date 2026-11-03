@@ -12,7 +12,8 @@
       "*.ts",
       "*.json",
       "!dist",
-      "!node_modules"
+      "!node_modules",
+      "!src/routeTree.gen.ts"
     ]
   },
   "formatter": {

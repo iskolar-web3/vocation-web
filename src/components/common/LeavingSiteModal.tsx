@@ -59,6 +59,11 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
       return;
     }
 
+    if (!/^https?:\/\//i.test(destinationUrl)) {
+      console.error('Invalid destination URL protocol');
+      return;
+    }
+
     recordApplyClickMutation.mutate({
       internshipId: internship.id,
       referrerSurface: referrerSurface,
@@ -99,11 +104,11 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
         </div>
 
         <div className="space-y-3 text-xs text-[#2c3f77] leading-relaxed">
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
-            <AlertCircle className="w-4 h-4 text-[#ff9b00] shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#f0f7ff] border border-[#607ef2]/20 text-[#021F53]">
+            <AlertCircle className="w-4 h-4 text-[#2563eb] shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold block">Important Notice (Zero Application Storage):</span>
-              iSkolar Vocation does not store student resumes or job applications on its servers. You are being redirected to the employer's official careers portal to submit your documents directly.
+              <span className="font-bold block">Important Notice (Direct Employer Redirection):</span>
+              iSkolar Vocation does not store or process job applications for this role. You are being redirected to the employer's official recruitment portal to submit your application directly.
             </div>
           </div>
 
@@ -125,7 +130,7 @@ export const LeavingSiteModal: React.FC<LeavingSiteModalProps> = ({
             type="button"
             onClick={handleProceed}
             disabled={isLoadingDetail && !destinationUrl}
-            className="px-6 py-2.5 bg-[#021F53] hover:bg-[#002774] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="tactile-btn-primary px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {isLoadingDetail && !destinationUrl ? (
               <>

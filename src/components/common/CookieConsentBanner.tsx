@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Cookie } from 'lucide-react';
 import { getStoredConsent, setStoredConsent } from '../../lib/analytics';
+import { useNavigate } from '@tanstack/react-router';
 
 interface CookieConsentBannerProps {
-  navigate: (path: string) => void;
+  navigate?: (path: string) => void;
 }
 
-export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ navigate }) => {
+export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ navigate: propNavigate }) => {
+  const routerNavigate = useNavigate();
+  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -32,41 +35,34 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ naviga
     <div
       role="region"
       aria-label="Cookie consent banner"
-      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md bg-white rounded-2xl p-5 border border-slate-200 shadow-soft z-50 animate-fadeIn"
+      className="fixed bottom-3 right-3 left-3 sm:left-auto sm:right-4 sm:max-w-[300px] bg-white rounded-xl p-3 border border-slate-200/90 shadow-lift z-50 animate-fadeIn space-y-2"
     >
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl bg-[#f0f7ff] border border-[#607ef2]/20 flex items-center justify-center text-[#3f58b2] shrink-0 mt-0.5">
-          <Cookie className="w-4 h-4 text-[#ff9b00]" />
-        </div>
-        <div className="space-y-1.5 flex-1">
-          <h4 className="text-xs font-bold text-[#021F53] font-headline">
-            Cookie &amp; Analytics Consent
-          </h4>
-          <p className="text-[11px] text-slate-600 leading-relaxed">
-            We use privacy-friendly Google Analytics with Consent Mode to track booking funnel performance without storing personal data. Read our{' '}
-            <button
-              type="button"
-              onClick={() => navigate('/privacy')}
-              className="text-[#3f58b2] underline font-semibold hover:text-[#021F53] cursor-pointer"
-            >
-              Privacy Policy
-            </button>.
-          </p>
-        </div>
+      <div className="flex items-start gap-2">
+        <Cookie className="w-3.5 h-3.5 text-[#2563eb] shrink-0 mt-0.5" />
+        <p className="text-[10px] text-slate-600 leading-snug flex-1">
+          We use analytics to improve your experience. Read our{' '}
+          <button
+            type="button"
+            onClick={() => navigate('/privacy')}
+            className="text-[#1d4ed8] underline font-medium hover:text-[#021F53] cursor-pointer"
+          >
+            Privacy Policy
+          </button>.
+        </p>
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-100">
         <button
           type="button"
           onClick={handleDecline}
-          className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="px-2 py-1 rounded-md text-[10px] font-semibold text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
         >
           Decline
         </button>
         <button
           type="button"
           onClick={handleAccept}
-          className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-[#021F53] hover:bg-[#002774] shadow-xs transition-colors cursor-pointer"
+          className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white bg-[#021F53] hover:bg-[#1d4ed8] shadow-2xs transition-colors cursor-pointer"
         >
           Accept Analytics
         </button>

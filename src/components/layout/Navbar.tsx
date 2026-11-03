@@ -13,13 +13,19 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSavedInternships, useStudentBookings } from '../../services/queries';
+import { useNavigate, useLocation } from '@tanstack/react-router';
+import { FontDirectionSwitcher } from '../common/FontDirectionSwitcher';
 
 interface NavbarProps {
-  currentPath: string;
-  navigate: (path: string) => void;
+  currentPath?: string;
+  navigate?: (path: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentPath: propCurrentPath, navigate: propNavigate }) => {
+  const routerNavigate = useNavigate();
+  const location = useLocation();
+  const currentPath = propCurrentPath ?? location.pathname;
+  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
   const { user, role, userName, avatar, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -30,8 +36,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
   const { data: studentBookings } = useStudentBookings('upcoming', { enabled: isStudent });
 
   const savedCount = savedList?.length || 0;
-  const pendingCount = (studentBookings || []).filter(
-    (b) => b.status === 'pending' || b.payment_status === 'pending'
+  // Reflect all active booked mentorship sessions
+  const bookingsCount = (studentBookings || []).filter(
+    (b) => b.status !== 'cancelled'
   ).length;
 
   const handleNav = (path: string) => {
@@ -52,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
       {/* Top Banner */}
       <div className="bg-[#021F53] text-white px-4 sm:px-8 py-1.5 text-xs flex items-center justify-between border-b border-[#3f58b2]/20">
         <div className="flex items-center gap-2.5">
-          <span className="bg-[#ff9b00] text-[#021F53] font-bold px-2 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-accent shadow-2xs">
+          <span className="bg-[#2563eb] text-white font-bold px-2 py-0.5 rounded-md text-[10px] tracking-wider uppercase font-accent shadow-2xs">
             Vocation
           </span>
           <span className="text-slate-300 hidden md:inline text-[11px] font-medium">
@@ -61,9 +68,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
         </div>
 
         <div className="flex items-center gap-3 text-[11px] text-slate-300">
+          <FontDirectionSwitcher compact />
           {isAuthenticated ? (
             <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span className="w-2 h-2 rounded-full bg-[#60a5fa] inline-block shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
               Signed in as <strong className="text-white capitalize">{user?.role}</strong>
             </span>
           ) : (
@@ -91,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <span className="font-display text-xl text-[#021F53] tracking-tight block leading-tight">
                 iSkolar <span className="text-[#3f58b2]">Vocation</span>
               </span>
-              <span className="text-[10px] font-bold text-[#ff9b00] tracking-wider uppercase block -mt-0.5 font-accent">
+              <span className="text-[10px] font-bold text-[#607ef2] tracking-wider uppercase block -mt-0.5 font-accent">
                 Internships &amp; Coaching
               </span>
             </div>
@@ -152,12 +160,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleNav('/app/saved')}
-                  className="relative p-2 text-[#2c3f77] hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-full transition-colors cursor-pointer"
+                  className="relative p-2 text-[#2c3f77] hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-xl transition-colors cursor-pointer"
                   title="Saved Internships"
                 >
                   <Bookmark className="w-4 h-4" />
                   {savedCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-[#ff9b00] text-[#021F53] text-[9px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-[#2563eb] text-white text-[9px] font-bold rounded-md flex items-center justify-center">
                       {savedCount}
                     </span>
                   )}
@@ -165,13 +173,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
 
                 <button
                   onClick={() => handleNav('/app/bookings')}
-                  className="relative p-2 text-[#2c3f77] hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-full transition-colors cursor-pointer"
+                  className="relative p-2 text-[#2c3f77] hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-xl transition-colors cursor-pointer"
                   title="My Bookings"
                 >
                   <Calendar className="w-4 h-4" />
-                  {pendingCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-[#607ef2] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {pendingCount}
+                  {bookingsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-[#2563eb] text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-xs">
+                      {bookingsCount}
                     </span>
                   )}
                 </button>
@@ -179,7 +187,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 transition-all text-xs font-bold text-[#021F53] cursor-pointer"
+                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 transition-all text-xs font-bold text-[#021F53] cursor-pointer"
                   >
                     {avatar ? (
                       <img
@@ -206,10 +214,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                       </button>
                       <button
                         onClick={() => handleNav('/app/bookings')}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center justify-between"
                       >
-                        <Calendar className="w-4 h-4" />
-                        <span>My Bookings</span>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>My Bookings</span>
+                        </div>
+                        {bookingsCount > 0 && (
+                          <span className="bg-[#f0f7ff] text-[#2563eb] border border-[#2563eb]/20 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                            {bookingsCount}
+                          </span>
+                        )}
                       </button>
                       <button
                         onClick={() => handleNav('/app/saved')}
@@ -264,7 +279,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                   onClick={() => handleNav('/admin/listings')}
                   className="px-4 py-2 rounded-xl bg-[#021F53] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
-                  <ShieldAlert className="w-4 h-4 text-[#ff9b00]" />
+                  <ShieldAlert className="w-4 h-4 text-[#607ef2]" />
                   <span>Moderation Queue</span>
                 </button>
                 <button
@@ -287,7 +302,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 </button>
                 <button
                   onClick={() => handleNav('/signup')}
-                  className="tactile-btn-honey px-4 py-2 text-xs rounded-xl flex items-center cursor-pointer"
+                  className="tactile-btn-primary px-5 py-2 text-xs font-bold rounded-xl flex items-center cursor-pointer shadow-md text-white"
                 >
                   Get Started
                 </button>
@@ -337,7 +352,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
               onClick={() => handleNav('/coaches')}
               className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
             >
-              <Award className="w-4 h-4 text-[#ff9b00]" />
+              <Award className="w-4 h-4 text-[#3f58b2]" />
               <span>Find a Coach</span>
             </button>
           </div>
@@ -358,9 +373,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                     </button>
                     <button
                       onClick={() => handleNav('/app/bookings')}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff] flex items-center justify-between"
                     >
-                      My Bookings
+                      <span>My Bookings</span>
+                      {bookingsCount > 0 && (
+                        <span className="bg-[#2563eb] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {bookingsCount}
+                        </span>
+                      )}
                     </button>
                     <button
                       onClick={() => handleNav('/app/saved')}
@@ -404,7 +424,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, navigate }) => {
                 </button>
                 <button
                   onClick={() => handleNav('/signup')}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-[#3f58b2] text-center"
+                  className="tactile-btn-primary w-full py-2.5 rounded-xl text-xs font-bold text-white text-center shadow-md"
                 >
                   Get Started
                 </button>

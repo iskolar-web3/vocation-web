@@ -35,28 +35,28 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
     switch (status) {
       case 'open':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#1d4ed8] border border-[#607ef2]/30">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#2563eb]" />
             <span>Open (Public)</span>
           </span>
         );
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
-            <Clock className="w-3.5 h-3.5 text-[#ff9b00]" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/20">
+            <Clock className="w-3.5 h-3.5 text-[#2563eb]" />
             <span>Pending Review</span>
           </span>
         );
       case 'rejected':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200">
             <XCircle className="w-3.5 h-3.5" />
             <span>Needs Revision</span>
           </span>
         );
       case 'withdrawn':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
             <Ban className="w-3.5 h-3.5 text-slate-500" />
             <span>Withdrawn</span>
           </span>
@@ -127,7 +127,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                     </td>
                     <td className="px-5 py-4">
                       {item.is_paid ? (
-                        <span className="font-bold text-emerald-700">
+                        <span className="font-bold text-[#021F53]">
                           {(item as any).compensation_details || ((item as any).stipend_amount ? `${formatPesos((item as any).stipend_amount)}/${(item as any).stipend_period || 'mo'}` : 'Paid')}
                         </span>
                       ) : (
@@ -181,7 +181,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
             <button
               type="button"
               onClick={() => setWithdrawModalItem(null)}
-              className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-full cursor-pointer"
+              className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer"
             >
               Cancel
             </button>
@@ -189,7 +189,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
               type="button"
               onClick={handleConfirmWithdraw}
               disabled={withdrawMutation.isPending}
-              className="px-5 py-2 bg-rose-600 text-white font-bold text-xs rounded-full hover:bg-rose-700 cursor-pointer"
+              className="px-5 py-2 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 cursor-pointer"
             >
               Confirm Withdraw
             </button>

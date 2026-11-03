@@ -91,7 +91,7 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f0f7ff] text-[#3f58b2] text-xs font-bold uppercase tracking-wider font-accent border border-[#3f58b2]/20">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#f0f7ff] text-[#3f58b2] text-xs font-bold uppercase tracking-wider font-accent border border-[#3f58b2]/20">
             <Compass className="w-3.5 h-3.5 text-[#3f58b2]" />
             <span>Coaching Focus Tracks</span>
           </div>
@@ -116,7 +116,7 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-[#ff9b00]' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-[#2563eb]' : 'text-slate-400'}`} />
                 <span>{topic.label}</span>
               </button>
             );
@@ -129,7 +129,7 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
         {/* Left Side: Topic Syllabus & 60-min Breakdown */}
         <div className="lg:col-span-7 space-y-6">
           <div className="space-y-2">
-            <span className="stamp-badge bg-amber-50 text-amber-950 border border-amber-300">
+            <span className="stamp-badge bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/20 font-bold">
               {currentTopic.badge}
             </span>
             <h4 className="text-lg sm:text-xl font-bold text-[#021F53] font-headline">
@@ -161,13 +161,13 @@ export const SessionTopicMatcher: React.FC<SessionTopicMatcherProps> = ({
           </div>
         </div>
 
-        {/* Right Side: Matched Verified Coaches */}
+        {/* Right Side: Matched Coaches */}
         <div className="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
             <span className="text-xs font-bold text-[#021F53] uppercase tracking-wider font-headline">
               Specialized Coaches for this Track
             </span>
-            <span className="text-[11px] font-semibold text-emerald-700">Live Slots Available</span>
+            <span className="text-[11px] font-semibold text-[#1d4ed8]">Live Slots Available</span>
           </div>
 
           <div className="space-y-3">

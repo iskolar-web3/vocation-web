@@ -133,6 +133,9 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
         // Free session (confirmed without payment)
         analytics.bookingConfirmed(true, 'none');
         setConfirmedBooking(result);
+        if (onBookingSuccess) {
+          onBookingSuccess();
+        }
       } else if (result.checkout_url) {
         // Paid session -> redirect directly to hosted checkout or success page
         window.location.href = result.checkout_url;
@@ -167,7 +170,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
     >
       {confirmedBooking ? (
         <div className="py-8 text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-full bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/30 flex items-center justify-center mx-auto shadow-inner">
             <CheckCircle2 className="w-10 h-10" />
           </div>
           <h3 className="text-2xl font-bold text-[#021F53] font-headline">
@@ -185,7 +188,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             </div>
             <div className="flex justify-between text-xs text-slate-600">
               <span>Status:</span>
-              <span className="font-bold text-emerald-600 capitalize">{confirmedBooking.status}</span>
+              <span className="font-bold text-[#2563eb] capitalize">{confirmedBooking.status}</span>
             </div>
             <div className="flex justify-between text-xs text-slate-600">
               <span>Timezone:</span>
@@ -254,7 +257,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
                         <div className="flex items-center gap-2">
                           <h5 className="font-bold text-sm text-[#021F53]">{st.name}</h5>
                           {st.is_intro_call && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#ff9b00]/15 text-[#ff9b00] border border-[#ff9b00]/30">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#f0f7ff] text-[#1d4ed8] border border-[#607ef2]/30">
                               Intro Call
                             </span>
                           )}
@@ -354,8 +357,8 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
           </div>
 
           {role === 'coach' && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <div className="p-3 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-xs text-[#021F53] flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-[#2563eb] flex-shrink-0" />
               <span>Coach accounts cannot book mentoring sessions. Please sign in with a student account to book.</span>
             </div>
           )}
@@ -374,20 +377,18 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
               type="button"
               onClick={handleProceed}
               disabled={role === 'coach' || !selectedSlot || createBookingMutation.isPending}
-              className={`${
-                isFree ? 'tactile-btn-midnight' : 'tactile-btn-honey'
-              } px-6 py-3 rounded-xl text-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-soft`}
+              className="tactile-btn-primary px-6 py-3 rounded-xl text-xs font-bold text-white flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
             >
               {createBookingMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : isFree ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-[#ff9b00]" />
+                  <CheckCircle2 className="w-4 h-4 text-white" />
                   <span>Confirm Free Booking</span>
                 </>
               ) : (
                 <>
-                  <CreditCard className="w-4 h-4 text-[#021F53]" />
+                  <CreditCard className="w-4 h-4 text-white" />
                   <span>Proceed to Payment</span>
                 </>
               )}

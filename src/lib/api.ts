@@ -1,4 +1,5 @@
 import { ApiResponse, PaginationMeta } from '../types/api';
+import { z } from 'zod';
 
 const LIVE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -16,8 +17,9 @@ export class ApiError extends Error {
   }
 }
 
-export interface ApiFetchOptions extends RequestInit {
+export interface ApiFetchOptions<T = any> extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null>;
+  schema?: z.ZodType<any>;
 }
 
 export interface ApiFetchResult<T> {
@@ -81,16 +83,10 @@ export async function apiFetch<T>(
     }
   }
 
-  const sessionId = typeof window !== 'undefined' ? localStorage.getItem('vocation_session_id') : null;
-
   const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
-
-  if (sessionId) {
-    defaultHeaders['X-Session-Id'] = sessionId;
-  }
 
   const config: RequestInit = {
     method: 'GET',
@@ -131,18 +127,18 @@ export async function apiFetch<T>(
       );
     }
 
-    // Persist session_id on successful auth
-    if (typeof window !== 'undefined') {
-      const cleanEp = endpoint.split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
-      if ((cleanEp === 'auth/signin' || cleanEp === 'auth/signup') && payload.data && (payload.data as any).session_id) {
-        localStorage.setItem('vocation_session_id', (payload.data as any).session_id);
-      } else if (cleanEp === 'auth/signout') {
-        localStorage.removeItem('vocation_session_id');
+    let parsedData = payload.data;
+    if (options.schema && parsedData !== null && parsedData !== undefined) {
+      const parseResult = options.schema.safeParse(parsedData);
+      if (!parseResult.success) {
+        console.warn(`[apiFetch] Schema validation drift on ${endpoint}:`, parseResult.error.format());
+      } else {
+        parsedData = parseResult.data;
       }
     }
 
     return {
-      data: payload.data,
+      data: parsedData,
       message: payload.message || 'ok',
       meta: payload.meta,
     };
@@ -180,31 +176,31 @@ export async function apiFetch<T>(
 }
 
 export const api = {
-  get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined | null>, options?: ApiFetchOptions) {
+  get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined | null>, options?: ApiFetchOptions<T>) {
     return apiFetch<T>(endpoint, { method: 'GET', params, ...options });
   },
-  post<T>(endpoint: string, body?: any, options?: ApiFetchOptions) {
+  post<T>(endpoint: string, body?: any, options?: ApiFetchOptions<T>) {
     return apiFetch<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
       ...options,
     });
   },
-  put<T>(endpoint: string, body?: any, options?: ApiFetchOptions) {
+  put<T>(endpoint: string, body?: any, options?: ApiFetchOptions<T>) {
     return apiFetch<T>(endpoint, {
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,
       ...options,
     });
   },
-  patch<T>(endpoint: string, body?: any, options?: ApiFetchOptions) {
+  patch<T>(endpoint: string, body?: any, options?: ApiFetchOptions<T>) {
     return apiFetch<T>(endpoint, {
       method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
       ...options,
     });
   },
-  delete<T>(endpoint: string, options?: ApiFetchOptions) {
+  delete<T>(endpoint: string, options?: ApiFetchOptions<T>) {
     return apiFetch<T>(endpoint, { method: 'DELETE', ...options });
   },
 };

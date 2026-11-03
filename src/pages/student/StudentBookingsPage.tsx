@@ -154,15 +154,15 @@ export const StudentBookingsPage: React.FC<StudentBookingsPageProps> = ({ naviga
       )}
 
       {cancelSuccessMsg && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-xs text-emerald-800">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+        <div className="p-3.5 bg-[#f0f7ff] border border-[#607ef2]/30 rounded-xl flex items-start gap-2.5 text-xs text-[#021F53]">
+          <CheckCircle2 className="w-4 h-4 text-[#2563eb] shrink-0 mt-0.5" />
           <div className="flex-1">
             <span className="font-semibold">{cancelSuccessMsg}</span>
           </div>
           <button
             type="button"
             onClick={() => setCancelSuccessMsg(null)}
-            className="text-emerald-700 hover:text-emerald-900 font-bold ml-2 cursor-pointer"
+            className="text-[#2563eb] hover:text-[#021F53] font-bold ml-2 cursor-pointer"
           >
             ×
           </button>
@@ -216,7 +216,7 @@ export const StudentBookingsPage: React.FC<StudentBookingsPageProps> = ({ naviga
             {activeWhen === 'upcoming' && (
               <button
                 onClick={() => navigate('/coaches')}
-                className="mt-2 px-5 py-2 bg-[#f0f7ff] text-[#3f58b2] font-bold text-xs rounded-xl border border-[#3f58b2]/20 cursor-pointer hover:bg-[#e0efff]"
+                className="mt-2 px-5 py-2.5 tactile-btn-primary text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
               >
                 Browse Coaches
               </button>
@@ -262,15 +262,15 @@ export const StudentBookingsPage: React.FC<StudentBookingsPageProps> = ({ naviga
                 <div
                   className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
                     preview.isEligible
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                      ? 'bg-[#f0f7ff] border-[#607ef2]/40 text-[#021F53]'
+                      : 'bg-slate-50 border-slate-200 text-slate-700'
                   }`}
                 >
                   <div className="font-bold flex items-center gap-1.5">
                     {preview.isEligible ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <CheckCircle2 className="w-4 h-4 text-[#2563eb]" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-amber-600" />
+                      <AlertCircle className="w-4 h-4 text-slate-500" />
                     )}
                     <span>Refund Assessment</span>
                   </div>

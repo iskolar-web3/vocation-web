@@ -28,6 +28,7 @@ interface InternshipDirectoryPageProps {
   initialQuery?: string;
   initialField?: string;
   initialSetup?: string;
+  onFiltersChange?: (newFilters: FilterState) => void;
 }
 
 export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = ({
@@ -35,6 +36,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
   initialQuery = '',
   initialField = '',
   initialSetup = 'all',
+  onFiltersChange,
 }) => {
   const [filters, setFilters] = useState<FilterState>({
     q: initialQuery,
@@ -44,6 +46,25 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
     minOjtHours: 'all',
     sort: 'newest',
   });
+
+  React.useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      q: initialQuery !== undefined ? initialQuery : prev.q,
+      field: initialField !== undefined ? initialField : prev.field,
+      setup: initialSetup !== undefined ? initialSetup : prev.setup,
+    }));
+  }, [initialQuery, initialField, initialSetup]);
+
+  const updateFilters = (updater: React.SetStateAction<FilterState>) => {
+    setFilters((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (onFiltersChange) {
+        onFiltersChange(next);
+      }
+      return next;
+    });
+  };
 
   const [viewMode, setViewMode] = useState<'split' | 'row' | 'grid'>('split');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -66,7 +87,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
   if (filters.minOjtHours && filters.minOjtHours !== 'all') {
     const minH = Number(filters.minOjtHours);
     internships = internships.filter((i) => {
-      const estimatedHours = (i as any).ojt_hours || (i.duration_weeks ? i.duration_weeks * 20 : 0);
+      const estimatedHours = i.ojt_hours || (i.duration_weeks ? i.duration_weeks * 20 : 0);
       return estimatedHours >= minH;
     });
   }
@@ -74,7 +95,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
   const currentDossierRole = activeDossierRole || internships[0] || null;
 
   const handleReset = () => {
-    setFilters({
+    updateFilters({
       q: '',
       field: '',
       setup: 'all',
@@ -107,14 +128,14 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
       <div className="bg-[#021F53] rounded-2xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
-              <Briefcase className="w-3.5 h-3.5 text-[#ff9b00]" />
+            <span className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-md text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent border border-white/15">
+              <Briefcase className="w-3.5 h-3.5 text-[#607ef2]" />
               <span>Verified OJT &amp; Internship Directory</span>
             </span>
             <button
               type="button"
               onClick={() => setIsCalculatorOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-[#ff9b00]/20 hover:bg-[#ff9b00]/30 border border-[#ff9b00]/40 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[#2563eb]/25 hover:bg-[#2563eb]/35 border border-[#607ef2]/40 px-3 py-1 rounded-md text-xs font-bold text-white transition-colors cursor-pointer"
             >
               <Calculator className="w-3.5 h-3.5" />
               <span>OJT Hours &amp; Allowance Calculator</span>
@@ -133,15 +154,15 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
             <input
               type="text"
               value={filters.q}
-              onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
+              onChange={(e) => updateFilters((prev) => ({ ...prev, q: e.target.value }))}
               placeholder="Search by role title, tech stack (React, Python, Go), company, or city..."
-              className="w-full pl-11 pr-10 py-3.5 bg-white text-[#021F53] font-medium text-xs sm:text-sm rounded-2xl shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ff9b00]"
+              className="w-full pl-11 pr-10 py-3.5 bg-white text-[#021F53] font-medium text-xs sm:text-sm rounded-2xl shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
             />
             {filters.q && (
               <button
                 type="button"
-                onClick={() => setFilters((prev) => ({ ...prev, q: '' }))}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
+                onClick={() => updateFilters((prev) => ({ ...prev, q: '' }))}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -155,8 +176,8 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
         {quickFieldPills.map((pill) => (
           <button
             key={pill.label}
-            onClick={() => setFilters((prev) => ({ ...prev, field: pill.value }))}
-            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            onClick={() => updateFilters((prev) => ({ ...prev, field: pill.value }))}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               filters.field === pill.value
                 ? 'bg-[#021F53] text-white shadow-2xs font-bold ring-2 ring-[#021F53]/20'
                 : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
@@ -173,7 +194,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
         <aside className="hidden md:block md:col-span-4 lg:col-span-3 space-y-6 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
           <InternshipFilters
             filters={filters}
-            setFilters={setFilters}
+            setFilters={updateFilters}
             totalResults={internships.length}
             onReset={handleReset}
           />
@@ -181,14 +202,14 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
           <button
             type="button"
             onClick={() => setIsCalculatorOpen(true)}
-            className="w-full p-4 rounded-2xl bg-[#002774] text-white border border-[#3f58b2]/30 hover:border-[#ff9b00]/50 transition-all text-left space-y-2 group cursor-pointer shadow-soft"
+            className="w-full p-4 rounded-2xl bg-[#002774] text-white border border-[#3f58b2]/30 hover:border-[#607ef2]/50 transition-all text-left space-y-2 group cursor-pointer shadow-soft"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold flex items-center gap-1.5 font-headline text-white">
-                <Calculator className="w-4 h-4 text-[#ff9b00]" />
+                <Calculator className="w-4 h-4 text-[#607ef2]" />
                 <span>OJT Hours Calculator</span>
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ff9b00] text-[#021F53] font-accent">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#2563eb] text-white font-accent">
                 Widget
               </span>
             </div>
@@ -262,9 +283,9 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
               <button
                 type="button"
                 onClick={() => setIsCalculatorOpen(true)}
-                className="sm:hidden px-3 py-1.5 bg-amber-50 text-amber-900 border border-amber-200 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
+                className="sm:hidden px-3 py-1.5 bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/20 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
               >
-                <Calculator className="w-3.5 h-3.5 text-[#ff9b00]" />
+                <Calculator className="w-3.5 h-3.5 text-[#2563eb]" />
                 <span>Calculator</span>
               </button>
             </div>
@@ -307,7 +328,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
                 </span>
               )}
               {filters.minOjtHours !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 font-semibold border border-amber-200">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#f0f7ff] text-[#021F53] font-semibold border border-[#607ef2]/20">
                   <span>Min OJT: {filters.minOjtHours}h</span>
                   <button type="button" onClick={() => setFilters((p) => ({ ...p, minOjtHours: 'all' }))} className="hover:text-rose-600">
                     <X className="w-3 h-3" />
@@ -356,27 +377,33 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
             </div>
           ) : viewMode === 'split' ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Master Stream */}
-              <div className="lg:col-span-6 space-y-3">
+              {/* Left Master Stream (5 cols) */}
+              <div className="lg:col-span-5 space-y-3">
                 {internships.map((internship) => (
                   <InternshipCard
                     key={internship.id}
                     internship={internship}
                     layout="split"
                     isSelected={currentDossierRole?.id === internship.id}
-                    onSelect={(i) => setActiveDossierRole(i)}
+                    onSelect={(i) => {
+                      setActiveDossierRole(i);
+                      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                        navigate(`/internships/${i.slug}`);
+                      }
+                    }}
                     onApply={(i) => setSelectedInternship(i)}
                   />
                 ))}
               </div>
 
-              {/* Right Detail Dossier */}
-              <div className="hidden lg:block lg:col-span-6 sticky top-24">
+              {/* Right Detail Dossier (7 cols) */}
+              <div className="hidden lg:block lg:col-span-7 sticky top-20">
                 {currentDossierRole && (
                   <InternshipDossier
                     internship={currentDossierRole}
                     onApplyOutbound={(i) => setSelectedInternship(i)}
                     onBookCoach={(c) => setBookingCoach(c)}
+                    navigate={navigate}
                   />
                 )}
               </div>
@@ -417,7 +444,7 @@ export const InternshipDirectoryPage: React.FC<InternshipDirectoryPageProps> = (
       >
         <InternshipFilters
           filters={filters}
-          setFilters={setFilters}
+          setFilters={updateFilters}
           totalResults={internships.length}
           onReset={handleReset}
           isMobileDrawer

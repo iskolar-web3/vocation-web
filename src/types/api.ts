@@ -44,20 +44,41 @@ export type PasswordResetConfirmRequest = Schemas['PasswordResetConfirmRequest']
 
 // Internships & Companies
 export type CompanySummary = Schemas['CompanySummary'];
-export type InternshipCard = Schemas['InternshipCard'];
-export type InternshipDetail = Schemas['InternshipDetail'];
-export type CompanyCard = Schemas['CompanyCard'];
-export type CompanyProfile = Schemas['CompanyProfile'];
-export type CompanyDetail = Schemas['CompanyProfile'];
+export type InternshipCard = Schemas['InternshipCard'] & {
+  ojt_hours?: number;
+  compensation_details?: string;
+};
+export type InternshipDetail = Schemas['InternshipDetail'] & {
+  ojt_hours?: number;
+  compensation_details?: string;
+  recommended_coach_slug?: string;
+};
+export type CompanyCard = Schemas['CompanyCard'] & {
+  banner_url?: string;
+  about?: string;
+  description?: string;
+  perks?: string[];
+};
+export type CompanyProfile = Schemas['CompanyProfile'] & {
+  banner_url?: string;
+  about?: string;
+  perks?: string[];
+};
+export type CompanyDetail = CompanyProfile;
+export type Company = CompanyProfile;
+export type Internship = InternshipDetail;
 export type ApplyClickRequest = Schemas['ApplyClickRequest'];
 
 // Coaching & Availability
 export type SessionType = Schemas['SessionType'];
-export type CoachCard = Schemas['CoachCard'];
+export type CoachCard = Schemas['CoachCard'] & {
+  primary_topic?: string;
+};
 export type CoachProfile = Schemas['CoachProfile'];
 export type CoachDetail = Schemas['CoachProfile'] & {
   available_slots?: Schemas['PublicAvailabilitySlot'][];
 };
+export type Coach = CoachDetail;
 export type PublicAvailabilitySlot = Schemas['PublicAvailabilitySlot'];
 export type AvailabilitySlot = Schemas['PublicAvailabilitySlot'];
 export type MyAvailabilitySlot = Schemas['MyAvailabilitySlot'];
@@ -89,13 +110,16 @@ export type Dashboard = Schemas['Dashboard'];
 export type StudentDashboardData = Schemas['Dashboard'];
 export type SavedInternship = Schemas['SavedInternship'];
 export type Settings = Schemas['Settings'];
-export type UpdateSettingsRequest = Schemas['UpdateSettingsRequest'];
+export type UpdateSettingsRequest = Schemas['UpdateSettingsRequest'] & {
+  current_password?: string;
+};
 
 // Bookings
 export type BookingResponse = Schemas['BookingResponse'];
 export type CreateBookingResponse = Schemas['BookingResponse'];
 export type StudentBooking = Schemas['StudentBooking'];
 export type BookingItem = Schemas['StudentBooking'];
+export type Booking = Schemas['StudentBooking'];
 export type CoachBooking = Schemas['CoachBooking'];
 export type CreateBookingRequest = Schemas['CreateBookingRequest'];
 export type PatchBookingRequest = Schemas['PatchBookingRequest'];

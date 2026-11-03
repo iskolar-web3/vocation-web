@@ -11,8 +11,8 @@ export const ModerationQueuePage: React.FC<ModerationQueuePageProps> = ({ naviga
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
       <div className="bg-[#021F53] rounded-2xl p-6 sm:p-10 text-white shadow-soft space-y-3">
-        <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider">
-          <ShieldAlert className="w-3.5 h-3.5 text-[#ff9b00]" />
+        <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-md text-xs font-bold text-[#607ef2] uppercase tracking-wider border border-white/15">
+          <ShieldAlert className="w-3.5 h-3.5 text-[#607ef2]" />
           <span>Platform Moderation Suite</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display">

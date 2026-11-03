@@ -36,8 +36,8 @@ export const CompaniesPage: React.FC<CompaniesPageProps> = ({ navigate }) => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
       <div className="bg-[#021F53] rounded-2xl p-6 sm:p-10 text-white shadow-soft space-y-3">
-        <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
-          <Building className="w-3.5 h-3.5" />
+        <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-md text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent border border-white/15">
+          <Building className="w-3.5 h-3.5 text-[#607ef2]" />
           <span>Employer Catalog</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold font-display">
@@ -55,7 +55,7 @@ export const CompaniesPage: React.FC<CompaniesPageProps> = ({ navigate }) => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by company name, location, or industry..."
-            className="w-full pl-12 pr-4 py-3.5 bg-white text-[#021F53] font-medium text-sm rounded-2xl shadow-md placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ff9b00]"
+            className="w-full pl-12 pr-4 py-3.5 bg-white text-[#021F53] font-medium text-sm rounded-2xl shadow-md placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
           />
         </div>
       </div>

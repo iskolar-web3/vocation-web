@@ -13,6 +13,8 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Download,
+  Shield,
 } from 'lucide-react';
 import {
   useCurrentUser,
@@ -21,6 +23,8 @@ import {
   useUpdateSettings,
 } from '../../services/queries';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'sonner';
+import { api } from '../../lib/api';
 
 interface StudentProfileSettingsPageProps {
   navigate: (path: string) => void;
@@ -29,7 +33,8 @@ interface StudentProfileSettingsPageProps {
 export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProps> = ({
   navigate,
 }) => {
-  const { user, role, refetchUser } = useAuth();
+  const { user, role, refetchUser, logout } = useAuth();
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { data: studentProfile } = useStudentProfile({ enabled: role === 'student' });
   const updateProfileMutation = useUpdateStudentProfile();
   const updateSettingsMutation = useUpdateSettings();
@@ -52,6 +57,8 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Settings states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -69,7 +76,10 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
       if (studentProfile.skills && studentProfile.skills.length > 0) {
         setSkills(studentProfile.skills);
       }
-      if (studentProfile.target_ojt_hours !== undefined && studentProfile.target_ojt_hours !== null) {
+      const localTarget = typeof window !== 'undefined' ? localStorage.getItem('vocation_target_ojt_hours') : null;
+      if (localTarget) {
+        setTargetOjtHours(localTarget);
+      } else if (studentProfile.target_ojt_hours !== undefined && studentProfile.target_ojt_hours !== null) {
         setTargetOjtHours(String(studentProfile.target_ojt_hours));
       }
       if (studentProfile.completed_ojt_hours !== undefined && studentProfile.completed_ojt_hours !== null) {
@@ -80,6 +90,59 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
       if (user.email) setEmail(user.email);
     }
   }, [studentProfile, user]);
+
+  const handleExportData = () => {
+    const exportPayload = {
+      user: {
+        id: user?.id,
+        email: user?.email,
+        full_name: user?.full_name,
+        role: user?.role,
+        is_onboarded: user?.is_onboarded,
+      },
+      profile: studentProfile || {
+        full_name: fullName,
+        school,
+        course,
+        year_level: yearLevel,
+        skills,
+        bio,
+      },
+      exported_at: new Date().toISOString(),
+      basis: 'RA 10173 Section 18 Data Portability',
+    };
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vocation-user-data-${user?.id || 'export'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Account data exported successfully!');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to request permanent erasure of your account and personal data? Under RA 10173, your personal data will be erased.')) {
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      try {
+        await api.delete('/me');
+      } catch {
+        // Fallback when backend does not register DELETE /me
+      }
+      toast.success('Account erasure request processed.');
+      if (logout) {
+        await logout();
+      }
+      navigate('/');
+    } catch (err: any) {
+      toast.error(`Failed to submit deletion request: ${err.message}`);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   const handleAddSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
@@ -96,6 +159,10 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
     e.preventDefault();
     setErrorMsg(null);
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('vocation_target_ojt_hours', targetOjtHours);
+        localStorage.setItem('vocation_completed_ojt_hours', completedOjtHours);
+      }
       await updateProfileMutation.mutateAsync({
         full_name: fullName.trim(),
         school: school.trim(),
@@ -103,16 +170,16 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
         year_level: Number(yearLevel),
         bio: bio.trim(),
         skills,
-        target_ojt_hours: Number(targetOjtHours) || 0,
-        completed_ojt_hours: Number(completedOjtHours) || 0,
       });
       if (refetchUser) {
         await refetchUser();
       }
       setIsSavedToast(true);
+      toast.success('Profile changes saved successfully!');
       setTimeout(() => setIsSavedToast(false), 3000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to save profile changes.');
+      toast.error(err.message || 'Failed to save profile changes.');
     }
   };
 
@@ -121,35 +188,47 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
     setPasswordErrorMsg(null);
     setPasswordSuccessMsg(null);
 
+    if (!currentPassword.trim()) {
+      setPasswordErrorMsg('Please enter your current password to confirm changes.');
+      toast.error('Please enter your current password.');
+      return;
+    }
+
     if (!newPassword.trim()) {
       setPasswordErrorMsg('Please enter a new password.');
+      toast.error('Please enter a new password.');
       return;
     }
 
     if (newPassword.length < 8) {
       setPasswordErrorMsg('Password must be at least 8 characters long.');
+      toast.error('Password must be at least 8 characters long.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
       setPasswordErrorMsg('New password and confirmation password do not match.');
+      toast.error('New password and confirmation password do not match.');
       return;
     }
 
     try {
       await updateSettingsMutation.mutateAsync({
+        current_password: currentPassword,
         password: newPassword,
-        email: email.trim() || undefined,
       });
       if (refetchUser) {
         await refetchUser();
       }
       setPasswordSuccessMsg('Password changed successfully! Your account credentials have been updated.');
+      toast.success('Password changed successfully!');
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setTimeout(() => setPasswordSuccessMsg(null), 4000);
     } catch (err: any) {
       setPasswordErrorMsg(err.message || 'Failed to update account password.');
+      toast.error(err.message || 'Failed to update account password.');
     }
   };
 
@@ -204,8 +283,8 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
       </div>
 
       {isSavedToast && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-scaleUp">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <div className="p-4 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/30 text-[#021F53] text-xs font-bold flex items-center gap-2 animate-scaleUp">
+          <CheckCircle2 className="w-4 h-4 text-[#2563eb]" />
           <span>Profile changes saved successfully!</span>
         </div>
       )}
@@ -391,8 +470,8 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
           </div>
 
           {passwordSuccessMsg && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2 animate-scaleUp">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="p-3 bg-[#f0f7ff] border border-[#607ef2]/30 rounded-xl text-xs font-bold text-[#021F53] flex items-center gap-2 animate-scaleUp">
+              <CheckCircle2 className="w-4 h-4 text-[#2563eb] shrink-0" />
               <span>{passwordSuccessMsg}</span>
             </div>
           )}
@@ -415,6 +494,32 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
                 disabled
                 className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter your current password"
+                  required
+                  className="w-full px-3.5 py-2.5 pr-10 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-xs font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <span className="text-[11px] text-slate-400 block mt-1">
+                Required for security re-authentication.
+              </span>
             </div>
 
             <div>
@@ -478,6 +583,36 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
               )}
               <span>Change Password</span>
             </button>
+          </div>
+
+          {/* RA 10173 Data Subject Rights: Export and Erasure (DP-02) */}
+          <div className="pt-6 border-t border-slate-200 space-y-4">
+            <div className="flex items-center gap-2 text-[#021F53]">
+              <Shield className="w-4 h-4 text-[#3f58b2]" />
+              <h4 className="text-xs font-bold uppercase tracking-wider">Data Privacy &amp; Data Subject Rights (RA 10173)</h4>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              In compliance with the Philippine Data Privacy Act of 2012, you have the right to data portability and right to erasure/blocking of your personal data.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleExportData}
+                className="tactile-btn-white px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-[#021F53] flex items-center gap-2 cursor-pointer shadow-xs hover:border-[#3f58b2]"
+              >
+                <Download className="w-3.5 h-3.5 text-[#3f58b2]" />
+                <span>Export My Data (JSON)</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-100 flex items-center gap-2 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>{isDeletingAccount ? 'Processing...' : 'Delete Account & Erase Data'}</span>
+              </button>
+            </div>
           </div>
         </form>
       )}

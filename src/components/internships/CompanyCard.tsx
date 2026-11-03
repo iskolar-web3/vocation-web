@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, ArrowRight, Briefcase } from 'lucide-react';
+import { MapPin, ArrowRight, Briefcase, Check } from 'lucide-react';
 import { CompanyCard as CompanyCardType, CompanyDetail } from '../../types/api';
 
 interface CompanyCardProps {
@@ -54,16 +54,19 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company, onSelect }) =
           </p>
         )}
 
-        {/* Perks Tags */}
+        {/* Key Benefits */}
         {perks.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
             {perks.slice(0, 2).map((perk, idx) => (
-              <span
+              <div
                 key={idx}
-                className="stamp-badge bg-slate-50 text-slate-700 border border-slate-200 text-[10px]"
+                className="bg-[#f8fbff] px-2.5 py-1.5 rounded-lg border border-[#dbeafe] flex items-center gap-2 text-[11px] text-[#021F53] font-medium"
               >
-                ✓ {perk}
-              </span>
+                <div className="w-3.5 h-3.5 rounded bg-white border border-[#3f58b2]/20 text-[#2563eb] flex items-center justify-center shrink-0 shadow-2xs">
+                  <Check className="w-2.5 h-2.5 text-[#2563eb]" />
+                </div>
+                <span className="truncate">{perk}</span>
+              </div>
             ))}
           </div>
         )}

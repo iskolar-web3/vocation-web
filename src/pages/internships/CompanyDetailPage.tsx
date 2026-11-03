@@ -7,6 +7,7 @@ import {
   Briefcase,
   ExternalLink,
   Loader2,
+  Check,
 } from 'lucide-react';
 import { useCompany } from '../../services/queries';
 import { InternshipCard } from '../../components/internships/InternshipCard';
@@ -127,18 +128,26 @@ export const CompanyDetailPage: React.FC<CompanyDetailPageProps> = ({ slug, navi
 
           {/* Perks & Benefits */}
           {(company as any).perks && (company as any).perks.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#3f58b2] font-accent">
-                Intern Benefits &amp; Perks
-              </h3>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#021F53] font-headline">
+                  Intern Benefits &amp; Perks
+                </h3>
+                <span className="text-[10px] font-bold text-[#1d4ed8] bg-[#f0f7ff] px-2.5 py-0.5 rounded-md border border-[#3f58b2]/20">
+                  {((company as any).perks as string[]).length} Perks
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                 {((company as any).perks as string[]).map((perk: string, idx: number) => (
-                  <span
+                  <div
                     key={idx}
-                    className="stamp-badge bg-emerald-50 text-emerald-900 border border-emerald-300"
+                    className="bg-[#f8fbff] px-3.5 py-2.5 rounded-xl border border-[#dbeafe] flex items-center gap-2.5 text-xs text-slate-700 shadow-2xs hover:border-[#3f58b2]/40 transition-colors"
                   >
-                    ✓ {perk}
-                  </span>
+                    <div className="w-5 h-5 rounded-md bg-white border border-[#3f58b2]/20 text-[#2563eb] flex items-center justify-center shrink-0 shadow-2xs">
+                      <Check className="w-3 h-3 text-[#2563eb]" />
+                    </div>
+                    <span className="font-semibold text-[#021F53] leading-snug">{perk}</span>
+                  </div>
                 ))}
               </div>
             </div>

@@ -15,12 +15,14 @@ test.describe('Coach Onboarding & Portal Journey', () => {
 
     // Switch role to Coach
     const coachRoleBtn = page.locator('button:has-text("Industry Coach")');
+    await coachRoleBtn.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     if (await coachRoleBtn.isVisible()) {
       await coachRoleBtn.click();
     }
 
     // Fill sign up form
     const fullNameInput = page.locator('input[placeholder="e.g. Maria Santos"]');
+    await fullNameInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     if (await fullNameInput.isVisible()) {
       await fullNameInput.fill(coachName);
     }

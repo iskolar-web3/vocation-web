@@ -11,7 +11,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ onRetry, n
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-16 bg-[#f0f7ff]">
       <div className="max-w-md w-full bg-white rounded-2xl p-8 border border-slate-200 shadow-soft text-center space-y-6">
         <div className="w-16 h-16 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-2xl flex items-center justify-center mx-auto text-[#3f58b2] shadow-2xs">
-          <Hammer className="w-8 h-8 text-[#ff9b00]" />
+          <Hammer className="w-8 h-8 text-[#2563eb]" />
         </div>
 
         <div className="space-y-2">
@@ -41,7 +41,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ onRetry, n
             <button
               type="button"
               onClick={onRetry}
-              className="flex-1 py-3 bg-[#021F53] hover:bg-[#002774] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              className="tactile-btn-primary flex-1 py-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Retry Connection</span>

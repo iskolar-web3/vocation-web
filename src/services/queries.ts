@@ -1,6 +1,16 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 import { api } from '../lib/api';
+import {
+  LandingResponseSchema,
+  InternshipCardSchema,
+  InternshipDetailSchema,
+  CompanyCardSchema,
+  CoachCardSchema,
+  StudentBookingSchema,
+  StudentDashboardSchema,
+} from '../lib/schemas';
 import {
   LandingData,
   InternshipCard,
@@ -29,6 +39,7 @@ import {
   EarningsItem,
   EarningsMeta,
   PasswordResetConfirmRequest,
+  UpdateSettingsRequest,
 } from '../types/api';
 
 // Keys
@@ -43,7 +54,7 @@ export const queryKeys = {
   coachReviews: (slug: string) => ['coach-reviews', slug] as const,
   coachAvailability: (slug: string, from?: string, to?: string) =>
     ['coach-availability', slug, from, to] as const,
-  currentUser: ['currentUser'] as const,
+  currentUser: ['me'] as const,
   studentDashboard: ['studentDashboard'] as const,
   savedInternships: ['savedInternships'] as const,
   studentBookings: (when?: 'upcoming' | 'past') => ['studentBookings', when] as const,
@@ -59,7 +70,9 @@ export function useLanding() {
   return useQuery({
     queryKey: queryKeys.landing,
     queryFn: async () => {
-      const res = await api.get<LandingData>('/landing');
+      const res = await api.get<LandingData>('/landing', undefined, {
+        schema: LandingResponseSchema,
+      });
       return res.data;
     },
     staleTime: 1000 * 60 * 5,
@@ -79,7 +92,9 @@ export function useInternships(filters?: {
   return useQuery({
     queryKey: queryKeys.internships(filters),
     queryFn: async () => {
-      const res = await api.get<InternshipCard[]>('/internships', filters);
+      const res = await api.get<InternshipCard[]>('/internships', filters, {
+        schema: z.array(InternshipCardSchema),
+      });
       return { items: res.data || [], meta: res.meta };
     },
     staleTime: 1000 * 60 * 2,
@@ -90,7 +105,9 @@ export function useInternship(slug: string) {
   return useQuery({
     queryKey: queryKeys.internship(slug),
     queryFn: async () => {
-      const res = await api.get<InternshipDetail>(`/internships/${slug}`);
+      const res = await api.get<InternshipDetail>(`/internships/${slug}`, undefined, {
+        schema: InternshipDetailSchema,
+      });
       return res.data;
     },
     enabled: Boolean(slug),
@@ -117,7 +134,9 @@ export function useCompanies(params?: { q?: string; page?: number; per_page?: nu
   return useQuery({
     queryKey: queryKeys.companies(params),
     queryFn: async () => {
-      const res = await api.get<CompanyCard[]>('/companies', params);
+      const res = await api.get<CompanyCard[]>('/companies', params, {
+        schema: z.array(CompanyCardSchema),
+      });
       return { items: res.data || [], meta: res.meta };
     },
     staleTime: 1000 * 60 * 5,
@@ -128,7 +147,9 @@ export function useCompany(slug: string) {
   return useQuery({
     queryKey: queryKeys.company(slug),
     queryFn: async () => {
-      const res = await api.get<CompanyDetail>(`/companies/${slug}`);
+      const res = await api.get<CompanyDetail>(`/companies/${slug}`, undefined, {
+        schema: CompanyCardSchema,
+      });
       return res.data;
     },
     enabled: Boolean(slug),
@@ -145,7 +166,9 @@ export function useCoaches(filters?: {
   return useQuery({
     queryKey: queryKeys.coaches(filters),
     queryFn: async () => {
-      const res = await api.get<CoachCard[]>('/coaches', filters);
+      const res = await api.get<CoachCard[]>('/coaches', filters, {
+        schema: z.array(CoachCardSchema),
+      });
       return { items: res.data || [], meta: res.meta };
     },
     staleTime: 1000 * 60 * 2,
@@ -156,7 +179,9 @@ export function useCoach(slug: string) {
   return useQuery({
     queryKey: queryKeys.coach(slug),
     queryFn: async () => {
-      const res = await api.get<CoachDetail>(`/coaches/${slug}`);
+      const res = await api.get<CoachDetail>(`/coaches/${slug}`, undefined, {
+        schema: CoachCardSchema,
+      });
       return res.data;
     },
     enabled: Boolean(slug),
@@ -232,7 +257,9 @@ export function useStudentDashboard(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.studentDashboard,
     queryFn: async () => {
-      const res = await api.get<StudentDashboardData>('/me/dashboard');
+      const res = await api.get<StudentDashboardData>('/me/dashboard', undefined, {
+        schema: StudentDashboardSchema,
+      });
       return res.data;
     },
     enabled: options?.enabled !== undefined ? options.enabled : true,
@@ -243,7 +270,9 @@ export function useSavedInternships(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.savedInternships,
     queryFn: async () => {
-      const res = await api.get<InternshipCard[]>('/me/saved');
+      const res = await api.get<InternshipCard[]>('/me/saved', undefined, {
+        schema: z.array(InternshipCardSchema),
+      });
       return res.data || [];
     },
     enabled: options?.enabled !== undefined ? options.enabled : true,
@@ -280,7 +309,9 @@ export function useStudentBookings(when?: 'upcoming' | 'past', options?: { enabl
   return useQuery({
     queryKey: queryKeys.studentBookings(when),
     queryFn: async () => {
-      const res = await api.get<BookingItem[]>('/me/bookings', { when });
+      const res = await api.get<BookingItem[]>('/me/bookings', { when }, {
+        schema: z.array(StudentBookingSchema),
+      });
       return res.data || [];
     },
     enabled: options?.enabled !== undefined ? options.enabled : true,
@@ -305,11 +336,17 @@ export function useStudentProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['studentProfile'],
     queryFn: async () => {
-      const res = await api.get<StudentProfile>('/me/student-profile');
-      return res.data;
+      try {
+        const res = await api.get<StudentProfile>('/me/student-profile');
+        return res.data;
+      } catch {
+        // Fallback gracefully when server has not registered GET /me/student-profile (CON-08)
+        return null;
+      }
     },
     enabled: options?.enabled !== undefined ? options.enabled : true,
     staleTime: 1000 * 60 * 2,
+    retry: false,
   });
 }
 
@@ -331,7 +368,7 @@ export function useUpdateStudentProfile() {
 export function useUpdateSettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { email?: string; password?: string }) => {
+    mutationFn: async (payload: UpdateSettingsRequest) => {
       return api.patch('/me/settings', payload);
     },
     onSuccess: () => {
@@ -449,16 +486,6 @@ export function useCoachEarnings() {
         items: res.data || [],
         meta: res.meta as EarningsMeta | undefined,
       };
-    },
-  });
-}
-
-export function useCoachSessionTypes() {
-  return useQuery({
-    queryKey: queryKeys.coachSessionTypes,
-    queryFn: async () => {
-      const res = await api.get<SessionType[]>('/me/session-types');
-      return res.data || [];
     },
   });
 }

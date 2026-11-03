@@ -74,16 +74,32 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
         }
       } else if (mode === 'signin') {
         const session = await signin({ email, password });
-        // Role-based post-signin redirect
-        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
-        if (redirectParam) {
-          navigate(redirectParam);
-        } else if (session?.role === 'coach') {
-          navigate(session.is_onboarded ? '/coach' : '/coach/onboarding');
+        // Role-based post-signin redirect (SEC-31: restricted to same-origin relative paths)
+        const rawRedirect = new URLSearchParams(window.location.search).get('redirect');
+        const isSafeRedirect = (url: string | null): url is string => {
+          if (!url) return false;
+          return url.startsWith('/') && !url.startsWith('//') && !url.includes('\\');
+        };
+        const safeRedirect = isSafeRedirect(rawRedirect) ? rawRedirect : null;
+
+        if (session?.role === 'coach') {
+          if (safeRedirect?.startsWith('/coach')) {
+            navigate(safeRedirect);
+          } else {
+            navigate(session.is_onboarded ? '/coach' : '/coach/onboarding');
+          }
         } else if (session?.role === 'admin') {
           navigate('/admin/listings');
         } else {
-          navigate(session?.is_onboarded ? '/app' : '/app/onboarding');
+          if (
+            safeRedirect &&
+            !safeRedirect.startsWith('/coach') &&
+            !safeRedirect.startsWith('/admin')
+          ) {
+            navigate(safeRedirect);
+          } else {
+            navigate(session?.is_onboarded ? '/app' : '/app/onboarding');
+          }
         }
       } else if (mode === 'signup') {
         if (!agreeLegal) {
@@ -113,7 +129,7 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
     <div className="max-w-md mx-auto px-4 py-16 space-y-6">
       <div className="text-center space-y-2">
         <div className="w-12 h-12 rounded-2xl bg-[#021F53] text-white flex items-center justify-center mx-auto shadow-sm">
-          <GraduationCap className="w-6 h-6 text-[#ff9b00]" />
+          <GraduationCap className="w-6 h-6 text-[#607ef2]" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#021F53]">
           {mode === 'signin' && 'Sign in to iSkolar Vocation'}
@@ -137,7 +153,7 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
 
         {resetConfirmed ? (
           <div className="text-center py-6 space-y-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto font-bold">
+            <div className="w-12 h-12 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/30 flex items-center justify-center mx-auto font-bold shadow-inner">
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <h3 className="font-bold text-base text-[#021F53]">Password Updated</h3>
@@ -146,14 +162,14 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
             </p>
             <button
               onClick={() => navigate('/signin')}
-              className="mt-3 px-6 py-2.5 bg-[#021F53] text-white font-bold text-xs rounded-xl cursor-pointer hover:bg-[#002774] transition-colors"
+              className="tactile-btn-primary mt-3 px-6 py-2.5 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md"
             >
               Sign In Now
             </button>
           </div>
         ) : resetSent ? (
           <div className="text-center py-6 space-y-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto font-bold">
+            <div className="w-12 h-12 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/30 flex items-center justify-center mx-auto font-bold shadow-inner">
               ✓
             </div>
             <h3 className="font-bold text-base text-[#021F53]">Reset Email Sent</h3>
@@ -319,7 +335,7 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 bg-[#021F53] hover:bg-[#002774] disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 mt-2 cursor-pointer"
+              className="tactile-btn-primary w-full py-3.5 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer disabled:opacity-60"
             >
               {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

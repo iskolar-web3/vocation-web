@@ -22,6 +22,7 @@ import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
 import { BookingDialog } from '../../components/coaching/BookingDialog';
 import { DeadlineCountdown } from '../../components/internships/DeadlineCountdown';
 import { CoachCard } from '../../types/api';
+import { toast } from 'sonner';
 
 // Safe list converter: if value is already an array, use it; if it is a string, split by newlines/bullets.
 const toList = (val: unknown): string[] => {
@@ -96,6 +97,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopiedLink(true);
+    toast.success('Link copied to clipboard!');
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
@@ -185,11 +187,11 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
                   onClick={handleToggleSave}
                   className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                     isSaved
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      ? 'border-[#607ef2]/40 bg-[#f0f7ff] text-[#1d4ed8]'
                       : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-emerald-600' : ''}`} />
+                  <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-[#2563eb] text-[#2563eb]' : ''}`} />
                   <span>{isSaved ? 'Saved' : 'Save'}</span>
                 </button>
               )}
@@ -201,7 +203,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
                 title="Copy share link"
               >
                 {copiedLink ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <Check className="w-3.5 h-3.5 text-[#2563eb]" />
                 ) : (
                   <Share2 className="w-3.5 h-3.5" />
                 )}
@@ -246,7 +248,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
             <span className="text-[10px] text-[#2c3f77] uppercase tracking-wider font-bold block">
               Work Setup
             </span>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-md inline-block mt-0.5 capitalize">
+            <span className="text-xs font-bold text-[#1d4ed8] bg-[#f0f7ff] border border-[#607ef2]/30 px-2.5 py-0.5 rounded-md inline-block mt-0.5 capitalize">
               {internship.work_setup}
             </span>
           </div>
@@ -287,18 +289,28 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
 
           {/* Perks */}
           {internship.perks && (
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-4">
-              <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
-                Internship Perks &amp; Learning Opportunities
-              </h2>
-              <ul className="space-y-2.5">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-soft space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
+                  Perks &amp; Learning Opportunities
+                </h2>
+                <span className="text-[10px] font-bold text-[#1d4ed8] bg-[#f0f7ff] px-2.5 py-0.5 rounded-md border border-[#3f58b2]/20">
+                  {toList(internship.perks).length} Benefits
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {toList(internship.perks).map((perk, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>{perk}</span>
-                  </li>
+                  <div
+                    key={idx}
+                    className="bg-[#f8fbff] px-3.5 py-3 rounded-xl border border-[#dbeafe] flex items-center gap-2.5 text-xs sm:text-sm text-slate-700 shadow-2xs hover:border-[#3f58b2]/40 transition-colors"
+                  >
+                    <div className="w-5 h-5 rounded-md bg-white border border-[#3f58b2]/20 text-[#2563eb] flex items-center justify-center shrink-0 shadow-2xs">
+                      <Check className="w-3 h-3 text-[#2563eb]" />
+                    </div>
+                    <span className="font-semibold text-[#021F53] leading-snug">{perk}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>
@@ -313,7 +325,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
             </p>
             <button
               onClick={() => setIsLeavingModalOpen(true)}
-              className="w-full py-3 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="tactile-btn-primary w-full py-3.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Apply on Company Site</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -323,8 +335,8 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
           {/* Cross-sell Coach (for students only) */}
           {role !== 'coach' && recommendedCoach && (
             <div className="bg-[#021F53] rounded-2xl p-6 text-white shadow-xs border border-[#3f58b2]/30 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#ff9b00]">
-                <Target className="w-4 h-4 text-[#ff9b00]" />
+              <div className="flex items-center gap-2 text-xs font-bold text-[#607ef2]">
+                <Target className="w-4 h-4 text-[#607ef2]" />
                 <span>Prepare for Technical Screening</span>
               </div>
               <p className="text-xs text-slate-200 leading-relaxed">
@@ -333,9 +345,9 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
               <button
                 type="button"
                 onClick={() => setSelectedCoachForBooking(recommendedCoach)}
-                className="w-full py-2.5 bg-white text-[#021F53] hover:bg-[#f0f7ff] font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="tactile-btn-white w-full py-2.5 text-[#021F53] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
               >
-                <Calendar className="w-3.5 h-3.5 text-[#3f58b2]" />
+                <Calendar className="w-3.5 h-3.5 text-[#021F53]" />
                 <span>Book 1-on-1 Practice</span>
               </button>
             </div>

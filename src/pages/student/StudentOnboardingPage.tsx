@@ -51,13 +51,16 @@ export const StudentOnboardingPage: React.FC<StudentOnboardingPageProps> = ({ na
     }
 
     try {
+      if (typeof window !== 'undefined' && targetOjtHours) {
+        localStorage.setItem('vocation_target_ojt_hours', targetOjtHours);
+      }
+
       await createProfileMutation.mutateAsync({
         full_name: fullName.trim(),
         school: school.trim(),
         course: course.trim(),
         year_level: Number(yearLevel),
         skills,
-        target_ojt_hours: Number(targetOjtHours) || 300,
       });
 
       // Refetch user session so AuthContext immediately reflects is_onboarded: true
@@ -74,7 +77,7 @@ export const StudentOnboardingPage: React.FC<StudentOnboardingPageProps> = ({ na
     <div className="min-h-screen bg-[#f0f7ff]/40 py-12 px-4 sm:px-6 flex items-center justify-center">
       <div className="max-w-xl w-full bg-white rounded-2xl border border-slate-200 p-8 shadow-xs space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-xl bg-[#021F53] text-[#ff9b00] flex items-center justify-center mx-auto shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-[#021F53] text-[#607ef2] flex items-center justify-center mx-auto shadow-xs">
             <GraduationCap className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-[#021F53] font-headline">
@@ -223,7 +226,7 @@ export const StudentOnboardingPage: React.FC<StudentOnboardingPageProps> = ({ na
             <button
               type="submit"
               disabled={createProfileMutation.isPending}
-              className="w-full py-3 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="tactile-btn-primary w-full py-3.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {createProfileMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

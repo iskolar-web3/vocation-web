@@ -70,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="w-full py-3 bg-[#021F53] hover:bg-[#002774] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="tactile-btn-primary w-full py-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Reload Application</span>
@@ -91,7 +91,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   onClick={openFeedbackDialog}
                   className="py-2.5 bg-[#f0f7ff] hover:bg-[#e0efff] text-[#3f58b2] font-bold text-xs rounded-xl border border-[#607ef2]/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <MessageSquareWarning className="w-3.5 h-3.5 text-[#ff9b00]" />
+                  <MessageSquareWarning className="w-3.5 h-3.5 text-[#2563eb]" />
                   <span>Report Problem</span>
                 </button>
               </div>

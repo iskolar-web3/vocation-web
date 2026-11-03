@@ -9,39 +9,62 @@ import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
 
 interface CoachDirectoryPageProps {
   navigate: (path: string) => void;
+  initialQuery?: string;
   initialExpertise?: string;
   initialPrice?: 'all' | 'free' | 'under500' | '500to1000' | '1000plus';
+  onFiltersChange?: (newFilters: CoachFilterState) => void;
 }
 
 export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
   navigate,
+  initialQuery = '',
   initialExpertise = '',
   initialPrice = 'all',
+  onFiltersChange,
 }) => {
   const [filters, setFilters] = useState<CoachFilterState>({
-    q: '',
+    q: initialQuery,
     expertise: initialExpertise,
     price: initialPrice,
   });
+
+  React.useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      q: initialQuery !== undefined ? initialQuery : prev.q,
+      expertise: initialExpertise !== undefined ? initialExpertise : prev.expertise,
+      price: initialPrice !== undefined ? initialPrice : prev.price,
+    }));
+  }, [initialQuery, initialExpertise, initialPrice]);
+
+  const updateFilters = (updater: React.SetStateAction<CoachFilterState>) => {
+    setFilters((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (onFiltersChange) {
+        onFiltersChange(next);
+      }
+      return next;
+    });
+  };
 
   const [viewMode, setViewMode] = useState<'grid' | 'row'>('grid');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachCardType | CoachDetail | null>(null);
 
   // Map filters to API params
-  const apiPriceParam =
+  const apiPriceParam: 'free' | 'paid' | undefined =
     filters.price === 'free' ? 'free' : filters.price === 'all' ? undefined : 'paid';
 
   const { data, isLoading, error } = useCoaches({
     q: filters.q || undefined,
     expertise: filters.expertise || undefined,
-    price: apiPriceParam as any,
+    price: apiPriceParam,
   });
 
   const coaches = data?.items || [];
 
   const handleReset = () => {
-    setFilters({ q: '', expertise: '', price: 'all' });
+    updateFilters({ q: '', expertise: '', price: 'all' });
   };
 
   const quickExpertisePills = [
@@ -57,15 +80,15 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
       {/* Header */}
       <div className="bg-[#021F53] rounded-2xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
         <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-[#ff9b00] uppercase tracking-wider font-accent">
-            <Award className="w-3.5 h-3.5 text-[#ff9b00]" />
+          <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-md text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent border border-white/15">
+            <Award className="w-3.5 h-3.5 text-[#607ef2]" />
             <span>Find a Coach Directory</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
             Book 1-on-1 Coaching with Industry Leaders
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Select a verified coach by specialization and book directly into their live availability schedule. Free intro calls and paid deep-dives hosted securely.
+            Select an industry coach by specialization and book directly into their live availability schedule. Free intro calls and paid deep-dives hosted securely.
           </p>
 
           <div className="relative pt-2">
@@ -73,9 +96,9 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
             <input
               type="text"
               value={filters.q}
-              onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
+              onChange={(e) => updateFilters((prev) => ({ ...prev, q: e.target.value }))}
               placeholder="Search by coach name, company (Grab, Canva, Maya), or skill..."
-              className="w-full pl-11 pr-4 py-3 bg-white text-[#021F53] font-medium text-xs sm:text-sm rounded-xl shadow-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ff9b00]"
+              className="w-full pl-11 pr-4 py-3 bg-white text-[#021F53] font-medium text-xs sm:text-sm rounded-xl shadow-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
             />
           </div>
         </div>
@@ -86,8 +109,8 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
         {quickExpertisePills.map((pill) => (
           <button
             key={pill.label}
-            onClick={() => setFilters((prev) => ({ ...prev, expertise: pill.value }))}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            onClick={() => updateFilters((prev) => ({ ...prev, expertise: pill.value }))}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               filters.expertise === pill.value
                 ? 'bg-[#021F53] text-white shadow-2xs font-bold'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -102,7 +125,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         {/* Desktop Filters */}
         <aside className="hidden md:block md:col-span-4 lg:col-span-3">
-          <CoachFilters filters={filters} setFilters={setFilters} onReset={handleReset} />
+          <CoachFilters filters={filters} setFilters={updateFilters} onReset={handleReset} />
         </aside>
 
         {/* Results */}
@@ -210,7 +233,7 @@ export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
         onClose={() => setIsMobileDrawerOpen(false)}
         title="Filter Coaches"
       >
-        <CoachFilters filters={filters} setFilters={setFilters} onReset={handleReset} isMobileDrawer />
+        <CoachFilters filters={filters} setFilters={updateFilters} onReset={handleReset} isMobileDrawer />
       </Drawer>
 
       <BookingDialog

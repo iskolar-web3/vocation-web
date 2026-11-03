@@ -17,7 +17,7 @@ export const DeadlineCountdown: React.FC<DeadlineCountdownProps> = ({
 
   if (isExpired) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-rose-100 text-rose-700 border border-rose-200">
         <Clock className="w-3.5 h-3.5" />
         <span>Applications Closed</span>
       </span>
@@ -26,15 +26,15 @@ export const DeadlineCountdown: React.FC<DeadlineCountdownProps> = ({
 
   if (isUrgent) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
-        <AlertTriangle className="w-3.5 h-3.5 text-[#ff9b00]" />
+      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-md bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/30">
+        <AlertTriangle className="w-3.5 h-3.5 text-[#2563eb]" />
         <span>{days}d {hours}h left to apply</span>
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+    <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">
       <Clock className="w-3.5 h-3.5 text-slate-500" />
       <span>Deadline in {days} days</span>
     </span>

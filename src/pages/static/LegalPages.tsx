@@ -48,12 +48,12 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
           <div className="space-y-4 text-sm text-[#2c3f77] leading-relaxed">
             <h3 className="font-bold text-base text-[#021F53]">1. Platform Scope &amp; Outbound Application Model</h3>
             <p>
-              iSkolar Vocation connects Filipino tertiary students with vetted internship listings and 1-on-1 industry career coaching. <strong>iSkolar Vocation does not store student resumes, cover letters, or job applications on its servers (BR-001, BR-002).</strong> All internship applications proceed via outbound redirection directly to the employer's official recruitment portal.
+              iSkolar Vocation connects Filipino tertiary students with curated internship listings and 1-on-1 industry career coaching. <strong>iSkolar Vocation does not store or process third-party job applications on its servers (BR-001, BR-002).</strong> All internship applications proceed via outbound redirection directly to the employer's official recruitment portal.
             </p>
 
             <h3 className="font-bold text-base text-[#021F53]">2. Coaching Marketplace &amp; Commission Model</h3>
             <p>
-              Paid coaching sessions are collected through our secure payment gateway partner. The platform retains a <strong>10% platform fee</strong> on paid bookings, with <strong>90% disbursed to the verified coach</strong> in accordance with ADR-0026 and ADR-0007.
+              Paid coaching sessions are collected through our secure payment gateway partner. The platform retains a <strong>10% platform fee</strong> on paid bookings, with <strong>90% disbursed to the coach</strong> in accordance with ADR-0026 and ADR-0007.
             </p>
 
             <h3 className="font-bold text-base text-[#021F53]">3. Session Scheduling, Attendance &amp; Conduct</h3>
@@ -74,39 +74,89 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
 
       {page === 'privacy' && (
         <div className="bg-white rounded-2xl p-8 sm:p-12 border border-slate-200 shadow-soft space-y-6">
-          <h1 className="text-3xl font-bold text-[#021F53] font-display">Privacy Policy</h1>
-          <p className="text-xs text-slate-500">
-            Compliant with Philippine Republic Act No. 10173 (Data Privacy Act of 2012)
-          </p>
-
-          <div className="space-y-4 text-sm text-[#2c3f77] leading-relaxed">
-            <h3 className="font-bold text-base text-[#021F53]">1. Information We Collect</h3>
-            <p>
-              We collect user account information (full name, email address, school, academic program, year level, and target OJT hours) solely to provide platform discovery services, recommend relevant roles, and schedule coaching sessions.
+          <div>
+            <h1 className="text-3xl font-bold text-[#021F53] font-display">Privacy Notice &amp; Policy</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Compliant with Republic Act No. 10173 (Philippine Data Privacy Act of 2012) and its Implementing Rules and Regulations
             </p>
+          </div>
 
-            <h3 className="font-bold text-base text-[#021F53]">2. Zero Application Storage Principle</h3>
-            <p>
-              We do not collect, process, or store employment applications or confidential recruitment files submitted to third-party employers. Outbound clicks to employers are recorded solely for click telemetry without personal application dossiers.
-            </p>
+          <div className="space-y-6 text-sm text-[#2c3f77] leading-relaxed">
+            <section className="space-y-2">
+              <h3 className="font-bold text-base text-[#021F53]">1. Personal Information Controller (PIC)</h3>
+              <p>
+                <strong>iSkolar Technologies Inc. (&quot;iSkolar Vocation&quot;)</strong> acts as the Personal Information Controller (PIC) under Philippine Republic Act No. 10173. For all privacy inquiries, data subject requests, or regulatory concerns, you may contact our designated Data Protection Officer (DPO) at{' '}
+                <a href="mailto:dpo@iskolar.io" className="text-[#3f58b2] font-semibold underline hover:text-[#021F53]">
+                  dpo@iskolar.io
+                </a>{' '}
+                or our support team at{' '}
+                <a href="mailto:support@iskolar.io" className="text-[#3f58b2] font-semibold underline hover:text-[#021F53]">
+                  support@iskolar.io
+                </a>.
+              </p>
+            </section>
 
-            <h3 className="font-bold text-base text-[#021F53]">3. Google Analytics &amp; Telemetry</h3>
-            <p>
-              We use <strong>Google Analytics 4</strong> with strict Google Consent Mode to measure aggregated booking funnel steps and website traffic. Analytics cookies are loaded <strong>only after explicit user consent</strong> via our cookie banner. No personal identifiable information (PII)—including names, email addresses, or booking notes—is ever passed to Google Analytics.
-            </p>
+            <section className="space-y-2">
+              <h3 className="font-bold text-base text-[#021F53]">2. Personal Data We Collect &amp; Specified Purposes</h3>
+              <p>
+                We collect and process personal data strictly for specified, legitimate purposes:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li><strong>Account Registration &amp; Authentication:</strong> Full name, email address, password hash, and Google account identifier (when using Google OAuth) to manage user identity and secure authentication.</li>
+                <li><strong>Student Profile &amp; Academic Details:</strong> University/college, academic program, year level, bio, and declared skills to personalize internship discovery and match coaching sessions.</li>
+                <li><strong>Coach Mentorship Profile:</strong> Professional headline, bio, areas of expertise, session rates, availability schedule, and payout account information (masked) to operate the career coaching marketplace.</li>
+                <li><strong>Session &amp; Booking Management:</strong> Booking timestamps, status, session notes, and video meeting URLs to coordinate coaching appointments between students and coaches.</li>
+                <li><strong>Technical &amp; Telemetry Data:</strong> Hashed user-agent representations and click timestamps for internship application referral tracking without collecting application dossiers.</li>
+              </ul>
+            </section>
 
-            <h3 className="font-bold text-base text-[#021F53]">4. Review Transparency &amp; Anonymity</h3>
-            <p>
-              Coaching session ratings and reviews are displayed publicly with the student's first name only (BR-011) to safeguard student privacy.
-            </p>
+            <section className="space-y-2">
+              <h3 className="font-bold text-base text-[#021F53]">3. Outbound Job Applications vs. Student Profile Resumes</h3>
+              <p>
+                <strong>Zero Job Application Storage:</strong> iSkolar Vocation does not store, review, or collect job applications, cover letters, or employment dossiers submitted to third-party employers. Outbound clicks redirect directly to employer recruitment portals.
+              </p>
+              <p>
+                <strong>Profile Resumes:</strong> Students may optionally upload a resume (PDF only) to their private student profile. Resumes are stored encrypted in private cloud storage (AWS S3) and are accessible solely by the account owner. Resumes are never shared with prospective employers automatically.
+              </p>
+            </section>
 
-            <h3 className="font-bold text-base text-[#021F53]">5. Data Privacy Officer Contact</h3>
-            <p>
-              Questions or requests regarding data subject rights may be addressed to{' '}
-              <a href="mailto:support@iskolar.io" className="text-[#3f58b2] font-semibold underline hover:text-[#021F53]">
-                support@iskolar.io
-              </a>.
-            </p>
+            <section className="space-y-2">
+              <h3 className="font-bold text-base text-[#021F53]">4. Third-Party Processors &amp; Cross-Border Transfers</h3>
+              <p>
+                Personal data is processed with vetted cloud processors governed by data processing agreements:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li><strong>Neon Inc.</strong> — Managed PostgreSQL cloud database infrastructure with encryption at rest and in transit.</li>
+                <li><strong>Amazon Web Services (AWS)</strong> — S3 private cloud object storage located in Singapore (ap-southeast-1 region) with AES-256 encryption.</li>
+                <li><strong>Xendit Philippines</strong> — Bangko Sentral ng Pilipinas (BSP)-licensed payment gateway for payment checkout and coach disbursements. We never store credit/debit card numbers or CVVs.</li>
+                <li><strong>Google LLC</strong> — Google OAuth authentication and Google Analytics 4 (utilizing Google Consent Mode v2, strictly denied by default until user consent is granted).</li>
+                <li><strong>Sentry (Functional Software, Inc.)</strong> — Application error logging and performance telemetry, scrubbed to remove PII, passwords, cookies, and authentication tokens.</li>
+                <li><strong>Coaching Participants:</strong> Only the student&#39;s first name is shared on public coach reviews (BR-011). Coaches never receive student email addresses.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="font-bold text-base text-[#021F53]">5. Data Retention &amp; Disposal</h3>
+              <p>
+                Account profiles are retained while active. Users may request account deletion or data export at any time. Financial and transaction ledgers are retained for a minimum of 5 years to comply with Philippine National Internal Revenue Code (NIRC) and commercial accounting requirements. Inactive session tokens and transient cache entries are purged regularly.
+              </p>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="font-bold text-base text-[#021F53]">6. Your Data Subject Rights (RA 10173)</h3>
+              <p>
+                Under the Data Privacy Act of 2012 (Sections 16 &amp; 18), you have the right to:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li><strong>Be Informed:</strong> Know how and why your personal data is collected and processed.</li>
+                <li><strong>Access:</strong> Request reasonable access to your personal data held by the platform.</li>
+                <li><strong>Rectification:</strong> Correct any inaccuracies or deficiencies in your personal profile.</li>
+                <li><strong>Erasure or Blocking:</strong> Request the deletion, blocking, or removal of your personal information.</li>
+                <li><strong>Data Portability:</strong> Obtain a portable electronic copy of your account data.</li>
+                <li><strong>Damages:</strong> Be indemnified for any damages sustained due to inaccurate, false, or unlawfully obtained personal data.</li>
+                <li><strong>Lodge a Complaint:</strong> If you believe your privacy rights have been infringed, you have the right to file a complaint before the <strong>National Privacy Commission (NPC)</strong> at <a href="https://privacy.gov.ph" target="_blank" rel="noopener noreferrer" className="text-[#3f58b2] underline font-semibold">privacy.gov.ph</a>.</li>
+              </ul>
+            </section>
           </div>
         </div>
       )}
@@ -197,7 +247,7 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
             </div>
 
             <div className="p-6 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/20 space-y-2">
-              <Building className="w-5 h-5 text-[#ff9b00]" />
+              <Building className="w-5 h-5 text-[#2563eb]" />
               <h4 className="font-bold text-sm text-[#021F53]">Employer &amp; University Partnerships</h4>
               <p className="text-xs text-[#2c3f77]">
                 <a href="mailto:support@iskolar.io" className="underline hover:text-[#021F53]">

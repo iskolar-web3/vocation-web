@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { ShieldCheck, MessageSquareText } from 'lucide-react';
 import { FeedbackModal } from '../common/FeedbackModal';
+import { useNavigate } from '@tanstack/react-router';
 
 interface FooterProps {
-  navigate: (path: string) => void;
+  navigate?: (path: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ navigate }) => {
+export const Footer: React.FC<FooterProps> = ({ navigate: propNavigate }) => {
+  const routerNavigate = useNavigate();
+  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   return (
@@ -28,7 +31,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
                 <span className="font-display text-2xl text-white tracking-tight block leading-tight">
                   iSkolar <span className="text-[#607ef2]">Vocation</span>
                 </span>
-                <span className="text-[10px] font-bold text-[#ff9b00] tracking-wider uppercase block font-accent">
+                <span className="text-[10px] font-bold text-[#607ef2] tracking-wider uppercase block font-accent">
                   Internships &amp; Coaching
                 </span>
               </div>
@@ -36,15 +39,11 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
             <p className="text-sm text-slate-300 max-w-sm leading-relaxed">
               The dedicated internship &amp; OJT directory paired with 1-on-1 career coaching, mock interviews, and resume reviews for Filipino college students.
             </p>
-            <div className="pt-2 flex items-center gap-2 text-xs text-[#ff9b00] font-semibold">
-              <ShieldCheck className="w-4 h-4 text-[#ff9b00]" />
-              <span>Outbound Direct Apply · Verified Official Portals</span>
-            </div>
             <div className="pt-2">
               <button
                 type="button"
                 onClick={() => setIsFeedbackOpen(true)}
-                className="inline-flex items-center gap-1.5 text-xs text-[#607ef2] hover:text-[#ff9b00] transition-colors font-semibold cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-[#607ef2] hover:text-[#93c5fd] transition-colors font-semibold cursor-pointer"
               >
                 <MessageSquareText className="w-3.5 h-3.5" />
                 <span>Send Feedback</span>

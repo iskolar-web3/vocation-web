@@ -49,8 +49,8 @@ export const BookingItem: React.FC<BookingItemProps> = ({
 
     if (booking.payment_status === 'expired') {
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-          <AlertCircle className="w-3 h-3 text-amber-600" />
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#f0f7ff] text-slate-700 border border-slate-200">
+          <AlertCircle className="w-3 h-3 text-slate-500" />
           <span>Payment Expired</span>
         </span>
       );
@@ -59,22 +59,22 @@ export const BookingItem: React.FC<BookingItemProps> = ({
     switch (booking.status) {
       case 'confirmed':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#1d4ed8] border border-[#607ef2]/30">
+            <CheckCircle2 className="w-3 h-3 text-[#2563eb]" />
             <span>Confirmed</span>
           </span>
         );
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200">
-            <AlertCircle className="w-3 h-3 text-[#ff9b00]" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/20">
+            <AlertCircle className="w-3 h-3 text-[#2563eb]" />
             <span>Pending Payment</span>
           </span>
         );
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/20">
-            <CheckCircle2 className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/20">
+            <CheckCircle2 className="w-3 h-3 text-[#3f58b2]" />
             <span>Completed</span>
           </span>
         );
@@ -135,7 +135,7 @@ export const BookingItem: React.FC<BookingItemProps> = ({
             href={booking.join_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#2563eb] hover:bg-[#1d4ed8] shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Video className="w-3.5 h-3.5" />
             <span>Join Video Call</span>
@@ -171,9 +171,9 @@ export const BookingItem: React.FC<BookingItemProps> = ({
           <button
             type="button"
             onClick={() => onReview(booking)}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-[#021F53] bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-bold text-[#021F53] bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <Star className="w-3.5 h-3.5 fill-[#ff9b00] text-[#ff9b00]" />
+            <Star className="w-3.5 h-3.5 fill-[#2563eb] text-[#2563eb]" />
             <span>Rate This Session</span>
           </button>
         )}

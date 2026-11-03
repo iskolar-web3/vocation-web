@@ -46,4 +46,19 @@ test('capture tactile UI visual snapshots', async ({ page }) => {
     path: path.join(ARTIFACT_DIR, 'student_dashboard_tactile.png'),
     fullPage: false,
   });
+
+  // 5. Internships Directory with Clicked Job Dossier
+  await page.goto('/internships');
+  await page.waitForLoadState('networkidle');
+  await page.setViewportSize({ width: 1280, height: 850 });
+  // Click first stream row to populate right-hand dossier
+  const firstRole = page.locator('.stream-row').first();
+  if (await firstRole.isVisible()) {
+    await firstRole.click();
+    await page.waitForTimeout(500);
+  }
+  await page.screenshot({
+    path: path.join(ARTIFACT_DIR, 'internship_split_dossier.png'),
+    fullPage: false,
+  });
 });

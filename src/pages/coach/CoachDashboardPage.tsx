@@ -117,9 +117,9 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
             {user?.full_name ? user.full_name.charAt(0) : 'C'}
           </div>
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 bg-white/10 px-2.5 py-0.5 rounded-md text-xs font-bold text-[#ff9b00] uppercase tracking-wider">
+            <div className="inline-flex items-center gap-1.5 bg-white/10 px-2.5 py-0.5 rounded-md text-xs font-bold text-[#607ef2] uppercase tracking-wider">
               <Award className="w-3.5 h-3.5" />
-              <span>Verified Coach Portal</span>
+              <span>Coach Portal</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold font-headline">
               {user?.full_name || 'Coach Dashboard'}
@@ -136,7 +136,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
             setPublishError(null);
             setIsAddSlotOpen(true);
           }}
-          className="px-5 py-2.5 bg-[#ff9b00] hover:bg-[#e68c00] text-[#021F53] font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 self-start md:self-auto cursor-pointer"
+          className="tactile-btn-primary px-5 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 self-start md:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Add Availability Slot</span>
@@ -144,12 +144,12 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
       </div>
 
       {publishSuccess && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
+        <div className="p-3 bg-[#f0f7ff] border border-[#607ef2]/30 rounded-xl text-xs text-[#021F53] flex items-center justify-between">
           <span>{publishSuccess}</span>
           <button
             type="button"
             onClick={() => setPublishSuccess(null)}
-            className="text-emerald-700 hover:text-emerald-900 font-bold cursor-pointer"
+            className="text-[#2563eb] hover:text-[#021F53] font-bold cursor-pointer"
           >
             ×
           </button>
@@ -255,7 +255,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
                       href={booking.join_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl flex items-center gap-1 hover:bg-emerald-700 cursor-pointer shadow-xs"
+                      className="px-4 py-2 bg-[#2563eb] text-white text-xs font-bold rounded-xl flex items-center gap-1 hover:bg-[#1d4ed8] cursor-pointer shadow-xs"
                     >
                       <Video className="w-3.5 h-3.5" />
                       <span>Join Call</span>
@@ -304,7 +304,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
                   key={slot.id}
                   className={`p-4 rounded-2xl border text-xs flex justify-between items-center ${
                     slot.is_booked
-                      ? 'bg-emerald-50/50 border-emerald-200'
+                      ? 'bg-[#f0f7ff]/70 border-[#607ef2]/30'
                       : 'bg-white border-slate-200'
                   }`}
                 >
@@ -314,7 +314,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
                       {formatTimeOnly(slot.starts_at)} – {formatTimeOnly(slot.ends_at)}
                     </div>
                     {slot.is_booked ? (
-                      <span className="inline-block mt-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                      <span className="inline-block mt-1 text-[10px] font-bold text-[#1d4ed8] bg-[#f0f7ff] border border-[#607ef2]/30 px-2 py-0.5 rounded-md">
                         Booked
                       </span>
                     ) : (
@@ -349,7 +349,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Available for Payout
               </span>
-              <div className="text-2xl font-bold text-emerald-600 font-headline">
+              <div className="text-2xl font-bold text-[#021F53] font-headline">
                 {formatPHP(balance.available_centavos)}
               </div>
               <span className="text-[11px] text-slate-400">Ready for automated disbursement</span>
@@ -359,7 +359,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Pending Balance
               </span>
-              <div className="text-2xl font-bold text-amber-600 font-headline">
+              <div className="text-2xl font-bold text-[#2563eb] font-headline">
                 {formatPHP(balance.pending_centavos)}
               </div>
               <span className="text-[11px] text-slate-400">Within 24h dispute escrow window</span>
@@ -419,7 +419,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = ({ navigate
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-emerald-600">
+                      <div className="font-bold text-[#2563eb]">
                         +{formatPHP(item.coach_payout_centavos)}
                       </div>
                       <div className="text-[10px] text-slate-400">

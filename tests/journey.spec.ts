@@ -17,6 +17,7 @@ test.describe('Core Student & Coaching Journey', () => {
 
     // Fill sign up form
     const fullNameInput = page.locator('input[placeholder="e.g. Maria Santos"]');
+    await fullNameInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     if (await fullNameInput.isVisible()) {
       await fullNameInput.fill(fullName);
     }

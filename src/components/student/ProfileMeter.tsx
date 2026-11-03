@@ -56,14 +56,14 @@ export const ProfileMeter: React.FC<ProfileMeterProps> = ({
           <div
             key={idx}
             className={`flex items-center justify-between text-xs p-2 rounded-xl transition-all ${
-              item.done ? 'bg-[#f0f7ff]/60 border border-[#607ef2]/15 text-slate-700' : 'bg-amber-50/70 border border-amber-200/60 text-amber-900'
+              item.done ? 'bg-[#f0f7ff]/60 border border-[#607ef2]/15 text-slate-700' : 'bg-slate-50 border border-slate-200 text-slate-600'
             }`}
           >
             <div className="flex items-center gap-2">
               {item.done ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#2563eb] flex-shrink-0" />
               ) : (
-                <Circle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <Circle className="w-4 h-4 text-slate-400 flex-shrink-0" />
               )}
               <span className={item.done ? 'font-medium' : 'font-semibold'}>
                 {item.label}

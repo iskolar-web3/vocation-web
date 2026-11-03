@@ -11,6 +11,8 @@ import {
   Building,
   GraduationCap,
   Loader2,
+  MapPin,
+  Check,
 } from 'lucide-react';
 import { useLanding, useInternships, useCoaches } from '../services/queries';
 import { InternshipCard } from '../components/internships/InternshipCard';
@@ -18,12 +20,15 @@ import { CoachCard } from '../components/coaching/CoachCard';
 import { LeavingSiteModal } from '../components/common/LeavingSiteModal';
 import { BookingDialog } from '../components/coaching/BookingDialog';
 import { InternshipCard as InternshipCardType, InternshipDetail, CoachCard as CoachCardType, CoachDetail } from '../types/api';
+import { useNavigate } from '@tanstack/react-router';
 
 interface LandingPageProps {
-  navigate: (path: string) => void;
+  navigate?: (path: string) => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ navigate: propNavigate }) => {
+  const routerNavigate = useNavigate();
+  const navigate = propNavigate ?? ((path: string) => routerNavigate({ to: path }));
   const { data: landingData, isLoading: isLoadingLanding } = useLanding();
   const { data: internshipsData, isLoading: isLoadingInternships } = useInternships();
   const { data: coachesData, isLoading: isLoadingCoaches } = useCoaches();
@@ -61,35 +66,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
 
   return (
     <div className="space-y-24 pb-24 overflow-hidden">
-      {/* Stripe-Inspired Radiant Mesh Hero Stage */}
-      <section className="relative pt-12 pb-20 md:py-24 stripe-mesh-hero border-b border-[#3f58b2]/15">
+      {/* Radiant Blue & White Mesh Hero Stage (Centered, Zero Whitespace Gaps) */}
+      <section className="relative pt-12 pb-16 md:pt-16 md:pb-20 stripe-mesh-hero border-b border-[#3f58b2]/15">
         <div className="stripe-grid-lines" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            {/* Left Col: Hero Statement & Tactile Capsule Search Console */}
-            <div className="lg:col-span-6 space-y-7 text-left">
-              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#3f58b2]/20 shadow-stripe-subtle">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#ff9b00] animate-pulse" />
-                <span className="text-xs font-bold text-[#021F53] uppercase tracking-wider font-accent">
-                  iSkolar Vocation · Sessions 2026
-                </span>
-                <span className="text-[#3f58b2] text-xs font-semibold hidden sm:inline">
-                  Directory &amp; 1-on-1 Mentorship &rarr;
-                </span>
-              </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-10">
+          
+          {/* Centered Hero Header & Standout CTA Console */}
+          <div className="max-w-4xl mx-auto text-center space-y-4">
+            {/* Standout Commanding Header */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display text-[#021F53] leading-[1.12] tracking-tight font-bold">
+              Land high-impact <span className="text-[#1d4ed8]">internships</span> with verified <span className="text-[#2563eb]">1-on-1 coaching</span>.
+            </h1>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display text-[#021F53] leading-[1.08] tracking-tight">
-                Land high-impact <span className="text-[#3f58b2] underline decoration-[#ff9b00]/60 decoration-wavy decoration-2">internships</span> with verified <span className="text-[#ff9b00]">1-on-1 coaching</span>.
-              </h1>
+            {/* Exact 50-character subheader */}
+            <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto font-medium font-sans">
+              Curated OJT internships and 1-on-1 career coaching.
+            </p>
 
-              <p className="text-base sm:text-lg text-slate-700 max-w-xl leading-relaxed font-sans">
-                A purpose-built ecosystem for Filipino students. Discover curated OJT roles with direct outbound apply, paired with mock technical interviews and portfolio audits from senior industry practitioners.
-              </p>
-
-              {/* Neumorphic Tactile Search Capsule Bar */}
+            {/* Centered Elevated Architectural Search & Explore Console */}
+            <div className="pt-2 max-w-2xl mx-auto">
               <form
                 onSubmit={handleHeroSearch}
-                className="bg-white p-2 rounded-2xl sm:rounded-full border border-slate-200/90 shadow-stripe-float flex flex-col sm:flex-row items-center gap-2 max-w-xl"
+                className="bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-soft flex flex-col sm:flex-row items-center gap-2"
               >
                 <div className="relative flex-1 w-full pl-2">
                   <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -106,7 +104,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
                   <select
                     value={heroSetup}
                     onChange={(e) => setHeroSetup(e.target.value)}
-                    className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
+                    className="px-3 py-2.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
                   >
                     <option value="">All Setups</option>
                     <option value="remote">Remote</option>
@@ -116,7 +114,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
 
                   <button
                     type="submit"
-                    className="tactile-btn-honey px-5 py-2.5 text-xs rounded-xl sm:rounded-full flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                    className="tactile-btn-primary px-6 py-2.5 text-xs rounded-xl flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shadow-md"
                   >
                     <span>Explore Roles</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -124,161 +122,178 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
                 </div>
               </form>
 
-              {/* Verified Trust Badges */}
-              <div className="flex items-center gap-6 pt-1 text-xs text-slate-600 flex-wrap">
-                <div className="flex items-center gap-2 bg-white/70 backdrop-blur-xs px-3 py-1 rounded-full border border-slate-200/60 shadow-2xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span className="font-semibold text-slate-700">Direct Outbound Apply (Zero Data Leak)</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/70 backdrop-blur-xs px-3 py-1 rounded-full border border-slate-200/60 shadow-2xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span className="font-semibold text-slate-700">100% Verified Practitioners</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Col: Stripe-Style Layered 3D Tactile Mockup & Companion Dashboard */}
-            <div className="lg:col-span-6 relative flex items-center justify-center lg:justify-end pt-6 pb-6 pr-2 sm:pr-6">
-              {/* Overlapping Companion Card (Behind & To the Right - z-0) */}
-              <div className="hidden sm:block absolute -top-6 right-0 sm:right-2 z-0 w-64 bg-white/95 backdrop-blur-md rounded-3xl p-4 border border-slate-200/90 shadow-stripe-float animate-floatSlow">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-accent">
-                    Practicum Trajectory
-                  </span>
-                  <span className="stamp-badge bg-emerald-50 text-emerald-700 border border-emerald-300 text-[10px] py-0 px-1.5">
-                    +34.2% Faster
-                  </span>
-                </div>
-                <div className="mt-2.5 space-y-0.5">
-                  <div className="text-xl font-black text-[#021F53] font-display">
-                    98.4% Placement
-                  </div>
-                  <p className="text-[10px] text-slate-500 font-medium">
-                    300h Certified Practicum Match Rate
-                  </p>
-                </div>
-                {/* Micro Sparkline Curve SVG */}
-                <div className="mt-3 h-12 w-full">
-                  <svg className="w-full h-full overflow-visible" viewBox="0 0 180 40">
-                    <defs>
-                      <linearGradient id="sparklineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#607ef2" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="#607ef2" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M 0,35 Q 30,30 60,22 T 120,15 T 180,4 L 180,40 L 0,40 Z"
-                      fill="url(#sparklineGrad)"
-                    />
-                    <path
-                      d="M 0,35 Q 30,30 60,22 T 120,15 T 180,4"
-                      fill="none"
-                      stroke="#3f58b2"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="180" cy="4" r="3.5" fill="#ff9b00" />
-                  </svg>
-                </div>
-                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                  <span>Avg. Hiring Lead Time</span>
-                  <span className="font-bold text-[#021F53]">14 Days</span>
-                </div>
-              </div>
-
-              {/* Main Tactile Foreground Mockup Card (Skeuomorphic Device Frame - z-10) */}
-              <div className="w-full max-w-sm sm:max-w-[380px] bg-white rounded-3xl p-6 sm:p-7 border border-white/95 shadow-stripe-float relative z-10 space-y-4">
-                {/* Device Header Bar */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-2xl bg-[#f0f7ff] border border-[#607ef2]/20 flex items-center justify-center text-[#3f58b2] shadow-2xs">
-                      <GraduationCap className="w-4 h-4 text-[#3f58b2]" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-[#021F53] block font-headline">
-                        Verified Mentorship Session
-                      </span>
-                      <span className="text-[10px] text-slate-500 block">
-                        Pass #VK-2026 · Instant Calendar Invite
-                      </span>
-                    </div>
-                  </div>
-                  <span className="stamp-badge bg-amber-50 text-amber-900 border border-amber-300">
-                    <Star className="w-3 h-3 fill-[#ff9b00] text-[#ff9b00]" />
-                    4.9 ★ Top Rated
-                  </span>
-                </div>
-
-                {/* Tactile Coach Snapshot Box */}
-                <div className="bg-[#f8fafc] rounded-2xl p-4 border border-slate-200/80 shadow-2xs space-y-3">
-                  <div className="flex items-start gap-3.5">
-                    <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
-                      alt="Engr. Mark Villanueva"
-                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-[#021F53] font-headline">
-                        Engr. Mark Villanueva
-                      </h4>
-                      <p className="text-xs font-semibold text-[#3f58b2] truncate">
-                        Senior Tech Lead &amp; Hiring Manager
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        1-on-1 Mock Interview &amp; Resume Audit
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs">
-                    <span className="text-slate-500 font-medium">Session Rate</span>
-                    <span className="font-bold text-[#021F53] bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      Free 15-min Intro
-                    </span>
-                  </div>
-                </div>
-
-                {/* Inset Tactile Form Elements */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Student University &amp; Program
-                    </label>
-                    <div className="tactile-inset rounded-xl px-3.5 py-2 text-xs font-medium text-[#021F53] flex items-center justify-between">
-                      <span>University of the Philippines · BS CS</span>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Target Practicum Track
-                    </label>
-                    <div className="tactile-inset rounded-xl px-3.5 py-2 text-xs font-medium text-[#021F53] flex items-center justify-between">
-                      <span>Full-Stack &amp; Systems Engineering</span>
-                      <Compass className="w-3.5 h-3.5 text-[#3f58b2]" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tactile Glossy Action Pill Button */}
-                <button
-                  type="button"
-                  onClick={() => navigate('/coaches')}
-                  className="tactile-btn-midnight w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Users className="w-4 h-4 text-[#ff9b00]" />
-                  <span>Schedule 1-on-1 Practice Session</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-
-                <p className="text-[10px] text-center text-slate-500 flex items-center justify-center gap-1.5">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  <span>Outbound direct booking · PayMongo verified checkout</span>
-                </p>
+              {/* Quick Trending Intent Tags */}
+              <div className="flex items-center justify-center gap-2 flex-wrap pt-3 text-xs">
+                <span className="text-slate-400 font-semibold text-[11px] uppercase tracking-wider font-accent">
+                  Trending:
+                </span>
+                {fieldsList.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => {
+                      setHeroSearchQuery(f);
+                      navigate(`/internships?field=${encodeURIComponent(f)}`);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white text-slate-600 hover:text-[#021F53] border border-slate-200/80 text-[11px] font-semibold transition-all cursor-pointer shadow-2xs"
+                  >
+                    {f}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
+
+          {/* Dual-Card Platform Showcase: Grounded, Balanced & Interactive */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-4 items-stretch">
+            {/* Left Card (6 cols): Featured Internship Spotlight */}
+            <div className="lg:col-span-6 bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-soft flex flex-col justify-between space-y-5">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#2563eb] animate-pulse" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-accent">
+                      Featured Verified Opportunity
+                    </span>
+                  </div>
+                  <span className="bg-[#f0f7ff] text-[#1d4ed8] border border-[#3f58b2]/20 rounded-md text-[10px] py-0.5 px-2 font-bold">
+                    Active Intake
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#021F53] text-white font-bold flex items-center justify-center text-lg flex-shrink-0 shadow-2xs">
+                    M
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Maya Philippines
+                      </span>
+                      <span className="text-[10px] text-[#2563eb] font-bold bg-[#f0f7ff] px-2 py-0.2 rounded border border-[#607ef2]/20">
+                        Verified Partner
+                      </span>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-bold text-[#021F53] font-headline leading-tight mt-0.5">
+                      Frontend Engineering Intern
+                    </h3>
+                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Taguig, Metro Manila · Hybrid (3 days onsite)</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Benefits & Specs */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-[#f8fbff] p-2.5 rounded-xl border border-[#dbeafe]">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Allowance</span>
+                    <span className="font-bold text-[#021F53]">₱15,000 / month</span>
+                  </div>
+                  <div className="bg-[#f8fbff] p-2.5 rounded-xl border border-[#dbeafe]">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Practicum</span>
+                    <span className="font-bold text-[#021F53]">300h Certified Credit</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500 font-medium">Direct Outbound Application</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/internships/frontend-engineering-intern')}
+                  className="tactile-btn-primary px-4 py-2 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <span>View Role Dossier</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Right Card (6 cols): Verified Mentorship & Practicum Acceleration */}
+            <div className="lg:col-span-6 bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-soft flex flex-col justify-between space-y-5">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-[#1d4ed8]" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-accent">
+                      Verified Career Mentorship
+                    </span>
+                  </div>
+                  <span className="bg-[#f0f7ff] text-[#021F53] border border-[#3f58b2]/20 font-bold rounded-md px-2 py-0.5 text-[10px] flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-[#1d4ed8] text-[#1d4ed8]" />
+                    4.9 Top Rated
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
+                    alt="Engr. Mark Villanueva"
+                    className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs flex-shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base sm:text-lg font-bold text-[#021F53] font-headline leading-tight">
+                      Engr. Mark Villanueva
+                    </h3>
+                    <p className="text-xs font-semibold text-[#1d4ed8]">
+                      Senior Tech Lead &amp; Hiring Manager
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Specializes in Mock Technical Interviews &amp; Resume Audits
+                    </p>
+                  </div>
+                </div>
+
+                {/* Trajectory Stat */}
+                <div className="bg-[#f8fafc] p-3 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-accent">
+                      Student Placement Rate
+                    </span>
+                    <span className="text-sm font-bold text-[#021F53]">98.4% Matched in &lt;14 Days</span>
+                  </div>
+                  <span className="text-xs font-bold text-[#1d4ed8] bg-[#f0f7ff] px-2.5 py-1 rounded-lg border border-[#3f58b2]/20">
+                    Free 15-min Intro
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500 font-medium">1-on-1 Google Meet Prep</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/coaches')}
+                  className="tactile-btn-primary px-4 py-2 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Users className="w-3.5 h-3.5 text-white" />
+                  <span>Book Practice Session</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Social Proof & Trust Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-200/80 text-center">
+            <div className="p-3 bg-white/70 backdrop-blur-xs rounded-xl border border-slate-200/70 shadow-2xs">
+              <span className="text-lg sm:text-xl font-black text-[#021F53] block font-display">500+</span>
+              <span className="text-[11px] text-slate-500 font-medium">Verified OJT Roles</span>
+            </div>
+            <div className="p-3 bg-white/70 backdrop-blur-xs rounded-xl border border-slate-200/70 shadow-2xs">
+              <span className="text-lg sm:text-xl font-black text-[#1d4ed8] block font-display">₱15,000</span>
+              <span className="text-[11px] text-slate-500 font-medium">Avg. Monthly Allowance</span>
+            </div>
+            <div className="p-3 bg-white/70 backdrop-blur-xs rounded-xl border border-slate-200/70 shadow-2xs">
+              <span className="text-lg sm:text-xl font-black text-[#021F53] block font-display">14 Days</span>
+              <span className="text-[11px] text-slate-500 font-medium">Avg. Placement Speed</span>
+            </div>
+            <div className="p-3 bg-white/70 backdrop-blur-xs rounded-xl border border-slate-200/70 shadow-2xs">
+              <span className="text-lg sm:text-xl font-black text-[#2563eb] block font-display">100%</span>
+              <span className="text-[11px] text-slate-500 font-medium">Credited Practicum</span>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -296,7 +311,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
 
           <button
             onClick={() => navigate('/internships')}
-            className="px-5 py-2.5 bg-white text-[#3f58b2] hover:text-[#021F53] font-bold text-xs rounded-xl border border-[#3f58b2]/20 shadow-2xs hover:shadow-soft flex items-center gap-1.5 transition-all cursor-pointer self-start sm:self-auto"
+            className="tactile-btn-primary px-5 py-2.5 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm self-start sm:self-auto"
           >
             <span>View Full Directory</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -339,16 +354,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
         )}
       </section>
 
-      {/* Pillar 2: 1-on-1 Coaching Section (With Deep Brand Radiance) */}
-      <section className="bg-gradient-to-b from-[#021F53] via-[#062c73] to-[#021F53] text-white py-20 px-4 sm:px-6 lg:px-8 border-y border-[#3f58b2]/30 relative overflow-hidden">
+      {/* Pillar 2: 1-on-1 Coaching Section (Blue & White Contrast) */}
+      <section className="bg-gradient-to-b from-[#021F53] via-[#05225c] to-[#021F53] text-white py-20 px-4 sm:px-6 lg:px-8 border-y border-[#3f58b2]/30 relative overflow-hidden">
         <div className="stripe-grid-lines opacity-10" />
-        <div className="absolute top-1/4 -right-20 w-96 h-96 bg-radial from-[#ff9b00]/15 to-transparent pointer-events-none rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -right-20 w-96 h-96 bg-radial from-[#2563eb]/20 to-transparent pointer-events-none rounded-full blur-3xl" />
         <div className="absolute bottom-10 -left-20 w-96 h-96 bg-radial from-[#607ef2]/20 to-transparent pointer-events-none rounded-full blur-3xl" />
 
         <div className="max-w-7xl mx-auto space-y-10 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#ff9b00] font-accent">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#607ef2] font-accent">
                 Pillar 2 · 1-on-1 Career Coaching
               </span>
               <h2 className="text-2xl sm:text-4xl font-bold font-display leading-tight">
@@ -358,10 +373,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ navigate }) => {
 
             <button
               onClick={() => navigate('/coaches')}
-              className="tactile-btn-honey px-6 py-3 text-xs rounded-xl flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+              className="tactile-btn-white px-6 py-3 text-xs rounded-xl flex items-center gap-2 cursor-pointer self-start sm:self-auto shadow-lift"
             >
               <span>Explore All Coaches</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 text-[#021F53]" />
             </button>
           </div>
 
