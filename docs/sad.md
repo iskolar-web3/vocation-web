@@ -11,7 +11,7 @@
 
 > **Purpose:** the small roster of **build-time** AI agents this project needs, so coding has
 > specialised workers instead of one general agent. Materialises into `.claude/agents/*.md`.
-> Traces back to: [System Design](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md).
+> Traces back to: [System Design](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md).
 > **Not** FMD's factory subagents — this is Vocation's build crew.
 > **Living doc.** When a pivot changes architecture or scope (logged in [`adr/`](adr/)), refresh
 > this roster.
@@ -54,7 +54,7 @@ replace them.
 - **model:** balanced
 - **Justification:** repeated-spawn — every server task routes here.
 - **Purpose:** implement Go endpoints that match [`api-spec.md`](api-spec.md) exactly, inside the
-  module boundaries of [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md).
+  module boundaries of [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md).
 - **Inputs:** `api-spec.md`, `erd.md`, the `F-###` and `BR-###` under work, existing `vocation-server` code.
 - **Outputs:** Go source, table-driven tests, and the `api-spec.md` diff when a contract changes.
 - **Guardrails (never):**
@@ -101,7 +101,7 @@ replace them.
 - **model:** balanced
 - **Justification:** guardrail-enforcement — the constraints in `erd.md` are what make broken
   business rules unrepresentable.
-- **Purpose:** own migrations, and keep [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) and the live schema in agreement.
+- **Purpose:** own migrations, and keep [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md) and the live schema in agreement.
 - **Inputs:** `erd.md`, existing migrations.
 - **Outputs:** numbered reversible migrations, and the `erd.md` diff.
 - **Guardrails (never):**
@@ -127,7 +127,7 @@ replace them.
 - **Justification:** guardrail-enforcement — this is the one area where a bug is not recoverable by
   redeploying. Serves the Security Engineer.
 - **Purpose:** adversarially review the money path against BR-007, BR-008, BR-009 and the failure
-  table in [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md).
+  table in [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md).
 - **Inputs:** the diff, `api-spec.md` API-041/042/045, `erd.md` booking and payment_event,
   [`adr/ADR-0031`](adr/ADR-0031-paymongo-gateway.md).
 - **Outputs:** a findings list with a merge or block recommendation. **Writes no code.**

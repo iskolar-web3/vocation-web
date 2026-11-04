@@ -32,6 +32,9 @@ export interface ApiResponse<T> {
   error?: ApiErrorPayload;
 }
 
+// Platform
+export type Features = Schemas['Features'];
+
 // Auth & Session
 export type UserSession = Schemas['Me'];
 export type Me = Schemas['Me'];

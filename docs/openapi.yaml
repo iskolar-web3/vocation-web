@@ -2021,6 +2021,36 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '500':
           $ref: '#/components/responses/InternalError'
+  /features:
+    get:
+      tags: [Platform]
+      summary: Which optional integrations are on (API-082)
+      operationId: getFeatures
+      description: |
+        Public. Four booleans computed once at startup from config (ADR-0041): email (Resend),
+        uploads (S3), checkout (PayMongo) and Google sign-in. Booleans only; the body never carries
+        a key, bucket, sender or URL. Cached for 5 minutes. Maintenance mode answers `503`.
+      security: []
+      responses:
+        '200':
+          description: The four feature flags.
+          headers:
+            Cache-Control:
+              description: Always `public, max-age=300`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Features'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /healthz:
     get:
       tags: [Platform]
@@ -2216,6 +2246,19 @@ components:
           properties:
             data:
               nullable: true
+    Features:
+      type: object
+      description: The optional integrations that are on, computed from server config at startup (ADR-0041).
+      required: [email, uploads, checkout, google_signin]
+      properties:
+        email:
+          type: boolean
+        uploads:
+          type: boolean
+        checkout:
+          type: boolean
+        google_signin:
+          type: boolean
     ErrorResponse:
       type: object
       required: [message, data, error]

@@ -22,10 +22,12 @@ import {
   useStudentBookings,
   useInternships,
   useResumeCheckout,
+  useFeatures,
 } from '../../services/queries';
 import { ProfileMeter } from '../../components/student/ProfileMeter';
 import { InternshipCard } from '../../components/internships/InternshipCard';
 import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
+import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
 import { formatDateTime } from '../../lib/utils';
 import { InternshipCard as InternshipCardType, InternshipDetail } from '../../types/api';
 
@@ -42,6 +44,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
   const { data: bookings = [], isLoading: isLoadingBookings } = useStudentBookings('upcoming', { enabled: isStudent });
   const { data: internshipsData } = useInternships();
   const resumeCheckoutMutation = useResumeCheckout();
+  const features = useFeatures();
 
   const [selectedInternship, setSelectedInternship] = useState<InternshipCardType | InternshipDetail | null>(null);
 
@@ -225,8 +228,8 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
             <button
               type="button"
               onClick={() => handleResumePayment(pendingSession.booking_id)}
-              disabled={resumeCheckoutMutation.isPending}
-              className="tactile-btn-primary px-4.5 py-2 text-white font-bold rounded-xl shadow-sm text-xs flex items-center gap-1.5 cursor-pointer"
+              disabled={resumeCheckoutMutation.isPending || !features.checkout}
+              className="tactile-btn-primary px-4.5 py-2 text-white font-bold rounded-xl shadow-sm text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {resumeCheckoutMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -235,6 +238,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
               )}
               <span>Complete Payment</span>
             </button>
+            {!features.checkout && <ComingSoonBadge />}
             <button
               type="button"
               onClick={() => navigate('/app/bookings')}
@@ -320,15 +324,18 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleResumePayment(pendingSession.booking_id)}
-                  disabled={resumeCheckoutMutation.isPending}
-                  className="tactile-btn-primary px-5 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-center"
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span>Resume Checkout</span>
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => handleResumePayment(pendingSession.booking_id)}
+                    disabled={resumeCheckoutMutation.isPending || !features.checkout}
+                    className="tactile-btn-primary px-5 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Resume Checkout</span>
+                  </button>
+                  {!features.checkout && <ComingSoonBadge />}
+                </div>
               </div>
             </div>
           ) : (

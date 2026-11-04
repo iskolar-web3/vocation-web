@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import {
   useCurrentUser,
+  useFeatures,
   useStudentProfile,
   useUpdateStudentProfile,
   useUpdateSettings,
@@ -25,6 +26,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import { api } from '../../lib/api';
+import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
 
 interface StudentProfileSettingsPageProps {
   navigate: (path: string) => void;
@@ -34,6 +36,7 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
   navigate,
 }) => {
   const { user, role, refetchUser, logout } = useAuth();
+  const features = useFeatures();
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { data: studentProfile } = useStudentProfile({ enabled: role === 'student' });
   const updateProfileMutation = useUpdateStudentProfile();
@@ -442,6 +445,25 @@ export const StudentProfileSettingsPage: React.FC<StudentProfileSettingsPageProp
               </button>
             </div>
           </div>
+
+          {!features.uploads && (
+            <div className="space-y-2">
+              <div
+                aria-disabled="true"
+                className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-400"
+              >
+                <span>Profile photo</span>
+                <ComingSoonBadge />
+              </div>
+              <div
+                aria-disabled="true"
+                className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-400"
+              >
+                <span>Resume (PDF)</span>
+                <ComingSoonBadge />
+              </div>
+            </div>
+          )}
 
           {/* Submit */}
           <div className="pt-4 border-t border-slate-100 flex justify-end">

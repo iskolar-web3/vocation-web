@@ -518,6 +518,14 @@ export async function handleDevMockRequest<T>(
   const cleanPath = endpoint.split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
   const methodUpper = method.toUpperCase();
 
+  // Feature flags (API-082) — every optional integration is on in local dev
+  if (cleanPath === 'features' && methodUpper === 'GET') {
+    return {
+      message: 'ok',
+      data: { email: true, uploads: true, checkout: true, google_signin: true } as unknown as T,
+    };
+  }
+
   // 1. Auth & Session Routes
   if (cleanPath === 'me' && methodUpper === 'GET') {
     const user = getStored<UserSession | null>(STORAGE_KEYS.USER, null);
