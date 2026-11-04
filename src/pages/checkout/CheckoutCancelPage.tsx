@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AlertTriangle, ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
-import { useStudentBookings, useResumeCheckout } from '../../services/queries';
+import { useStudentBookings, useResumeCheckout, useFeatures } from '../../services/queries';
 import { formatDateTime, formatPHP } from '../../lib/utils';
+import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
 
 interface CheckoutCancelPageProps {
   navigate: (path: string) => void;
@@ -15,6 +16,7 @@ export const CheckoutCancelPage: React.FC<CheckoutCancelPageProps> = ({ navigate
   const booking = bookings?.find((b) => b.booking_id === bookingId);
 
   const resumeCheckoutMutation = useResumeCheckout();
+  const features = useFeatures();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleRetryCheckout = async () => {
@@ -76,21 +78,24 @@ export const CheckoutCancelPage: React.FC<CheckoutCancelPageProps> = ({ navigate
 
           <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
             {bookingId && (
-              <button
-                type="button"
-                onClick={handleRetryCheckout}
-                disabled={resumeCheckoutMutation.isPending}
-                className="w-full sm:w-auto px-6 py-2.5 tactile-btn-primary text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
-              >
-                {resumeCheckoutMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Complete Payment</span>
-                  </>
-                )}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleRetryCheckout}
+                  disabled={resumeCheckoutMutation.isPending || !features.checkout}
+                  className="w-full sm:w-auto px-6 py-2.5 tactile-btn-primary text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {resumeCheckoutMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      <span>Complete Payment</span>
+                    </>
+                  )}
+                </button>
+                {!features.checkout && <ComingSoonBadge />}
+              </>
             )}
 
             <button

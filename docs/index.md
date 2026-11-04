@@ -29,21 +29,21 @@ everything else lives in `vocation-server`, and four are mirrored read-only into
 
 | Concern | Canonical owner | Repo | Note |
 |---|---|---|---|
-| **How big this build is, and what it is** — team, mode, time budget, the flags that select the doc set · vision · problem · segment · value proposition · the `F-###` origin | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md) | server | **The single root input.** Part A sizes the build; Part B is the seed brief. `idea.md` was folded in on 2026-09-08 ([ADR-0015](adr/ADR-0015-fold-idea-into-vocation.md)) — `idea.md §N` is now **§BN** |
+| **How big this build is, and what it is** — team, mode, time budget, the flags that select the doc set · vision · problem · segment · value proposition · the `F-###` origin | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md) | server | **The single root input.** Part A sizes the build; Part B is the seed brief. `idea.md` was folded in on 2026-09-08 ([ADR-0015](adr/ADR-0015-fold-idea-into-vocation.md)) — `idea.md §N` is now **§BN** |
 | Decision *why* · pivots · names and immutable ids · assumptions · rejected approaches · changes to Locked docs (`CR-###`) | [`adr/`](adr/) | server · mirrored | **Combined decision home**: ADR changelog + decision ledger + change records in one folder. Append-only — supersede, never edit. Read newest first |
 | What we build: features `F-###`, business rules `BR-###`, journeys `UJ-###`, acceptance criteria | [`prd.md`](prd.md) | server · mirrored | Owns the id spine. The workbook was the raw input; this is the home now |
-| How it is built: components, data flow, technology choices, deployment topology, scaling | [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) | server | The charter's "System Design" **and** "System Architecture", collapsed |
-| Entities · schema · constraints · indexes · privacy classification · retention | [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) | server | FMD's `data-model`, renamed. The charter's "System Model" |
+| How it is built: components, data flow, technology choices, deployment topology, scaling | [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md) | server | The charter's "System Design" **and** "System Architecture", collapsed |
+| Entities · schema · constraints · indexes · privacy classification · retention | [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md) | server | FMD's `data-model`, renamed. The charter's "System Model" |
 | Screens `S-###` · information architecture · routes · access zones · responsive variants | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) | **web** | Static half of ux-maps |
 | Journeys `UF-###` · edge cases `EV-###` · instrumentation events | [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) | **web** | Dynamic half of ux-maps. The charter's "User Journey" |
 | API contracts `API-###` · auth schemes · error codes · rate limits · versioning | [`api-spec.md`](api-spec.md) | server · mirrored | **The only coupling between the two repositories** |
 | **Machine-readable API contract** — paths, fields, enums, request/response types | [`openapi.yaml`](openapi.yaml) | server · mirrored | OpenAPI 3.0.3. The type half of the contract; `api-spec.md` is the narrative half. Validated in CI by `internal/platform/apicontract/openapi_test.go`; `vocation-web` generates its types from it |
-| **Schedule** — milestone Gantt, sprint calendar, current sprint commitments, review responsibilities | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | server | Owns *when*. Live task state lives in **GitHub Issues + the `Vocation Delivery` Project** (re-homed 2026-09-21; Trello and Shortcut retired for this project). The `TASK-###` ledger was removed 2026-09-10 |
+| **Schedule** — milestone Gantt, sprint calendar, current sprint commitments, review responsibilities | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/implementation-plan.md) | server | Owns *when*. Live task state lives in **GitHub Issues + the `Vocation Delivery` Project** (re-homed 2026-09-21; Trello and Shortcut retired for this project). The `TASK-###` ledger was removed 2026-09-10 |
 | Build-time agent roster | [`sad.md`](sad.md) | server · mirrored | Materialises to `.claude/agents/*.md` |
 | How to get productive · which docs belong to whom · what is missing | [`onboarding.md`](onboarding.md) | server · mirrored | Points, never restates |
 | Code conventions · definition of done · stack currency · which `BR-###` governs which code area | [`../AGENTS.md`](../AGENTS.md) | both | Root agent guide. The rules table is an **index**, not a copy — the PRD wins |
 | Every computed number — equation, inputs, rounding | [`methods.md`](methods.md) | server · mirrored | `platform_fee`, `coach_payout`, `rating_avg`, `completeness_pct`, refund and completion windows. Also records the equations that **do not exist yet** |
-| Deploy · secrets · migrations · workers · monitoring · incidents · backup | [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/ops.md) | server | Operating the system. Deployment *topology* stays in `system-design.md` |
+| Deploy · secrets · migrations · workers · monitoring · incidents · backup | [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/ops.md) | server | Operating the system. Deployment *topology* stays in `system-design.md` |
 | Tests · cases · traceability `F-###` → test · the per-release Passed/Failed tracker | [`qa-test-plan.md`](qa-test-plan.md) | server | Generated 2026-10-01. Owns the 55-path register (47 non-deferred `API-###` operations from 44 identifiers, + EV-004/005/010 and the ₱499.90 case, + 4 manual/E2E paths), how to run each level, the money checklist, and the workbook tracker |
 
 **The rule:** a fact lives in its canonical doc; everything else links to it. Do not restate.
@@ -63,19 +63,19 @@ See [`onboarding.md`](onboarding.md) for who owes each one.
 
 | Document | File | Status | Last updated |
 |---|---|---|---|
-| Root input (context + brief) | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md) | Draft | 2026-09-08 |
+| Root input (context + brief) | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md) | Draft | 2026-09-08 |
 | PRD | [`prd.md`](prd.md) | Draft | 2026-09-10 |
-| System Design (HLD) | [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) | Draft | 2026-09-10 |
-| ERD | [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) | Draft | 2026-09-08 |
+| System Design (HLD) | [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md) | Draft | 2026-09-10 |
+| ERD | [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md) | Draft | 2026-09-08 |
 | Sitemap | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) | Draft | 2026-09-08 |
 | User Flow | [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md) | Draft | 2026-09-08 |
 | API Spec | [`api-spec.md`](api-spec.md) | Draft | 2026-09-08 |
 | OpenAPI contract | [`openapi.yaml`](openapi.yaml) | Draft | 2026-10-01 |
-| Implementation Plan | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md) | Draft | 2026-09-10 |
+| Implementation Plan | [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/implementation-plan.md) | Draft | 2026-09-10 |
 | SAD (agent roster) | [`sad.md`](sad.md) | Draft | 2026-09-08 |
 | Onboarding | [`onboarding.md`](onboarding.md) | Draft | 2026-09-08 |
 | Methods (equations) | [`methods.md`](methods.md) | Draft | 2026-09-21 |
-| Ops | [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/ops.md) | Draft | 2026-10-01 |
+| Ops | [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/ops.md) | Draft | 2026-10-01 |
 | QA Test Plan | [`qa-test-plan.md`](qa-test-plan.md) | Draft | 2026-10-01 |
 | Decision Register | [`adr/README.md`](adr/README.md) | Draft | 2026-10-01 |
 | Agent guide | [`../AGENTS.md`](../AGENTS.md) | Draft | 2026-09-10 |
@@ -153,6 +153,7 @@ elsewhere until that narrative is reconciled. Do not reconstruct a decision from
 | [ADR-0030](adr/ADR-0030-account-full-name-at-signup.md) | Optional `account.full_name` captured at signup | Accepted |
 | [ADR-0032](adr/ADR-0032-observability-sentry-request-logs.md) | Observability: Sentry for errors, one log line per request, DB-aware health check | Accepted |
 | [ADR-0036](adr/ADR-0036-railway-vercel-deploy.md) | Deploy on Railway + Vercel (Resend, Sentry); supersedes ADR-0029 and hosting in ADR-0003 | Accepted |
+| [ADR-0041](adr/ADR-0041-feature-flags.md) | Feature flags: public `GET /features` reports four booleans, computed at startup and cached 5 minutes | Accepted |
 
 The decision ledger (names, immutable ids, assumptions, pivots, rejected approaches) and the
 change-record log live in the same folder: [`adr/README.md`](adr/README.md) §1–§6.

@@ -1044,6 +1044,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which optional integrations are on (API-082)
+         * @description Public. Four booleans computed once at startup from config (ADR-0041): email (Resend),
+         *     uploads (S3), checkout (PayMongo) and Google sign-in. Booleans only; the body never carries
+         *     a key, bucket, sender or URL. Cached for 5 minutes. Maintenance mode answers `503`.
+         */
+        get: operations["getFeatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -1080,6 +1102,13 @@ export interface components {
         };
         EmptySuccess: components["schemas"]["Envelope"] & {
             data: unknown;
+        };
+        /** @description The optional integrations that are on, computed from server config at startup (ADR-0041). */
+        Features: {
+            email: boolean;
+            uploads: boolean;
+            checkout: boolean;
+            google_signin: boolean;
         };
         ErrorResponse: {
             /** @description Top-level, always safe to display (ADR-0018). */
@@ -3466,6 +3495,31 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    getFeatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The four feature flags. */
+            200: {
+                headers: {
+                    /** @description Always `public, max-age=300`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: components["schemas"]["Features"];
+                    };
+                };
+            };
+            503: components["responses"]["Unavailable"];
         };
     };
     healthz: {

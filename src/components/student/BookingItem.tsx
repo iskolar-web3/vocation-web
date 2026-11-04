@@ -14,12 +14,14 @@ import {
 import { StudentBooking } from '../../types/api';
 import { formatDateTime, formatPHP, formatTimeOnly } from '../../lib/utils';
 import { Modal } from '../common/Modal';
+import { ComingSoonBadge } from '../common/ComingSoonBadge';
 
 interface BookingItemProps {
   booking: StudentBooking;
   onPay: (bookingId: string) => void;
   onCancel: (booking: StudentBooking) => void;
   onReview?: (booking: StudentBooking) => void;
+  payDisabled?: boolean;
 }
 
 export const BookingItem: React.FC<BookingItemProps> = ({
@@ -27,6 +29,7 @@ export const BookingItem: React.FC<BookingItemProps> = ({
   onPay,
   onCancel,
   onReview,
+  payDisabled = false,
 }) => {
   const getStatusBadge = () => {
     if (booking.status === 'cancelled') {
@@ -146,14 +149,18 @@ export const BookingItem: React.FC<BookingItemProps> = ({
         {(booking.status === 'pending' ||
           booking.payment_status === 'failed' ||
           booking.payment_status === 'expired') && (
-          <button
-            type="button"
-            onClick={() => onPay(booking.booking_id)}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>{booking.payment_status === 'failed' || booking.payment_status === 'expired' ? 'Retry Payment' : 'Complete Payment'}</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onPay(booking.booking_id)}
+              disabled={payDisabled}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>{booking.payment_status === 'failed' || booking.payment_status === 'expired' ? 'Retry Payment' : 'Complete Payment'}</span>
+            </button>
+            {payDisabled && <ComingSoonBadge />}
+          </>
         )}
 
         {isCancellable && (

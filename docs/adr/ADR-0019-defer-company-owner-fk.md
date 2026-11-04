@@ -8,10 +8,10 @@
 
 ## Context
 
-[`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) specifies `company.owner_account_id` as `uuid NOT NULL`, `FK → account`
+[`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md) specifies `company.owner_account_id` as `uuid NOT NULL`, `FK → account`
 (role `employer`). Sprint 0's migration 0001 is explicitly scoped to **`company` and `internship`
 only** — not the other 18 tables in `erd.md`, `account` included
-([`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md)). `account` lands with `iam` in Sprint 1.
+([`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/implementation-plan.md)). `account` lands with `iam` in Sprint 1.
 
 Separately, [ADR-0010](ADR-0010-mvp-cut-to-17-features.md) already deferred all employer
 self-serve out of v1: admin creates companies and listings directly (F-050, repurposed), so no

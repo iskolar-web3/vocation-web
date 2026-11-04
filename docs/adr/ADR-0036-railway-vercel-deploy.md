@@ -81,5 +81,5 @@ the Terraform and `deploy.yml` in the tree would document an environment that do
 
 ## References
 
-- [`../ops.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/ops.md) — operating the Railway deployment
+- [`../ops.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/ops.md) — operating the Railway deployment
 - [ADR-0016](ADR-0016-neon-postgres-not-rds.md) · [ADR-0029](ADR-0029-deploy-pipeline-and-migrations.md) · [ADR-0032](ADR-0032-observability-sentry-request-logs.md)

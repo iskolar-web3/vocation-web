@@ -14,7 +14,7 @@ something that turns an `ALERT` log line into a notification. None of the three 
 `docs/ops.md` said "NOT YET" for all of it, and the Deploy Spike has been outstanding since Sprint 1
 (`docs/sprint-jim.md`). The topology itself was already decided: Route 53 → ALB → ECS Fargate ≥ 2
 tasks, Neon over TLS, private S3 uploads bucket, Secrets Manager
-([`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) §Deployment topology; [ADR-0003](ADR-0003-aws-postgres-not-supabase.md)
+([`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md) §Deployment topology; [ADR-0003](ADR-0003-aws-postgres-not-supabase.md)
 for AWS-managed services, [ADR-0016](ADR-0016-neon-postgres-not-rds.md) for the database being
 Neon, which puts it outside the VPC). This ADR decides *how* that topology is provisioned and
 released. Constraints that shaped it: no ops role on the team (ADR-0003's own justification for

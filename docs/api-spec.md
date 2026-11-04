@@ -12,7 +12,7 @@
 > **Purpose:** the contract between `vocation-web` and `vocation-server`. Because the charter splits
 > the product into two repositories, **this document is the only coupling between them** — see
 > [`adr/ADR-0002`](adr/ADR-0002-two-repo-split.md).
-> Traces back to: [System Design](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md), [ERD](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md).
+> Traces back to: [System Design](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md), [ERD](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md).
 >
 > `API-###` ids are permanent. Every operation names the `F-###` it serves so a test can trace
 > endpoint → feature → rule.
@@ -103,6 +103,7 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
 | ~~API-010~~ | ~~`GET /programs/:slug`~~ | F-012 | — | **Deferred** (ADR-0010) |
 | API-011 | `GET /landing` | F-001 | public | Featured internships and coaches from **live data**, per F-001's acceptance criteria |
 | API-040 | `GET /coaches/:slug/availability` | F-011 | public | `?from`, `?to`. Bookable slots only |
+| API-082 | `GET /features` | — | public | Which optional integrations are on: `email`, `uploads`, `checkout`, `google_signin`. Booleans only, computed at startup; `Cache-Control: public, max-age=300` |
 
 #### API-001 — `GET /internships` — search the directory
 
@@ -112,7 +113,10 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
   (`newest|deadline_soon|relevance`), `page`, `per_page`
 - **Response 200:** `{ message, data: [InternshipCard], meta: { page, per_page, total } }` where
   `InternshipCard` carries `id`, `slug`, `title`, `company: {name, slug, logo_url}`, `location`,
-  `duration_weeks`, `is_paid`, `work_setup`, `field`, `deadline` — the card fields F-002 requires, plus `work_setup` for the setup badge
+  `duration_weeks`, `is_paid`, `pay_not_stated`, `work_setup`, `field`, `deadline` — the card fields
+  F-002 requires, plus `work_setup` for the setup badge. `pay_not_stated` is true only when an
+  unpaid listing's `compensation_details` is exactly the importer's "pay not stated" note, so the
+  client can show "Pay not stated" rather than "Unpaid / For Credit". It is always present.
 - **Auth:** none
 - **Errors:** `422` on an unknown enum value; never `500` on an empty result — an empty page is
   `200` with `total: 0` so the client can render its empty state
@@ -130,6 +134,21 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
 - **Note:** this endpoint records that a student *left*. It **must not** accept a resume, cover
   note, or any application payload — BR-001 and [`ADR-0006`](adr/ADR-0006-store-no-applications.md).
   Rate-limited by IP, since it is unauthenticated
+
+#### API-082 — `GET /features` — which optional integrations are on
+
+- **Serves:** operational — tells the web which optional integrations production has configured
+- **Auth:** **none**
+- **Response 200:** `{ message, data: { email, uploads, checkout, google_signin } }` — four booleans
+  computed once at startup from config ([ADR-0041](adr/ADR-0041-feature-flags.md))
+- **Flags:** `email` is on when `RESEND_API_KEY` is set · `uploads` when the `S3_BUCKET`/`AWS_*`
+  group is complete · `checkout` when `PAYMONGO_SECRET_KEY` **and** `PAYMONGO_WEBHOOK_SECRET` are
+  set (without the webhook no paid booking could be confirmed) · `google_signin` when the
+  `GOOGLE_*` group is complete
+- **Note:** booleans only — never a key, bucket, sender or URL (REG-33). The response carries
+  `Cache-Control: public, max-age=300`, so a flag can lag a config change (which needs a restart)
+  by up to five minutes. Maintenance mode answers `503`; the web fails open and shows its
+  maintenance screen
 
 ### Authentication
 
@@ -154,7 +173,7 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
 | API-031 | `PATCH /me/student-profile` | F-023 | owner | Name, school, course, year, skills, bio, avatar, resume keys, `target_ojt_hours`, `completed_ojt_hours` |
 | API-032 | `GET /me/student-profile` | F-023 | student | The caller's own profile (same shape as API-030/031's response); `404` until onboarding |
 | API-033 | `GET /me/dashboard` | F-021 | student | `{ saved_count, upcoming_sessions_count, completeness_pct }`. **Carries no application data** (BR-014) |
-| API-034 | `GET /me/saved` | F-005 | student | |
+| API-034 | `GET /me/saved` | F-005 | student | Items carry the public card fields plus `saved_at`, including `pay_not_stated` |
 | API-035 | `PUT /me/saved/:internshipId` | F-005 | student | Idempotent — a repeat save is `200`, not `409` |
 | API-036 | `DELETE /me/saved/:internshipId` | F-005 | student | Idempotent |
 | API-037 | `GET /me/bookings` | F-022 | student | `?when=upcoming\|past`. Confirmed rows carry `join_url`; `pending` paid rows carry `amount_due_centavos` |
@@ -175,7 +194,10 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
     Checkout Session is created and its `checkout_url` returned (ADR-0008)
 - **Response 201:** `{ booking_id, status, payment_status, price_centavos, platform_fee_centavos,
   coach_payout_centavos, checkout_url? }`
-- **Errors:** `409` slot no longer available (EV-008) · `422` slot not in the coach's availability
+- **Errors:** `409` slot no longer available (EV-008) · `409` the student already holds 3 unpaid
+  bookings (`booking: too_many_unpaid`) · `409` the student let an unpaid booking for the same slot
+  end within the last 30 minutes (`booking: slot_cooldown`); both 409s apply to paid
+  sessions only, never free ones (ADR-0039) · `422` slot not in the coach's availability
   · `404` unknown coach or session type · `502` PayMongo unreachable — **the booking row remains,
   `pending`, with no stored Checkout Session. A session whose create response was lost may exist, but
   its URL was never returned, so it cannot be paid. The student resumes via API-042; the 30 min
@@ -186,7 +208,7 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
   reconciliation.
 - **Note:** the fee split is returned so the client never computes money. `platform_fee +
   coach_payout = price` and `platform_fee = ROUND(price * take_rate, 2)` are both database CHECKs
-  ([`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md)), so a wrong split cannot persist
+  ([`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md)), so a wrong split cannot persist
 
 #### API-042 — `POST /bookings/:id/checkout` — resume payment
 
@@ -199,8 +221,10 @@ The client's route guards are UX only ([`sitemap.md`](https://github.com/iskolar
 - **Errors:** `409` if the booking is no longer pending payment, including when a webhook pays it
   between the initial read and the replacement — protects against a stale Complete-payment button
   after a webhook has landed · `409 payment in progress` if PayMongo reports pending or processing
-  payment · `502 upstream_failed` if session creation fails · `500 internal_error` if the session
-  reference could not be stored (ADR-0031)
+  payment · `409` if the booking is more than 2 hours old (`CheckoutMaxHold`): the stored session is
+  expired and the booking released on the spot, so the slot frees immediately (ADR-0039) · `429` over
+  10 checkouts per hour per account, with `Retry-After` · `502 upstream_failed` if session creation
+  fails · `500 internal_error` if the session reference could not be stored (ADR-0031)
 
 #### API-045 — `POST /webhooks/paymongo` — the only thing that confirms a payment
 
@@ -241,8 +265,8 @@ No employer surface exists in v1. Listings are created by admin (API-071). Rows 
 | ID | Method / path | Serves | Auth | Notes |
 |----|---------------|--------|------|-------|
 | API-060 | `POST /me/coach-profile` | F-040 | coach | Onboarding: bio, expertise, session types, pricing |
-| API-061 | `PATCH /me/coach-profile` | F-041 | owner | Partial update: `display_name`, `headline`, `bio`, `experience`, `languages`, `skills`, `default_join_url` — any field omitted is left unchanged. `slug`, `price_type` and `verification_status` are not writable here (`slug` and `price_type` are set once at onboarding via API-060; `verification_status` is never writable, F-043 deferred). **Payout destination:** `payout_channel_code` (e.g. `PH_GCASH`, `PH_BDO`), `payout_account_number` (6–32 digits) and `payout_account_holder_name` must be supplied **together**; responses return the account number **masked to its last four digits**, never in full (ADR-0028). Changing any payout field also requires `current_password` (missing, wrong, or a Google-only account: `403`) and a `payout_account_holder_name` equal to the account's `full_name` ignoring case and spacing (`422`) (ADR-0034) |
-| API-067 | `GET /me/session-types` · `POST /me/session-types` · `PATCH /me/session-types/:id` | F-041 | owner | Free/paid and rate. A price change never affects existing bookings ([`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md)). GET lists the coach's own types, retired ones included (`is_active`) |
+| API-061 | `PATCH /me/coach-profile` | F-041 | owner | Partial update: `display_name`, `headline`, `bio`, `experience`, `languages`, `skills`, `default_join_url` — any field omitted is left unchanged. `slug`, `price_type` and `verification_status` are not writable here (`slug` and `price_type` are set once at onboarding via API-060; `verification_status` is never writable, F-043 deferred). **Payout destination:** `payout_channel_code` (e.g. `PH_GCASH`, `PH_BDO`), `payout_account_number` (6–32 digits) and `payout_account_holder_name` must be supplied **together**; responses return the account number **masked to its last four digits**, never in full (ADR-0028). Changing any payout field also requires `current_password` (missing, wrong, or a Google-only account: `403`) and a `payout_account_holder_name` equal to the account's `full_name` ignoring case and spacing (`422`) (ADR-0034). Over the shared current-password budget (5 per 15 minutes per account) a request that sends a payout field is `429` with `Retry-After` (ADR-0039) |
+| API-067 | `GET /me/session-types` · `POST /me/session-types` · `PATCH /me/session-types/:id` | F-041 | owner | Free/paid and rate. A price change never affects existing bookings ([`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md)). GET lists the coach's own types, retired ones included (`is_active`) |
 | API-062 | `GET /me/availability` · `PUT /me/availability` | F-041 | owner | `422` on removing a slot that has a booking. Backed by an `ON DELETE RESTRICT` FK, so the database refuses it even if the handler is bypassed (ADR-0009) |
 | API-063 | `GET /me/sessions` | F-041 | coach | `?when=upcoming\|past` |
 | API-064 | `GET /me/earnings` · `GET /me/earnings/ledger` | F-042 | coach | `GET /me/earnings`: `data` is the per-booking array (`price`, `platform_fee`, `coach_payout`, `payment_status`) exactly as before; `meta.balance = { available_centavos, in_transit_centavos, paid_out_centavos, pending_centavos }` (ADR-0018 meta). `GET /me/earnings/ledger`: paginated (`?page`, `?per_page`) ledger entries, newest first. The balance is read from the append-only gateway-neutral ledger and payout batches; coach disbursements are manual until PayMongo Transfers is implemented. See `methods.md` §7, ADR-0028 |
@@ -291,7 +315,7 @@ No employer surface exists in v1. Listings are created by admin (API-071). Rows 
   if they are a key this endpoint issued to the caller for that purpose (`<prefix>/<account id>/<file>`);
   anything else is `422 unprocessable`
 - **Note:** bytes go **straight to object storage**, never through the API. `resume` objects land in
-  a private prefix, are never public-read, and carry the retention policy in [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) —
+  a private prefix, are never public-read, and carry the retention policy in [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md) —
   they are sensitive personal information under RA 10173
 
 ## Error codes
@@ -339,7 +363,9 @@ field-level for form errors.
 | `API-028` resend verification | 3 / hour per account | Each call is a real email against the Resend free plan |
 | `API-003` apply-click | 30 / min per IP | Unauthenticated write; analytics poisoning |
 | `API-001`, other public reads | 120 / min per IP | Scraping the directory |
-| `API-041` create booking | 10 / hour per account | Slot squatting |
+| `API-041` create booking | 10 / hour per account; at most 3 unpaid bookings at once; 30 min same-slot rebook cooldown | Slot squatting (ADR-0039) |
+| `API-042` resume checkout | 10 / hour per account | Re-issuing checkout resets the 30-minute idle window; paired with the 2-hour absolute hold cap (ADR-0039) |
+| `API-061` payout-detail change | 5 / 15 min per account, **shared** with `POST /auth/password/change` and `PATCH /me/settings` | Current-password guessing from a stolen coach session; spent only when a payout field is sent (ADR-0039) |
 | `API-080` presign | 20 / hour per account | Storage abuse |
 | `API-045` webhook | **Not rate-limited** | Throttling PayMongo would drop payment events. Protected by signature verification instead |
 

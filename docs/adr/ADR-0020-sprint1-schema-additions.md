@@ -15,7 +15,7 @@ settle on its own:
    "Session cookie" scheme and AGENTS.md's "server-side sessions" requirement need somewhere to
    live.
 2. **`review.booking_id`.** `erd.md` specifies it `NOT NULL`, `FK → booking`, `UNIQUE`. `booking`
-   doesn't exist until Sprint 2 ([`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md)), but F-013's
+   doesn't exist until Sprint 2 ([`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/implementation-plan.md)), but F-013's
    read path (`GET /coaches/:slug/reviews`, API-008) is in scope now — the same shape of problem
    [ADR-0019](ADR-0019-defer-company-owner-fk.md) already solved for `company.owner_account_id`.
 3. **Ordering columns on `coach_profile` and `session_type`.** `erd.md` lists no `created_at` for

@@ -3,6 +3,8 @@ import { GraduationCap, ArrowRight, Mail, Lock, User, AlertCircle, Loader2, Chec
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/api';
 import { api } from '../../lib/api';
+import { useFeatures } from '../../services/queries';
+import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
 
 interface AuthPageProps {
   mode: 'signin' | 'signup' | 'reset';
@@ -11,6 +13,7 @@ interface AuthPageProps {
 
 export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
   const { signin, signup, user } = useAuth();
+  const features = useFeatures();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [email, setEmail] = useState('');
@@ -23,8 +26,11 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check for reset token in URL (API-025 / Issue #16)
-  const [resetToken, setResetToken] = useState<string | null>(null);
+  // Check for reset token in URL (API-025 / Issue #16). Read it synchronously so
+  // a token link never renders the first paint as a tokenless request page.
+  const [resetToken, setResetToken] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('token')
+  );
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -136,12 +142,22 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
         <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#021F53]">
           {mode === 'signin' && 'Sign in to iSkolar Vocation'}
           {mode === 'signup' && 'Create Your iSkolar Account'}
-          {mode === 'reset' && (resetToken ? 'Set New Password' : 'Reset Your Password')}
+          {mode === 'reset' &&
+            (resetToken
+              ? 'Set New Password'
+              : !features.email
+              ? 'Password Reset'
+              : 'Reset Your Password')}
         </h1>
         <p className="text-xs text-[#2c3f77]">
           {mode === 'signin' && 'Access your internships, bookings, and coaching sessions'}
           {mode === 'signup' && 'Join thousands of students and industry mentors'}
-          {mode === 'reset' && (resetToken ? 'Choose a strong password for your account' : 'We will send a secure password reset link to your email')}
+          {mode === 'reset' &&
+            (resetToken
+              ? 'Choose a strong password for your account'
+              : !features.email
+              ? 'Email reset links are not available yet.'
+              : 'We will send a secure password reset link to your email')}
         </p>
       </div>
 
@@ -153,7 +169,23 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
           </div>
         )}
 
-        {resetConfirmed ? (
+        {mode === 'reset' && !resetToken && !features.email ? (
+          <div className="text-center py-6 space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center mx-auto">
+              <Mail className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-base text-[#021F53]">Reset By Email Unavailable</h3>
+            <p className="text-xs text-slate-500">Password reset by email is coming soon.</p>
+            <ComingSoonBadge />
+            <button
+              type="button"
+              onClick={() => navigate('/signin')}
+              className="mt-1 px-6 py-2.5 bg-[#021F53] text-white font-bold text-xs rounded-xl cursor-pointer hover:bg-[#002774] transition-colors"
+            >
+              Back to sign in
+            </button>
+          </div>
+        ) : resetConfirmed ? (
           <div className="text-center py-6 space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/30 flex items-center justify-center mx-auto font-bold shadow-inner">
               <CheckCircle2 className="w-6 h-6" />
@@ -282,15 +314,21 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1 flex items-center justify-between">
                   <span>Password</span>
-                  {mode === 'signin' && (
-                    <button
-                      type="button"
-                      onClick={() => navigate('/reset-password')}
-                      className="text-[11px] text-[#3f58b2] font-semibold hover:underline cursor-pointer"
-                    >
-                      Forgot password?
-                    </button>
-                  )}
+                  {mode === 'signin' &&
+                    (features.email ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/reset-password')}
+                        className="text-[11px] text-[#3f58b2] font-semibold hover:underline cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                        Forgot password?
+                        <ComingSoonBadge />
+                      </span>
+                    ))}
                 </label>
                 <input
                   type="password"

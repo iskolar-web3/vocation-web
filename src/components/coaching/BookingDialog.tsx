@@ -14,8 +14,9 @@ import { Modal } from '../common/Modal';
 import { CoachCard, CoachDetail, AvailabilitySlot, CreateBookingResponse, SessionType } from '../../types/api';
 import { formatPHP, formatDate, formatDateTime, formatTimeOnly } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
-import { useCoach, useCoachAvailability, useCreateBooking } from '../../services/queries';
+import { useCoach, useCoachAvailability, useCreateBooking, useFeatures } from '../../services/queries';
 import { analytics } from '../../lib/analytics';
+import { ComingSoonBadge } from '../common/ComingSoonBadge';
 
 interface BookingDialogProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
   onBookingSuccess,
 }) => {
   const { isAuthenticated, role } = useAuth();
+  const features = useFeatures();
+  const checkoutEnabled = features.checkout;
   const createBookingMutation = useCreateBooking();
 
   const [selectedSessionTypeId, setSelectedSessionTypeId] = useState<string>('');
@@ -92,6 +95,11 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
   const handleProceed = async () => {
     if (!activeSessionType || !selectedSlot) return;
     setErrorMsg(null);
+
+    if (!isFree && !checkoutEnabled) {
+      setErrorMsg('Paid sessions are coming soon.');
+      return;
+    }
 
     if (!isAuthenticated) {
       setErrorMsg('Please sign in or create a student account to book a coaching session.');
@@ -253,6 +261,7 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
                               Intro Call
                             </span>
                           )}
+                          {!checkoutEnabled && st.price_centavos > 0 && <ComingSoonBadge />}
                         </div>
                         <p className="text-xs text-[#2c3f77] mt-1 leading-relaxed">
                           {st.duration_minutes} min dedicated 1-on-1 session
@@ -368,11 +377,19 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({
             <button
               type="button"
               onClick={handleProceed}
-              disabled={role === 'coach' || !activeSessionType || !selectedSlot || createBookingMutation.isPending}
+              disabled={
+                role === 'coach' ||
+                !activeSessionType ||
+                !selectedSlot ||
+                createBookingMutation.isPending ||
+                (!isFree && !checkoutEnabled)
+              }
               className="tactile-btn-primary px-6 py-3 rounded-xl text-xs font-bold text-white flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
             >
               {createBookingMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : !isFree && !checkoutEnabled ? (
+                <span>Paid sessions are coming soon</span>
               ) : isFree ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 text-white" />

@@ -497,6 +497,13 @@ export const server = http.createServer(async (req, res) => {
   };
 
   try {
+    // Feature flags (API-082) — every optional integration is on in local dev
+    if (cleanPath === 'features' && method === 'GET') {
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      sendJson(200, { email: true, uploads: true, checkout: true, google_signin: true });
+      return;
+    }
+
     // Health Check
     if (cleanPath === 'healthz') {
       res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -20,7 +20,7 @@ iSkolar Vocation is a mobile-first web platform pairing an internship and OJT di
 marketplace of coaches. Students apply on each company's own site — the platform stores no
 applications. Revenue is a 10% commission on paid coaching, collected through PayMongo Checkout Sessions.
 
-Full brief: [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md). Scope: `Vocation Project Charter.pdf` §II.
+Full brief: [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md). Scope: `Vocation Project Charter.pdf` §II.
 
 ## Read first, in this order
 
@@ -79,10 +79,10 @@ are not records. The test: *would a future reader ask "why did we do it this way
 
 | You are | Own | Read closely | Skim |
 |---------|-----|--------------|------|
-| **Louigie** — Project Lead | [`adr/`](adr/) decisions, [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md), [`api-spec.md`](api-spec.md) contract | `prd.md`, `erd.md`, `sad.md` | `sitemap.md`, `user-flow.md` |
-| **Alexandre** — PM | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md), [`prd.md`](prd.md), [`index.md`](index.md), [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/implementation-plan.md), open questions everywhere | everything | — |
+| **Louigie** — Project Lead | [`adr/`](adr/) decisions, [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md), [`api-spec.md`](api-spec.md) contract | `prd.md`, `erd.md`, `sad.md` | `sitemap.md`, `user-flow.md` |
+| **Alexandre** — PM | [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md), [`prd.md`](prd.md), [`index.md`](index.md), [`implementation-plan.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/implementation-plan.md), open questions everywhere | everything | — |
 | **Jem** (`jemslzr`) — Frontend | `vocation-web`: screens, routes, `apiFetch` | [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [`user-flow.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md), [`api-spec.md`](api-spec.md) | `prd.md` for `BR-###` |
-| **Jimuelle** (`Jimuelle07`) — Backend | `vocation-server`: Go, Neon, migrations | [`api-spec.md`](api-spec.md), [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md) | `prd.md` for `BR-###` |
+| **Jimuelle** (`Jimuelle07`) — Backend | `vocation-server`: Go, Neon, migrations | [`api-spec.md`](api-spec.md), [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md), [`system-design.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md) | `prd.md` for `BR-###` |
 | **Emmanuel** — Security Engineer | `security-compliance` *(not yet written — yours to own)*, `erd.md` retention and classification | [`api-spec.md`](api-spec.md) auth, rate limits; `sitemap.md` §5 | `system-design.md` |
 | **John Richie** — Penetration Tester | Threat findings against [`sitemap.md`](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md) §5 and [`api-spec.md`](api-spec.md) | `user-flow.md` `EV-###`, `erd.md` classification | `prd.md` |
 
@@ -182,4 +182,4 @@ Being explicit so nobody assumes these exist:
 
 - [`index.md`](index.md) — §0 owners
 - [`adr/`](adr/) — decisions, ledger, change records; §6 is the live risk list
-- [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md) — context intake and charter mapping
+- [`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md) — context intake and charter mapping
