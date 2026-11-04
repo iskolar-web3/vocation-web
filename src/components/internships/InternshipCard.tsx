@@ -16,6 +16,10 @@ import { useAuth } from '../../context/AuthContext';
 const payLabel = (internship: InternshipCardType | InternshipDetail, fallback: string): string =>
   ('compensation_details' in internship && internship.compensation_details) || fallback;
 
+// Imported job-board posts whose original post never stated pay carry pay_not_stated.
+const isPayNotStated = (internship: InternshipCardType | InternshipDetail): boolean =>
+  'pay_not_stated' in internship && internship.pay_not_stated === true;
+
 interface InternshipCardProps {
   internship: InternshipCardType | InternshipDetail;
   onSelect: (internship: InternshipCardType | InternshipDetail) => void;
@@ -143,7 +147,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
             </span>
           ) : (
             <span className="stamp-badge bg-slate-100 text-slate-600 border border-slate-200 text-[10px] py-0 px-2">
-              Unpaid / For Credit
+              {isPayNotStated(internship) ? 'Pay not stated' : 'Unpaid / For Credit'}
             </span>
           )}
         </div>
@@ -197,14 +201,19 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
                 <span>{internship.duration_weeks} Weeks</span>
               </div>
-              {internship.is_paid && (
+              {internship.is_paid ? (
                 <div className="flex items-center gap-1 font-bold text-[#021F53] bg-[#f0f7ff] border border-[#3f58b2]/20 px-2.5 py-0.5 rounded-md text-[11px]">
                   <Coins className="w-3 h-3 text-[#2563eb]" />
                   <span>
                     {payLabel(internship, 'Paid Allowance')}
                   </span>
                 </div>
-              )}
+              ) : isPayNotStated(internship) ? (
+                <div className="flex items-center gap-1 font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md text-[11px]">
+                  <Coins className="w-3 h-3 text-slate-400" />
+                  <span>Pay not stated</span>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -314,7 +323,7 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
           ) : (
             <div className="flex items-center gap-1.5 text-slate-500">
               <Coins className="w-3.5 h-3.5 text-slate-400" />
-              <span>Unpaid / School credit</span>
+              <span>{isPayNotStated(internship) ? 'Pay not stated' : 'Unpaid / School credit'}</span>
             </div>
           )}
         </div>
