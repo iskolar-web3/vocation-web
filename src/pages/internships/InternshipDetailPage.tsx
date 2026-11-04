@@ -216,7 +216,7 @@ export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug
             <span className="text-sm font-bold text-[#021F53] mt-0.5 block">
               {internship.is_paid
                 ? internship.compensation_details || 'Paid Allowance'
-                : 'Unpaid / For Credit'}
+                : internship.compensation_details || 'Unpaid / For Credit'}
             </span>
           </div>
 
