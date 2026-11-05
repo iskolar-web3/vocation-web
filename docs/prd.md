@@ -10,9 +10,9 @@
 **FMD version:** 4.6.2
 
 > **Purpose:** the WHAT, for the team. Primary build reference.
-> Traces back to: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md), `Vocation Project Charter.pdf`,
-> `Vocation User Stories.xlsx`. Traces forward to: [System Design](https://github.com/iskolar-web3/vocation-server/blob/main/docs/system-design.md),
-> [Sitemap](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [User Flow](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md), [ERD](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md), [API Spec](api-spec.md).
+> Traces back to: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md), `Vocation Project Charter.pdf`,
+> `Vocation User Stories.xlsx`. Traces forward to: [System Design](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/system-design.md),
+> [Sitemap](https://github.com/iskolar-web3/vocation-web/blob/main/docs/sitemap.md), [User Flow](https://github.com/iskolar-web3/vocation-web/blob/main/docs/user-flow.md), [ERD](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md), [API Spec](api-spec.md).
 >
 > **This doc owns the `F-###`, `UJ-###`, and `BR-###` spine.** Nothing else defines them.
 > The workbook is the raw input; from here on this PRD is the home. When they disagree, this wins
@@ -88,7 +88,7 @@ list and [ADR-0010](adr/ADR-0010-mvp-cut-to-17-features.md).
 **v1 is 17 features.** The charter defines 25; eight are **Deferred** per
 [ADR-0010](adr/ADR-0010-mvp-cut-to-17-features.md) — one developer against 47 endpoints and 30
 screens, and none of the deferred blocks tests the riskiest assumption in
-[`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md) §B9. Deferred rows stay in place, marked, so reviving one is a
+[`../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md) §B9. Deferred rows stay in place, marked, so reviving one is a
 status flip rather than a re-spec.
 
 | F-ID | Feature | Priority | Module | Notes |
@@ -291,7 +291,7 @@ count, tracked as Passed/Failed/Rate — that tracker is the seed of the QA plan
 - Stipend or allowance disbursement. Money moves only student → platform → coach.
 - Employer analytics, and any HEI or university-facing surface. No such role exists.
 
-Full reasoning: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md) §B10.
+Full reasoning: [`VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md) §B10.
 
 ## Dependencies
 

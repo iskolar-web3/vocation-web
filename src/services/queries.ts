@@ -42,10 +42,28 @@ import {
   UpdateSettingsRequest,
   PutAvailabilityRequest,
   AdminInternshipCard,
+  Features,
 } from '../types/api';
+
+const FeaturesResponseSchema = z.object({
+  email: z.boolean(),
+  uploads: z.boolean(),
+  checkout: z.boolean(),
+  google_signin: z.boolean(),
+});
+
+// Fail open: before /features answers, and whenever it fails, every feature is
+// treated as available so an outage never hides something that works.
+const FEATURES_FAIL_OPEN: Features = {
+  email: true,
+  uploads: true,
+  checkout: true,
+  google_signin: true,
+};
 
 // Keys
 export const queryKeys = {
+  features: ['features'] as const,
   landing: ['landing'] as const,
   internships: (filters?: Record<string, any>) => ['internships', filters] as const,
   internship: (slug: string) => ['internship', slug] as const,
@@ -68,6 +86,29 @@ export const queryKeys = {
 };
 
 // Public Reads
+export function useFeatures(): Features {
+  const { data } = useQuery({
+    queryKey: queryKeys.features,
+    queryFn: async () => {
+      const res = await api.get<Features>('/features', undefined, {
+        schema: FeaturesResponseSchema,
+      });
+      return res.data;
+    },
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+  });
+  // Merge over the fail-open defaults: only an explicit false turns a feature
+  // off, so a missing or non-boolean key never hides a working feature.
+  const f: Partial<Features> = data ?? FEATURES_FAIL_OPEN;
+  return {
+    email: f.email !== false,
+    uploads: f.uploads !== false,
+    checkout: f.checkout !== false,
+    google_signin: f.google_signin !== false,
+  };
+}
+
 export function useLanding() {
   return useQuery({
     queryKey: queryKeys.landing,

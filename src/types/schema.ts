@@ -554,7 +554,9 @@ export interface paths {
          * @description Student role. Free or intro-call sessions are written `confirmed`/`none` with no gateway
          *     call and no `checkout_url`. A paid session writes the booking first (`pending`/`pending`)
          *     with the stored money split (BR-007/BR-008, ADR-0007), then creates a PayMongo Checkout Session and
-         *     returns `checkout_url`. Rate-limited 10/hour per account (`429`).
+         *     returns `checkout_url`. Rate-limited 10/hour per account (`429`). For a paid session, `409` also means
+         *     the student already holds 3 unpaid bookings (`booking: too_many_unpaid`) or released the same slot
+         *     unpaid within the last 30 minutes (`booking: slot_cooldown`) (ADR-0039).
          */
         post: operations["API-041"];
         delete?: never;
@@ -576,6 +578,7 @@ export interface paths {
          * Resume payment (API-042)
          * @description Student owner. Expires the previously stored Checkout Session before creating a replacement for a still-pending booking under the booking
          *     row lock. A payment already pending or processing returns `409 payment in progress`. Owner miss is `404`.
+         *     A booking more than 2 hours old is `409` (the booking is expired and its slot released at once). Rate-limited 10 per hour per account (`429`) (ADR-0039).
          */
         post: operations["API-042"];
         delete?: never;
@@ -717,7 +720,10 @@ export interface paths {
          *     `payout_account_holder_name`) must be supplied together; the account number is returned
          *     masked to its last four digits (ADR-0028). Sending any payout field also requires
          *     `current_password` (`403` if missing, wrong, or a Google-only account) and a holder name equal
-         *     to the account's `full_name` ignoring case and spacing (`422`) (ADR-0034).
+         *     to the account's `full_name` ignoring case and spacing (`422`) (ADR-0034). Sending a payout field
+         *     spends the shared password-change budget (5 per 15 minutes per account, with
+         *     `POST /auth/password/change` and `PATCH /me/settings`); once spent the request is `429` with `Retry-After`,
+         *     before the password is checked (ADR-0039).
          */
         patch: operations["API-061"];
         trace?: never;
@@ -1038,6 +1044,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which optional integrations are on (API-082)
+         * @description Public. Four booleans computed once at startup from config (ADR-0041): email (Resend),
+         *     uploads (S3), checkout (PayMongo) and Google sign-in. Booleans only; the body never carries
+         *     a key, bucket, sender or URL. Cached for 5 minutes. Maintenance mode answers `503`.
+         */
+        get: operations["getFeatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -1074,6 +1102,13 @@ export interface components {
         };
         EmptySuccess: components["schemas"]["Envelope"] & {
             data: unknown;
+        };
+        /** @description The optional integrations that are on, computed from server config at startup (ADR-0041). */
+        Features: {
+            email: boolean;
+            uploads: boolean;
+            checkout: boolean;
+            google_signin: boolean;
         };
         ErrorResponse: {
             /** @description Top-level, always safe to display (ADR-0018). */
@@ -1218,6 +1253,8 @@ export interface components {
             location: string;
             duration_weeks: number | null;
             is_paid: boolean;
+            /** @description True when an unpaid listing's original post did not state pay; the client shows "Pay not stated" instead of implying the role is unpaid. */
+            pay_not_stated: boolean;
             work_setup: components["schemas"]["WorkSetup"];
             field: string;
             /** @description Calendar date (`YYYY-MM-DD`) or null. */
@@ -1390,6 +1427,8 @@ export interface components {
             location: string;
             duration_weeks: number | null;
             is_paid: boolean;
+            /** @description True when an unpaid listing's original post did not state pay; the client shows "Pay not stated" instead of implying the role is unpaid. */
+            pay_not_stated: boolean;
             work_setup: components["schemas"]["WorkSetup"];
             field: string;
             deadline: string | null;
@@ -2667,7 +2706,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
-            /** @description Booking is no longer pending payment or PayMongo reports a payment in progress. */
+            /** @description Booking is no longer pending payment, is past its 2-hour hold cap (the booking is released on the spot), or PayMongo reports a payment in progress. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2676,6 +2715,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
             502: components["responses"]["UpstreamFailed"];
         };
@@ -2904,6 +2944,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -3454,6 +3495,31 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    getFeatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The four feature flags. */
+            200: {
+                headers: {
+                    /** @description Always `public, max-age=300`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data: components["schemas"]["Features"];
+                    };
+                };
+            };
+            503: components["responses"]["Unavailable"];
         };
     };
     healthz: {

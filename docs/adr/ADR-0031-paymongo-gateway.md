@@ -37,7 +37,8 @@ Use PayMongo Checkout Sessions through the existing `payments.IntentCreator` bou
   A session created by PayMongo whose response is lost has no stored reference and cannot be paid
   by the customer, because its checkout URL was never returned. This avoids a list-sweep; PayMongo
   has no API to list or search sessions.
-- A pending paid booking retains its slot for 24 h after the last checkout was issued. The sweeper
+- A pending paid booking retains its slot for 24 h after the last checkout was issued
+  *(superseded by [ADR-0039](ADR-0039-checkout-hold-cap-and-reauth-limits.md): 30 minutes idle, 2 hours absolute)*. The sweeper
   then expires the session and cancels the booking; sessions do not expire on their own and do not
   emit an expiry webhook.
 - Verify `Paymongo-Signature` as `t=<ts>,te=<hex>,li=<hex>` using HMAC-SHA256 over `<t>.<raw body>`

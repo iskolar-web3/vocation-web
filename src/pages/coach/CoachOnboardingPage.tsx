@@ -10,7 +10,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useCreateCoachProfile } from '../../services/queries';
+import { useCreateCoachProfile, useFeatures } from '../../services/queries';
+import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
 
 interface CoachOnboardingPageProps {
   navigate: (path: string) => void;
@@ -18,6 +19,7 @@ interface CoachOnboardingPageProps {
 
 export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ navigate }) => {
   const { user, refetchUser } = useAuth();
+  const features = useFeatures();
   const createCoachMutation = useCreateCoachProfile();
 
   const [displayName, setDisplayName] = useState(user?.full_name || '');
@@ -233,6 +235,16 @@ export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ naviga
               ))}
             </div>
           </div>
+
+          {!features.uploads && (
+            <div
+              aria-disabled="true"
+              className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-400"
+            >
+              <span>Profile photo</span>
+              <ComingSoonBadge />
+            </div>
+          )}
 
           {/* Coach Agreement Acceptance (Issue #23) */}
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">

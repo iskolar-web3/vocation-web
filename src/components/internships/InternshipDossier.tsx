@@ -95,7 +95,9 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
       ((internship as any).stipend_amount
         ? `${formatPesos((internship as any).stipend_amount)} / ${(internship as any).stipend_period || 'mo'}`
         : 'Paid Allowance')
-    : 'School Credit';
+    : 'pay_not_stated' in internship && internship.pay_not_stated
+      ? 'Pay not stated'
+      : 'School Credit';
 
   const ojtHoursDisplay = (internship as any).ojt_hours
     ? `${(internship as any).ojt_hours} Practicum Hours`

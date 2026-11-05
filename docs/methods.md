@@ -17,7 +17,7 @@ you cannot write its equation, it does not ship.
 
 Per [`index.md`](index.md) §0 this document owns one concern: **the equation behind any number the
 system computes, stores derived, or displays.** Business rules (`BR-###`) live in
-[`prd.md`](prd.md); columns and types live in [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md); wire formats live in
+[`prd.md`](prd.md); columns and types live in [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md); wire formats live in
 [`api-spec.md`](api-spec.md). This file owns only the arithmetic connecting them.
 
 ## 0. Conventions that apply to every money equation
@@ -114,7 +114,7 @@ auto_completes  = status = 'confirmed' AND now ≥ slot_ends_at + 24h
 ```
 
 **Evaluated:** `coaching.CanComplete()` for the manual path (API-047); the auto-complete worker
-polls on a 10-minute ticker (see [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/ops.md) §4).
+polls on a 10-minute ticker (see [`ops.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/ops.md) §4).
 
 ## 5. Coach rating — `coach_profile.rating_avg` / `rating_count`
 
@@ -221,6 +221,6 @@ Every figure needs confirmation in the PayMongo merchant agreement before launch
 
 - [`index.md`](index.md) §0 — ownership map
 - [`prd.md`](prd.md) — `BR-007`, `BR-008`, `BR-009`, `BR-010`, `BR-011`
-- [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/main/docs/erd.md) — column types, `CHECK` constraints
+- [`erd.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/docs/erd.md) — column types, `CHECK` constraints
 - [`api-spec.md`](api-spec.md) — centavo wire format
 - [ADR-0007](adr/ADR-0007-money-split-derived-by-subtraction.md) · [ADR-0012](adr/ADR-0012-session-delivery-model.md) · [ADR-0021](adr/ADR-0021-student-feature-slice-decisions.md) · [ADR-0022](adr/ADR-0022-ledger-foundation-schema.md)

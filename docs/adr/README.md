@@ -73,6 +73,9 @@ The test for an ADR: *would a future reader ask "why did we do it this way?"* If
 | [ADR-0035](ADR-0035-resend-email.md) | Transactional email through Resend from `send.vocation.iskolar.io`; async, never fails the request; email verification does not block sign-in | Accepted | 2026-10-18 |
 | [ADR-0036](ADR-0036-railway-vercel-deploy.md) | Deploy on Railway (API) and Vercel (web), Resend and Sentry; supersedes ADR-0029 and the hosting part of ADR-0003 | Accepted | 2026-10-18 |
 | [ADR-0037](ADR-0037-origin-check-csrf.md) | Check browser origin on write requests as CSRF defense in depth | Accepted | 2026-10-20 |
+| [ADR-0039](ADR-0039-checkout-hold-cap-and-reauth-limits.md) | Bound an unpaid booking's slot hold at 2 h from creation plus at most one sweep interval (30 min idle is a separate trigger), cap concurrent unpaid holds and same-slot rebooking, rate-limit checkout, and put payout re-authentication on the shared password-change budget | Accepted | 2026-11-03 |
+| [ADR-0040](ADR-0040-board-csv-import.md) | Cold-start the directory with an operator-run job-board CSV import; rows go live as `open`, company rows are matched and never modified, `pay_not_stated` marks a post with no stated pay | Accepted | 2026-11-04 |
+| [ADR-0041](ADR-0041-feature-flags.md) | Publish which optional integrations are on as four public booleans on `GET /features`; computed at startup, 5-minute cache, web fails open | Accepted | 2026-11-05 |
 
 ## 1. Names & immutable identifiers (read first)
 
@@ -387,6 +390,6 @@ Ranked by consequence, not by ease.
 ## References
 
 - [`../index.md`](../index.md) — §0 ownership map
-- [`../../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/main/VOCATION.md) — context intake
+- [`../../VOCATION.md`](https://github.com/iskolar-web3/vocation-server/blob/14d7d2db2d250323067e18f056216b9686b3ba04/VOCATION.md) — context intake
 - `Vocation Project Charter.pdf` · `Vocation User Stories.xlsx` — project root
 - `fmd/templates/adr.md` · `fmd/templates/decision-ledger.md` · `fmd/templates/change-record.md`

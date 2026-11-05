@@ -99,6 +99,7 @@ const INITIAL_INTERNSHIPS: any[] = [
     duration_weeks: 16,
     ojt_hours: 300,
     is_paid: true,
+    pay_not_stated: false,
     stipend_amount: 15000,
     stipend_period: 'month',
     status: 'open',
@@ -136,6 +137,7 @@ const INITIAL_INTERNSHIPS: any[] = [
     duration_weeks: 12,
     ojt_hours: 240,
     is_paid: true,
+    pay_not_stated: false,
     stipend_amount: 18000,
     stipend_period: 'month',
     status: 'open',
@@ -173,6 +175,7 @@ const INITIAL_INTERNSHIPS: any[] = [
     duration_weeks: 20,
     ojt_hours: 400,
     is_paid: true,
+    pay_not_stated: false,
     stipend_amount: 12000,
     stipend_period: 'month',
     status: 'open',
@@ -210,6 +213,7 @@ const INITIAL_INTERNSHIPS: any[] = [
     duration_weeks: 24,
     ojt_hours: 500,
     is_paid: true,
+    pay_not_stated: false,
     stipend_amount: 14000,
     stipend_period: 'month',
     status: 'open',
@@ -228,6 +232,42 @@ const INITIAL_INTERNSHIPS: any[] = [
     ],
     perks: ['₱14,000/mo stipend', 'Sponsored AWS / Azure certification exam', 'Return offer opportunity'],
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
+  },
+  {
+    id: 'int_05',
+    title: 'IT Support & Systems Administration Trainee',
+    slug: 'it-support-systems-administration-trainee-accenture',
+    company: {
+      name: INITIAL_COMPANIES[3].name,
+      slug: INITIAL_COMPANIES[3].slug,
+      logo_url: INITIAL_COMPANIES[3].logo_url,
+      location: INITIAL_COMPANIES[3].location,
+      industry: INITIAL_COMPANIES[3].industry,
+    },
+    field: 'Information Technology',
+    work_setup: 'onsite',
+    location: 'Mandaluyong City',
+    duration_weeks: 10,
+    ojt_hours: 200,
+    is_paid: false,
+    pay_not_stated: true,
+    compensation_details: 'Pay not stated in the original post',
+    status: 'open',
+    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 11).toISOString(),
+    external_apply_url: 'https://www.accenture.com/ph-en/careers',
+    description: 'Support the workplace technology team with device provisioning, ticket triage, and basic Windows and network administration for enterprise clients.',
+    responsibilities: [
+      'Provision and configure laptops, accounts, and access for new joiners.',
+      'Triage service desk tickets and document fixes in the knowledge base.',
+      'Assist with routine network and endpoint maintenance checks.',
+    ],
+    requirements: [
+      'Enrolled in BS Information Technology, Computer Science, or a related degree.',
+      'Basic familiarity with Windows administration and networking fundamentals.',
+      'Clear written communication and a service-oriented attitude.',
+    ],
+    perks: ['Hands-on enterprise tooling', 'Certificate of Completion'],
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
   },
 ];
 
@@ -477,6 +517,14 @@ export async function handleDevMockRequest<T>(
 ): Promise<ApiFetchResult<T> | null> {
   const cleanPath = endpoint.split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
   const methodUpper = method.toUpperCase();
+
+  // Feature flags (API-082) — every optional integration is on in local dev
+  if (cleanPath === 'features' && methodUpper === 'GET') {
+    return {
+      message: 'ok',
+      data: { email: true, uploads: true, checkout: true, google_signin: true } as unknown as T,
+    };
+  }
 
   // 1. Auth & Session Routes
   if (cleanPath === 'me' && methodUpper === 'GET') {
