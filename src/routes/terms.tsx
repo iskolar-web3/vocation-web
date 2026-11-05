@@ -13,7 +13,7 @@ function TermsRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Terms of Service — iSkolar Vocation';
+    document.title = 'Terms of Service | iSkolar Vocation';
   }, []);
 
   return (

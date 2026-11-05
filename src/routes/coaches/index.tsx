@@ -25,8 +25,8 @@ function CoachDirectoryRoute() {
 
   useEffect(() => {
     document.title = search.expertise
-      ? `${search.expertise} Coaches — iSkolar Vocation`
-      : 'Find a Career Coach — iSkolar Vocation';
+      ? `${search.expertise} Coaches | iSkolar Vocation`
+      : 'Find a Career Coach | iSkolar Vocation';
   }, [search.expertise]);
 
   return (

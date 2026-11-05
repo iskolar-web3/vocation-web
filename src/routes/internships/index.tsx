@@ -27,8 +27,8 @@ function InternshipDirectoryRoute() {
 
   useEffect(() => {
     document.title = search.field
-      ? `${search.field} Internships — iSkolar Vocation`
-      : 'Internship Directory — iSkolar Vocation';
+      ? `${search.field} Internships | iSkolar Vocation`
+      : 'Internship Directory | iSkolar Vocation';
   }, [search.field]);
 
   return (

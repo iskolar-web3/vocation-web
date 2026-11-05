@@ -15,7 +15,7 @@ function SavedInternshipsRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Saved Internships — iSkolar Vocation';
+    document.title = 'Saved Internships | iSkolar Vocation';
   }, []);
 
   return (

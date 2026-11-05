@@ -15,7 +15,7 @@ function AdminListingsRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Listing Moderation Queue — iSkolar Vocation Admin';
+    document.title = 'Listing Moderation Queue | iSkolar Vocation Admin';
   }, []);
 
   return (

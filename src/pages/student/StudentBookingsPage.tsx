@@ -95,7 +95,7 @@ export const StudentBookingsPage: React.FC<StudentBookingsPageProps> = ({ naviga
     if (booking.price_centavos === 0) {
       return {
         isEligible: true,
-        description: 'Free session — the slot will be released back to the coach’s calendar.',
+        description: 'Free session: the slot will be released back to the coach’s calendar.',
       };
     }
 

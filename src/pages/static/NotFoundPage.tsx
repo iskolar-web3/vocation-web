@@ -12,7 +12,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ navigate: propNaviga
       <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
         <Compass className="w-8 h-8" />
       </div>
-      <h1 className="text-3xl font-bold text-[#021F53] font-display">404 — Page Not Found</h1>
+      <h1 className="text-3xl font-bold text-[#021F53] font-display">404 - Page Not Found</h1>
       <p className="text-xs sm:text-sm text-[#2c3f77] leading-relaxed">
         The page you are looking for does not exist, or the listing has been withdrawn.
       </p>

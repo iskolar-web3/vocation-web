@@ -11,7 +11,7 @@ export const Route = createFileRoute('/')({
 
 function LandingRoute() {
   useEffect(() => {
-    document.title = 'iSkolar Vocation — Internships & Coaching for Filipino Students';
+    document.title = 'iSkolar Vocation | Internships & Coaching for Filipino Students';
   }, []);
 
   return (

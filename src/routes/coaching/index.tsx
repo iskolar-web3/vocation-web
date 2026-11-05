@@ -15,7 +15,7 @@ function CoachingHubRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Coaching Hub — iSkolar Vocation';
+    document.title = 'Coaching Hub | iSkolar Vocation';
   }, []);
 
   return (

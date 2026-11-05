@@ -15,7 +15,7 @@ function SplatRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = '404 - Page Not Found — iSkolar Vocation';
+    document.title = '404 - Page Not Found | iSkolar Vocation';
   }, []);
 
   return (

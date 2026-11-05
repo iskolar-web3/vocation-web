@@ -15,7 +15,7 @@ function StudentBookingsRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'My Mentorship Sessions — iSkolar Vocation';
+    document.title = 'My Mentorship Sessions | iSkolar Vocation';
   }, []);
 
   return (

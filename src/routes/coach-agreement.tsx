@@ -13,7 +13,7 @@ function CoachAgreementRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Coach Agreement — iSkolar Vocation';
+    document.title = 'Coach Agreement | iSkolar Vocation';
   }, []);
 
   return (

@@ -58,6 +58,53 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Dynamic page title & SEO meta tags (S-001 to S-090 & Open Graph)
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const [pathOnly] = currentPath.split('?');
+
+    let title = 'iSkolar Vocation | Internships & Coaching for Filipino Students';
+    if (pathOnly === '/signin') title = 'Sign In | iSkolar Vocation';
+    else if (pathOnly === '/signup') title = 'Create Account | iSkolar Vocation';
+    else if (pathOnly === '/reset-password' || pathOnly === '/reset') title = 'Reset Password | iSkolar Vocation';
+    else if (pathOnly === '/verify-email') title = 'Verify Email | iSkolar Vocation';
+    else if (pathOnly === '/internships') title = 'Internship Directory | iSkolar Vocation';
+    else if (pathOnly.startsWith('/internships/')) title = 'Internship Details | iSkolar Vocation';
+    else if (pathOnly === '/companies') title = 'Partner Companies | iSkolar Vocation';
+    else if (pathOnly.startsWith('/companies/')) title = 'Company Profile | iSkolar Vocation';
+    else if (pathOnly === '/coaching') title = 'Coaching Hub | iSkolar Vocation';
+    else if (pathOnly === '/coaches') title = 'Find a Career Coach | iSkolar Vocation';
+    else if (pathOnly.startsWith('/coaches/')) title = 'Coach Profile & Booking | iSkolar Vocation';
+    else if (pathOnly === '/app') title = 'Student Dashboard | iSkolar Vocation';
+    else if (pathOnly === '/app/onboarding' || pathOnly === '/onboarding') title = 'Student Onboarding | iSkolar Vocation';
+    else if (pathOnly === '/app/saved') title = 'Saved Internships | iSkolar Vocation';
+    else if (pathOnly === '/app/bookings') title = 'My Mentorship Sessions | iSkolar Vocation';
+    else if (pathOnly === '/app/profile' || pathOnly === '/app/settings') title = 'Account Settings | iSkolar Vocation';
+    else if (pathOnly === '/coach/onboarding' || pathOnly === '/onboarding/coach') title = 'Coach Onboarding | iSkolar Vocation';
+    else if (pathOnly.startsWith('/coach')) title = 'Coach Studio & Dashboard | iSkolar Vocation';
+    else if (pathOnly.startsWith('/admin')) title = 'Listing Moderation Queue | iSkolar Vocation Admin';
+    else if (pathOnly === '/checkout/success') title = 'Payment Received | iSkolar Vocation';
+    else if (pathOnly === '/checkout/cancel') title = 'Checkout Cancelled | iSkolar Vocation';
+    else if (pathOnly === '/terms') title = 'Terms of Service | iSkolar Vocation';
+    else if (pathOnly === '/privacy') title = 'Privacy Policy | iSkolar Vocation';
+    else if (pathOnly === '/refunds') title = 'Refund Policy | iSkolar Vocation';
+    else if (pathOnly === '/contact') title = 'Contact Support | iSkolar Vocation';
+    else if (pathOnly === '/coach-agreement') title = 'Coach Agreement | iSkolar Vocation';
+
+    document.title = title;
+
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', title);
+    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twitterTitle) twitterTitle.setAttribute('content', title);
+
+    const fullUrl = `https://vocation.iskolar.ph${pathOnly}`;
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute('content', fullUrl);
+    const twitterUrl = document.querySelector('meta[name="twitter:url"]');
+    if (twitterUrl) twitterUrl.setAttribute('content', fullUrl);
+  }, [currentPath]);
+
   const navigate = (path: string) => {
     window.history.pushState({}, '', path);
     setCurrentPath(path);

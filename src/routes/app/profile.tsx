@@ -15,7 +15,7 @@ function StudentProfileRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Student Profile — iSkolar Vocation';
+    document.title = 'Student Profile | iSkolar Vocation';
   }, []);
 
   return (

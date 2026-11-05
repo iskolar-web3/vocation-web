@@ -13,7 +13,7 @@ function ContactRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Contact Support — iSkolar Vocation';
+    document.title = 'Contact Support | iSkolar Vocation';
   }, []);
 
   return (

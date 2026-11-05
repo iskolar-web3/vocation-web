@@ -16,7 +16,7 @@ function CoachDetailRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Coach Profile & Booking — iSkolar Vocation';
+    document.title = 'Coach Profile & Booking | iSkolar Vocation';
   }, [slug]);
 
   return (

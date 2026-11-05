@@ -16,7 +16,7 @@ function InternshipDetailRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Internship Details — iSkolar Vocation';
+    document.title = 'Internship Details | iSkolar Vocation';
   }, [slug]);
 
   return (

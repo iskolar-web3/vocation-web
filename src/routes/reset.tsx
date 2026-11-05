@@ -13,7 +13,7 @@ function ResetRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Reset Password — iSkolar Vocation';
+    document.title = 'Reset Password | iSkolar Vocation';
   }, []);
 
   return (

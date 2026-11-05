@@ -19,6 +19,7 @@ import { InternshipCard, InternshipDetail, CoachCard } from '../../types/api';
 import { formatPesos, formatDate, getTimeRemaining } from '../../lib/utils';
 import { useSaveInternship, useUnsaveInternship, useSavedInternships, useCoaches } from '../../services/queries';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
 
 interface InternshipDossierProps {
   internship: InternshipCard | InternshipDetail;
@@ -37,6 +38,7 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
   const saveMutation = useSaveInternship();
   const unsaveMutation = useUnsaveInternship();
   const { data: coachesData } = useCoaches();
+  const { role } = useAuth();
 
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -158,16 +160,18 @@ export const InternshipDossier: React.FC<InternshipDossierProps> = ({
             >
               {copiedLink ? <Check className="w-4 h-4 text-[#93c5fd]" /> : <Copy className="w-4 h-4" />}
             </button>
-            <button
-              type="button"
-              onClick={handleToggleSave}
-              title="Save role to checklist"
-              className={`p-2 rounded-xl transition-all cursor-pointer ${
-                isSaved ? 'bg-[#2563eb] text-white shadow-md' : 'bg-white/10 hover:bg-white/20 text-white'
-              }`}
-            >
-              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-            </button>
+            {role !== 'coach' && (
+              <button
+                type="button"
+                onClick={handleToggleSave}
+                title="Save role to checklist"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  isSaved ? 'bg-[#2563eb] text-white shadow-md' : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+              </button>
+            )}
 
           </div>
         </div>

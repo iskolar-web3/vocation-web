@@ -16,7 +16,7 @@ function CompanyDetailRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Company Profile — iSkolar Vocation';
+    document.title = 'Company Profile | iSkolar Vocation';
   }, [slug]);
 
   return (

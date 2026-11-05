@@ -13,7 +13,7 @@ function RefundsRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Refund Policy — iSkolar Vocation';
+    document.title = 'Refund Policy | iSkolar Vocation';
   }, []);
 
   return (

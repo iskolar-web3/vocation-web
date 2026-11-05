@@ -15,7 +15,7 @@ function CompaniesRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Partner Companies — iSkolar Vocation';
+    document.title = 'Partner Companies | iSkolar Vocation';
   }, []);
 
   return (

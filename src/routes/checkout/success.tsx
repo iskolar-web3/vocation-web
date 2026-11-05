@@ -15,7 +15,7 @@ function CheckoutSuccessRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Payment Received — iSkolar Vocation';
+    document.title = 'Payment Received | iSkolar Vocation';
   }, []);
 
   return (

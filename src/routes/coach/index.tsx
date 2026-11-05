@@ -15,7 +15,7 @@ function CoachDashboardRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Coach Studio & Dashboard — iSkolar Vocation';
+    document.title = 'Coach Studio & Dashboard | iSkolar Vocation';
   }, []);
 
   return (

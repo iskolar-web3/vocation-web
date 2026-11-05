@@ -13,7 +13,7 @@ function PrivacyRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Privacy Policy — iSkolar Vocation';
+    document.title = 'Privacy Policy | iSkolar Vocation';
   }, []);
 
   return (

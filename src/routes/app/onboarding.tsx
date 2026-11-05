@@ -15,7 +15,7 @@ function StudentOnboardingRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Student Onboarding — iSkolar Vocation';
+    document.title = 'Student Onboarding | iSkolar Vocation';
   }, []);
 
   return (

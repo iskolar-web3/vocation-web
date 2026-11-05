@@ -15,7 +15,7 @@ function CheckoutCancelRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Checkout Cancelled — iSkolar Vocation';
+    document.title = 'Checkout Cancelled | iSkolar Vocation';
   }, []);
 
   return (

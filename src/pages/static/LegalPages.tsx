@@ -126,11 +126,11 @@ export const LegalPages: React.FC<LegalPageProps> = ({ page, navigate }) => {
                 Personal data is processed with vetted cloud processors governed by data processing agreements:
               </p>
               <ul className="list-disc pl-5 space-y-1 text-xs">
-                <li><strong>Neon Inc.</strong> — Managed PostgreSQL cloud database infrastructure with encryption at rest and in transit.</li>
-                <li><strong>Amazon Web Services (AWS)</strong> — S3 private cloud object storage located in Singapore (ap-southeast-1 region) with AES-256 encryption.</li>
-                <li><strong>Xendit Philippines</strong> — Bangko Sentral ng Pilipinas (BSP)-licensed payment gateway for payment checkout and coach disbursements. We never store credit/debit card numbers or CVVs.</li>
-                <li><strong>Google LLC</strong> — Google OAuth authentication and Google Analytics 4 (utilizing Google Consent Mode v2, strictly denied by default until user consent is granted).</li>
-                <li><strong>Sentry (Functional Software, Inc.)</strong> — Application error logging and performance telemetry, scrubbed to remove PII, passwords, cookies, and authentication tokens.</li>
+                <li><strong>Neon Inc.</strong>: Managed PostgreSQL cloud database infrastructure with encryption at rest and in transit.</li>
+                <li><strong>Amazon Web Services (AWS)</strong>: S3 private cloud object storage located in Singapore (ap-southeast-1 region) with AES-256 encryption.</li>
+                <li><strong>Xendit Philippines</strong>: Bangko Sentral ng Pilipinas (BSP)-licensed payment gateway for payment checkout and coach disbursements. We never store credit/debit card numbers or CVVs.</li>
+                <li><strong>Google LLC</strong>: Google OAuth authentication and Google Analytics 4 (utilizing Google Consent Mode v2, strictly denied by default until user consent is granted).</li>
+                <li><strong>Sentry (Functional Software, Inc.)</strong>: Application error logging and performance telemetry, scrubbed to remove PII, passwords, cookies, and authentication tokens.</li>
                 <li><strong>Coaching Participants:</strong> Only the student&#39;s first name is shared on public coach reviews (BR-011). Coaches never receive student email addresses.</li>
               </ul>
             </section>

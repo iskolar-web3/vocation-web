@@ -10,7 +10,7 @@ function SigninRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Sign In — iSkolar Vocation';
+    document.title = 'Sign In | iSkolar Vocation';
   }, []);
 
   return <AuthPages mode="signin" navigate={(path) => routerNavigate({ to: path })} />;

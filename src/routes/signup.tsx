@@ -10,7 +10,7 @@ function SignupRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Create an Account — iSkolar Vocation';
+    document.title = 'Create an Account | iSkolar Vocation';
   }, []);
 
   return <AuthPages mode="signup" navigate={(path) => routerNavigate({ to: path })} />;

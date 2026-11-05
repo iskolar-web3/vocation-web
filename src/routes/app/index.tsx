@@ -15,7 +15,7 @@ function StudentDashboardRoute() {
   const routerNavigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Student Dashboard — iSkolar Vocation';
+    document.title = 'Student Dashboard | iSkolar Vocation';
   }, []);
 
   return (

@@ -470,7 +470,7 @@ export function usePublishAvailability() {
   return useMutation({
     // API-062 replaces only the coach's unbooked slots; booked ones are kept
     // server-side and must not be re-sent (they would overlap). Each slot is
-    // exactly { starts_at, ends_at } — the server rejects unknown fields.
+    // exactly { starts_at, ends_at }: the server rejects unknown fields.
     mutationFn: async (slots: { starts_at: string; ends_at: string }[]) => {
       const body: PutAvailabilityRequest = {
         slots: slots.map(({ starts_at, ends_at }) => ({ starts_at, ends_at })),
