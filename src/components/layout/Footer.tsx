@@ -1,233 +1,184 @@
-import React, { useState } from 'react';
-import { ShieldCheck, MessageSquareText } from 'lucide-react';
-import { FeedbackModal } from '../common/FeedbackModal';
+import { ArrowUp } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { scrollToTop } from '../../lib/smoothScroll';
+import { SiteLink } from './shell';
 
-interface FooterProps {
-  navigate?: (path: string) => void;
-}
+/* The shared iSkolar footer (same columns and links on every iSkolar product). Vocation is marked "You're here". */
 
-export const Footer: React.FC<FooterProps> = ({ navigate: propNavigate }) => {
-  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+const ISK = 'https://iskolar.io';
 
+const Svg = ({ children }: { children: ReactNode }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+);
+
+const SOCIALS = [
+  {
+    label: 'iSkolar on Facebook',
+    href: 'https://www.facebook.com/profile.php?id=61575967087555',
+    icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />,
+  },
+  {
+    label: 'iSkolar on LinkedIn',
+    href: 'https://www.linkedin.com/company/107364901',
+    icon: (
+      <>
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z" />
+        <rect width="4" height="12" x="2" y="9" />
+        <circle cx="4" cy="4" r="2" />
+      </>
+    ),
+  },
+  {
+    label: 'iSkolar on Instagram',
+    href: 'https://www.instagram.com/iskolar_web3',
+    icon: (
+      <>
+        <rect width="20" height="20" x="2" y="2" rx="5" />
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37zM17.5 6.5h.01" />
+      </>
+    ),
+  },
+  {
+    label: 'iSkolar on X',
+    href: 'https://x.com/iSkolarWeb3',
+    icon: <path d="M4 4l11.7 16H20L8.3 4H4zM4 20l6.8-6.8M13.2 10.8 20 4" />,
+  },
+];
+
+const HOME: [string, string][] = [
+  ['Home', '#home'],
+  ['Products', '#products'],
+  ['Ecosystem', '#ecosystem'],
+  ['In the News', '#in-the-news'],
+  ['FAQs', '#faqs'],
+];
+const PRODUCTS = ['PathFinder', 'Review', 'iSkolar', 'Academy', 'Vocation', 'Verity'];
+const ABOUT: [string, string][] = [
+  ['Company Overview', 'company-overview'],
+  ['Mission & Vision', 'mission-vision'],
+  ['Partnerships', 'partnerships'],
+  ['Our Team', 'team'],
+];
+const LEGAL: [string, string][] = [
+  ['Privacy Policy', '/privacy'],
+  ['Terms & Conditions', '/terms'],
+  ['Refund Policy', '/refunds'],
+  ['Coach Agreement', '/coach-agreement'],
+];
+
+export function Footer() {
   return (
-    <footer className="bg-[#021F53] text-white pt-16 pb-12 border-t border-[#3f58b2]/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-white/10">
-          {/* Brand Col */}
-          <div className="lg:col-span-2 space-y-4">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer"
-            >
-              <img
-                src="/vocation-logo.svg"
-                alt="iSkolar Vocation"
-                className="w-10 h-10 rounded-2xl shadow-md group-hover:scale-105 transition-transform"
-              />
-              <div>
-                <span className="font-display text-2xl text-white tracking-tight block leading-tight">
-                  iSkolar <span className="text-[#607ef2]">Vocation</span>
-                </span>
-                <span className="text-[10px] font-bold text-[#607ef2] tracking-wider uppercase block font-accent">
-                  Internships &amp; Coaching
-                </span>
-              </div>
-            </button>
-            <p className="text-sm text-slate-300 max-w-sm leading-relaxed">
-              The dedicated internship &amp; OJT directory paired with 1-on-1 career coaching, mock interviews, and resume reviews for Filipino college students.
-            </p>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setIsFeedbackOpen(true)}
-                className="inline-flex items-center gap-1.5 text-xs text-[#607ef2] hover:text-[#93c5fd] transition-colors font-semibold cursor-pointer"
-              >
-                <MessageSquareText className="w-3.5 h-3.5" />
-                <span>Send Feedback</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Internships Pillar */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#607ef2] font-headline">
-              Internships
-            </h4>
-            <ul className="space-y-2 text-sm text-slate-300">
-              <li>
-                <button
-                  onClick={() => navigate('/internships')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Explore Directory
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/companies')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Company Directory
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/internships?setup=remote')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Remote Internships
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/internships?field=Software+Engineering')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Tech &amp; OJT Roles
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          {/* Coaching Pillar */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#607ef2] font-headline">
-              Coaching Marketplace
-            </h4>
-            <ul className="space-y-2 text-sm text-slate-300">
-              <li>
-                <button
-                  onClick={() => navigate('/coaching')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  How Coaching Works
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/coaches')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Find a 1-on-1 Coach
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/coaches?price=free')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Free Intro Sessions
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          {/* Portals & Legal */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#607ef2] font-headline">
-              Portals &amp; Legal
-            </h4>
-            <ul className="space-y-2 text-sm text-slate-300">
-              <li>
-                <button
-                  onClick={() => navigate('/admin/listings')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Admin Moderation
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/terms')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Terms of Service
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/privacy')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Privacy Policy
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/coach-agreement')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Coach Agreement
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/refunds')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Refund Policy
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigate('/contact')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Contact Us
-                </button>
-              </li>
-            </ul>
+    <footer className="sh-foot">
+      <div className="wrap sh-foot-in">
+        <div className="sh-foot-brand">
+          <a href={`${ISK}/`} aria-label="iSkolar home">
+            <img src="/iskolar-logo.png" alt="iSkolar" width={121} height={68} />
+          </a>
+          <p>Tools for every step of a Filipino student’s journey, from choosing a course to proving a diploma.</p>
+          <div className="sh-foot-social">
+            {SOCIALS.map((s) => (
+              <a key={s.label} href={s.href} aria-label={s.label} target="_blank" rel="noopener noreferrer">
+                <Svg>{s.icon}</Svg>
+              </a>
+            ))}
           </div>
         </div>
 
-        {/* Clean Footer Bottom */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <div>
-            © 2026 iSkolar Vocation. All rights reserved. Support:{' '}
-            <a href="mailto:support@iskolar.io" className="underline hover:text-white">
-              support@iskolar.io
-            </a>
-          </div>
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => navigate('/terms')}
-              className="hover:text-slate-300 transition-colors cursor-pointer"
-            >
-              Terms
-            </button>
-            <button
-              onClick={() => navigate('/privacy')}
-              className="hover:text-slate-300 transition-colors cursor-pointer"
-            >
-              Privacy
-            </button>
-            <button
-              onClick={() => navigate('/coach-agreement')}
-              className="hover:text-slate-300 transition-colors cursor-pointer"
-            >
-              Coach Agreement
-            </button>
-            <button
-              onClick={() => navigate('/refunds')}
-              className="hover:text-slate-300 transition-colors cursor-pointer"
-            >
-              Refunds
-            </button>
-            <button
-              onClick={() => navigate('/contact')}
-              className="hover:text-slate-300 transition-colors cursor-pointer"
-            >
-              Contact
-            </button>
-          </div>
+        <nav aria-label="iSkolar home">
+          <h4>Home</h4>
+          <ul>
+            {HOME.map(([l, h]) => (
+              <li key={l}>
+                <a href={`${ISK}/${h}`}>{l}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <nav aria-label="iSkolar products">
+          <h4>Products</h4>
+          <ul>
+            {PRODUCTS.map((l) => (
+              <li key={l}>
+                {l === 'Vocation' ? (
+                  <SiteLink to="/" aria-current="true">
+                    Vocation
+                  </SiteLink>
+                ) : l === 'Academy' ? (
+                  <a href="https://academy.iskolar.io">Academy</a>
+                ) : (
+                  <a href={`${ISK}/#${l.toLowerCase()}`}>{l}</a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <nav aria-label="About iSkolar">
+          <h4>About</h4>
+          <ul>
+            {ABOUT.map(([l, h]) => (
+              <li key={l}>
+                <a href={`${ISK}/about#${h}`}>{l}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <nav aria-label="Legal">
+          <h4>Legal</h4>
+          <ul>
+            {LEGAL.map(([l, to]) => (
+              <li key={to}>
+                <SiteLink to={to}>{l}</SiteLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div>
+          <h4>Contact us</h4>
+          <ul>
+            <li>
+              <a href="mailto:hello@iskolar.io">hello@iskolar.io
+              </a>
+            </li>
+            <li>
+              <SiteLink to="/contact">Help &amp; support</SiteLink>
+            </li>
+          </ul>
         </div>
       </div>
 
-      <FeedbackModal
-        isOpen={isFeedbackOpen}
-        onClose={() => setIsFeedbackOpen(false)}
-      />
+      <div className="wrap sh-foot-bar">
+        <span>© 2026 iSkolar Technologies Inc. All rights reserved.</span>
+        <span>Built For Students, Built By Students.</span>
+        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('app:open_feedback'))}>
+          Send feedback
+        </button>
+      </div>
+
+      <div className="sh-foot-mark" aria-hidden="true">
+        <span>iSkolar</span>
+      </div>
+      <button
+        type="button"
+        className="icon-btn glass sh-foot-top"
+        aria-label="Back to top"
+        onClick={scrollToTop}
+      >
+        <ArrowUp />
+      </button>
     </footer>
   );
-};
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
 import { meQueryOptions } from '../../context/AuthContext';
+import { AppFrame } from '../../components/layout/AppSidebar';
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: async ({ context }) => {
@@ -9,5 +10,9 @@ export const Route = createFileRoute('/admin')({
       throw redirect({ to: '/' });
     }
   },
-  component: () => <Outlet />,
+  component: () => (
+    <AppFrame zone="admin">
+      <Outlet />
+    </AppFrame>
+  ),
 });

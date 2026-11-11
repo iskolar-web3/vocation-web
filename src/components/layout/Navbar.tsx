@@ -1,435 +1,230 @@
-import React, { useState } from 'react';
-import {
-  Briefcase,
-  Bookmark,
-  Calendar,
-  User,
-  ShieldAlert,
-  Menu,
-  X,
-  GraduationCap,
-  Award,
-  LogOut,
-} from 'lucide-react';
+import { Bookmark, ChevronDown, ListChecks, LogOut, Menu as MenuIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useSavedInternships, useStudentBookings } from '../../services/queries';
-import { FontDirectionSwitcher } from '../common/FontDirectionSwitcher';
+import { useSavedInternships } from '../../services/queries';
+import { Disc, Menu, MenuHeader, MenuItem, MenuSeparator, Sheet } from '../ui';
+import { COACH_LINKS, STUDENT_LINKS, type ZoneLink, linkCurrent } from './AppSidebar';
+import { SiteLink, currentFor, pathOf, useShell } from './shell';
 
-interface NavbarProps {
-  currentPath?: string;
-  navigate?: (path: string) => void;
+const LINKS = [
+  { label: 'Internships', to: '/internships', bases: ['/internships'] },
+  { label: 'Companies', to: '/companies', bases: ['/companies'] },
+  { label: 'Coaching', to: '/coaching', bases: ['/coaching', '/coaches'] },
+];
+
+const ADMIN_LINKS: ZoneLink[] = [{ label: 'Listings', to: '/admin/listings', icon: ListChecks }];
+
+function Brand() {
+  return (
+    <SiteLink to="/" className="sh-brand" aria-label="Vocation by iSkolar, home">
+      <img src="/vocation-logo.svg" alt="" width={28} height={28} />
+      <b>Vocation</b>
+      <small>by iSkolar</small>
+    </SiteLink>
+  );
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentPath: propCurrentPath, navigate: propNavigate }) => {
-  const currentPath = propCurrentPath ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
-  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
-  const { user, role, userName, avatar, isAuthenticated, logout } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+/** Logo-only top bar for auth, onboarding and checkout. */
+export function BareBar() {
+  const { path } = useShell();
+  const p = pathOf(path);
+  const end =
+    p === '/signin'
+      ? { hint: 'New here?', label: 'Create an account', to: '/signup' }
+      : p === '/signup'
+        ? { hint: 'Have an account?', label: 'Sign in', to: '/signin' }
+        : p === '/reset' || p === '/reset-password'
+          ? { hint: '', label: 'Back to sign in', to: '/signin' }
+          : null;
+  return (
+    <header className="sh-bare">
+      <Brand />
+      {end ? (
+        <div className="sh-bare-end">
+          {end.hint ? <span className="hidden sm:inline">{end.hint}</span> : null}
+          <SiteLink to={end.to} className="btn btn-ghost btn-sm">
+            {end.label}
+          </SiteLink>
+        </div>
+      ) : null}
+    </header>
+  );
+}
 
-  // TanStack queries for badges (only enabled if student)
+export function Navbar() {
+  const { role, isAuthenticated, isLoading, userName, userEmail, logout } = useAuth();
+  const { path, navigate } = useShell();
+  const p = pathOf(path);
+  const [sheet, setSheet] = useState(false);
   const isStudent = isAuthenticated && role === 'student';
-  const { data: savedList } = useSavedInternships({ enabled: isStudent });
-  const { data: studentBookings } = useStudentBookings('upcoming', { enabled: isStudent });
+  const { data: saved } = useSavedInternships({ enabled: isStudent });
+  const savedCount = saved?.length ?? 0;
 
-  const savedCount = savedList?.length || 0;
-  // Reflect all active booked mentorship sessions
-  const bookingsCount = (studentBookings || []).filter(
-    (b) => b.status !== 'cancelled'
-  ).length;
+  // The sheet is a phone affordance: close it if the viewport grows past 768.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const close = () => mq.matches && setSheet(false);
+    mq.addEventListener('change', close);
+    return () => mq.removeEventListener('change', close);
+  }, []);
 
-  const handleNav = (path: string) => {
-    navigate(path);
-    setIsMobileMenuOpen(false);
-    setIsUserMenuOpen(false);
-  };
-
-  const handleLogout = async () => {
+  const signOut = async () => {
+    setSheet(false);
     await logout();
-    setIsUserMenuOpen(false);
-    setIsMobileMenuOpen(false);
     navigate('/');
   };
 
+  const zoneLinks: ZoneLink[] = role === 'student' ? STUDENT_LINKS : role === 'coach' ? COACH_LINKS : ADMIN_LINKS;
+  const roleLabel = role === 'student' ? 'Student' : role === 'coach' ? 'Coach' : 'iSkolar team';
+  const closeSheet = () => setSheet(false);
+
+  const avatarFace = <Disc name={userName} size="sm" />;
+
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#3f58b2]/15 shadow-stripe-subtle">
-      {/* Top Banner */}
-      <div className="bg-[#021F53] text-white px-4 sm:px-8 py-1.5 text-xs flex items-center justify-between border-b border-[#3f58b2]/20">
-        <div className="flex items-center gap-2.5">
-          <span className="bg-[#2563eb] text-white font-bold px-2 py-0.5 rounded-md text-[10px] tracking-wider uppercase font-accent shadow-2xs">
-            Vocation
-          </span>
-          <span className="text-slate-300 hidden md:inline text-[11px] font-medium">
-            Verified Internships &amp; 1-on-1 Career Mentorship for Filipino Students
-          </span>
+    <header className="sh-nav-wrap">
+      <nav className="sh-nav glass" aria-label="Main">
+        <Brand />
+        <div className="sh-links">
+          {LINKS.map((l) => (
+            <SiteLink key={l.to} to={l.to} aria-current={currentFor(p, l.to, l.bases)}>
+              {l.label}
+            </SiteLink>
+          ))}
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] text-slate-300">
-          <FontDirectionSwitcher compact />
-          {isAuthenticated ? (
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2 h-2 rounded-full bg-[#60a5fa] inline-block shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
-              Signed in as <strong className="text-white capitalize">{user?.role}</strong>
-            </span>
+        <div className="sh-end">
+          {isLoading ? (
+            <span style={{ width: 44, height: 44 }} aria-hidden="true" />
+          ) : !isAuthenticated ? (
+            <>
+              <SiteLink to="/signin" className="btn btn-ghost btn-sm sh-md-only">
+                Sign in
+              </SiteLink>
+              <SiteLink to="/signup" className="btn btn-primary btn-sm sh-md-only">
+                Create free account
+              </SiteLink>
+              <button type="button" className="icon-btn sh-sm-only" aria-label="Menu" onClick={() => setSheet(true)}>
+                <MenuIcon />
+              </button>
+            </>
           ) : (
-            <span className="hidden sm:inline text-slate-300">Public Directory</span>
+            <>
+              {role === 'student' ? (
+                <SiteLink
+                  to="/app/saved"
+                  className="icon-btn sh-md-only"
+                  aria-label={`Saved roles, ${savedCount}`}
+                >
+                  <Bookmark />
+                  {savedCount > 0 ? <span className="count-dot">{savedCount}</span> : null}
+                </SiteLink>
+              ) : (
+                <SiteLink
+                  to={role === 'coach' ? '/coach' : '/admin/listings'}
+                  className="btn btn-ghost btn-sm sh-md-only"
+                >
+                  {role === 'coach' ? 'Coach portal' : 'Listings'}
+                </SiteLink>
+              )}
+              <Menu
+                label="Account"
+                trigger={
+                  <button type="button" className="sh-avatar sh-md-only" aria-label="Account menu">
+                    {avatarFace}
+                    <ChevronDown aria-hidden="true" />
+                  </button>
+                }
+              >
+                <MenuHeader>
+                  <p className="font-display">{userName}</p>
+                  <p className="t-meta">{userEmail || roleLabel}</p>
+                </MenuHeader>
+                <MenuSeparator />
+                {zoneLinks.map((l) => (
+                  <MenuItem key={l.to} icon={<l.icon aria-hidden="true" />} render={<SiteLink to={l.to} />}>
+                    {l.label}
+                  </MenuItem>
+                ))}
+                <MenuSeparator />
+                <MenuItem icon={<LogOut aria-hidden="true" />} danger onSelect={signOut}>
+                  Sign out
+                </MenuItem>
+              </Menu>
+              <button
+                type="button"
+                className="sh-avatar sh-sm-only"
+                aria-label="Menu"
+                onClick={() => setSheet(true)}
+              >
+                {avatarFace}
+                <MenuIcon aria-hidden="true" />
+              </button>
+            </>
           )}
         </div>
-      </div>
+      </nav>
 
-      {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Brand Logo with SVG */}
-          <button
-            onClick={() => handleNav('/')}
-            className="flex items-center gap-3 group focus:outline-none cursor-pointer"
+      <Sheet
+        open={sheet}
+        onOpenChange={setSheet}
+        title="Menu"
+        footer={
+          !isAuthenticated ? (
+            <div className="sh-sheet-actions">
+              <SiteLink to="/signup" className="btn btn-primary btn-block" onClick={closeSheet}>
+                Create free account
+              </SiteLink>
+              <SiteLink to="/signin" className="btn btn-secondary btn-block" onClick={closeSheet}>
+                Sign in
+              </SiteLink>
+            </div>
+          ) : undefined
+        }
+      >
+        {isAuthenticated ? (
+          <div className="sh-sheet-who">
+            {avatarFace}
+            <div>
+              <p className="font-display">{userName}</p>
+              <p className="t-meta">{userEmail || roleLabel}</p>
+            </div>
+          </div>
+        ) : null}
+        {LINKS.map((l) => (
+          <SiteLink
+            key={l.to}
+            to={l.to}
+            className="sh-sheet-link"
+            aria-current={currentFor(p, l.to, l.bases)}
+            onClick={closeSheet}
           >
-            <div className="p-1 rounded-2xl bg-white shadow-2xs border border-slate-200/80 group-hover:scale-105 transition-transform">
-              <img
-                src="/vocation-logo.svg"
-                alt="iSkolar Vocation"
-                className="w-8 h-8 rounded-xl object-contain"
-              />
-            </div>
-            <div className="text-left">
-              <span className="font-display text-xl text-[#021F53] tracking-tight block leading-tight">
-                iSkolar <span className="text-[#3f58b2]">Vocation</span>
-              </span>
-              <span className="text-[10px] font-bold text-[#607ef2] tracking-wider uppercase block -mt-0.5 font-accent">
-                Internships &amp; Coaching
-              </span>
-            </div>
-          </button>
-
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-1.5">
-            <button
-              onClick={() => handleNav('/internships')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentPath.startsWith('/internships')
-                  ? 'bg-[#f0f7ff] text-[#3f58b2] shadow-2xs border border-[#3f58b2]/15'
-                  : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
-              }`}
-            >
-              Internships
+            {l.label}
+          </SiteLink>
+        ))}
+        {isAuthenticated ? (
+          <>
+            <hr className="menu-sep" />
+            {zoneLinks.map((l) => (
+              <SiteLink
+                key={l.to}
+                to={l.to}
+                className="sh-sheet-link"
+                aria-current={linkCurrent(path, l)}
+                onClick={closeSheet}
+              >
+                <l.icon aria-hidden="true" />
+                {l.label}
+                {l.saved && savedCount > 0 ? <span className="count-dot">{savedCount}</span> : null}
+              </SiteLink>
+            ))}
+            <hr className="menu-sep" />
+            <button type="button" className="sh-sheet-link" data-danger="" onClick={signOut}>
+              <LogOut aria-hidden="true" />
+              Sign out
             </button>
-
-            <button
-              onClick={() => handleNav('/companies')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentPath.startsWith('/companies')
-                  ? 'bg-[#f0f7ff] text-[#3f58b2]'
-                  : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
-              }`}
-            >
-              Companies
-            </button>
-
-            <div className="h-4 w-[1px] bg-slate-200 mx-1" />
-
-            <button
-              onClick={() => handleNav('/coaching')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentPath === '/coaching'
-                  ? 'bg-[#f0f7ff] text-[#3f58b2]'
-                  : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
-              }`}
-            >
-              Coaching Hub
-            </button>
-
-            <button
-              onClick={() => handleNav('/coaches')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentPath.startsWith('/coaches')
-                  ? 'bg-[#f0f7ff] text-[#3f58b2]'
-                  : 'text-[#2c3f77] hover:text-[#021F53] hover:bg-slate-50'
-              }`}
-            >
-              Find a Coach
-            </button>
-          </nav>
-
-          {/* Right Action / Account Area */}
-          <div className="hidden md:flex items-center gap-3">
-            {role === 'student' && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleNav('/app/saved')}
-                  className="relative p-2 text-[#2c3f77] hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-xl transition-colors cursor-pointer"
-                  title="Saved Internships"
-                >
-                  <Bookmark className="w-4 h-4" />
-                  {savedCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-[#2563eb] text-white text-[9px] font-bold rounded-md flex items-center justify-center">
-                      {savedCount}
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => handleNav('/app/bookings')}
-                  className="relative p-2 text-[#2c3f77] hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-xl transition-colors cursor-pointer"
-                  title="My Bookings"
-                >
-                  <Calendar className="w-4 h-4" />
-                  {bookingsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-[#2563eb] text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-xs">
-                      {bookingsCount}
-                    </span>
-                  )}
-                </button>
-
-                <div className="relative">
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 transition-all text-xs font-bold text-[#021F53] cursor-pointer"
-                  >
-                    {avatar ? (
-                      <img
-                        src={avatar}
-                        alt={userName}
-                        className="w-7 h-7 rounded-full object-cover border border-[#3f58b2]"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-[#3f58b2] text-white flex items-center justify-center font-bold text-xs">
-                        {userName ? userName.charAt(0).toUpperCase() : 'S'}
-                      </div>
-                    )}
-                    <span className="max-w-[120px] truncate">{userName}</span>
-                  </button>
-
-                  {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-scaleUp">
-                      <button
-                        onClick={() => handleNav('/app')}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
-                      >
-                        <GraduationCap className="w-4 h-4" />
-                        <span>Student Dashboard</span>
-                      </button>
-                      <button
-                        onClick={() => handleNav('/app/bookings')}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>My Bookings</span>
-                        </div>
-                        {bookingsCount > 0 && (
-                          <span className="bg-[#f0f7ff] text-[#2563eb] border border-[#2563eb]/20 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                            {bookingsCount}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleNav('/app/saved')}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
-                      >
-                        <Bookmark className="w-4 h-4" />
-                        <span>Saved Roles</span>
-                      </button>
-                      <button
-                        onClick={() => handleNav('/app/profile')}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f0f7ff] hover:text-[#3f58b2] flex items-center gap-2"
-                      >
-                        <User className="w-4 h-4" />
-                        <span>Profile &amp; Settings</span>
-                      </button>
-                      <div className="border-t border-slate-100 my-1" />
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {role === 'coach' && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleNav('/coach')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 text-xs font-bold text-[#021F53] cursor-pointer"
-                >
-                  <Award className="w-4 h-4 text-[#3f58b2]" />
-                  <span>Coach Portal</span>
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-slate-100 cursor-pointer"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {role === 'admin' && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleNav('/admin/listings')}
-                  className="px-4 py-2 rounded-xl bg-[#021F53] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <ShieldAlert className="w-4 h-4 text-[#607ef2]" />
-                  <span>Moderation Queue</span>
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-slate-100 cursor-pointer"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {!isAuthenticated && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleNav('/signin')}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#3f58b2] hover:bg-[#f0f7ff] transition-colors cursor-pointer"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => handleNav('/signup')}
-                  className="tactile-btn-primary px-5 py-2 text-xs font-bold rounded-xl flex items-center cursor-pointer shadow-md text-white"
-                >
-                  Get Started
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Hamburger Button */}
-          <div className="md:hidden flex items-center gap-2">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-[#021F53] hover:bg-slate-100 rounded-xl cursor-pointer"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Drawer Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-3 animate-slideDown">
-          <div className="space-y-1">
-            <button
-              onClick={() => handleNav('/internships')}
-              className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
-            >
-              <Briefcase className="w-4 h-4 text-[#3f58b2]" />
-              <span>Internships Directory</span>
-            </button>
-            <button
-              onClick={() => handleNav('/companies')}
-              className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
-            >
-              <Award className="w-4 h-4 text-[#3f58b2]" />
-              <span>Partner Companies</span>
-            </button>
-            <button
-              onClick={() => handleNav('/coaching')}
-              className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
-            >
-              <GraduationCap className="w-4 h-4 text-[#3f58b2]" />
-              <span>Coaching Hub</span>
-            </button>
-            <button
-              onClick={() => handleNav('/coaches')}
-              className="w-full text-left px-3 py-2.5 rounded-xl font-semibold text-sm text-[#021F53] hover:bg-[#f0f7ff] flex items-center gap-2.5 cursor-pointer"
-            >
-              <Award className="w-4 h-4 text-[#3f58b2]" />
-              <span>Find a Coach</span>
-            </button>
-          </div>
-
-          <div className="border-t border-slate-100 pt-3">
-            {isAuthenticated ? (
-              <div className="space-y-2">
-                <div className="px-3 py-1.5 text-xs text-slate-500 font-medium">
-                  Signed in as <strong className="text-slate-800">{userName}</strong> ({role})
-                </div>
-                {role === 'student' && (
-                  <>
-                    <button
-                      onClick={() => handleNav('/app')}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
-                    >
-                      Student Dashboard
-                    </button>
-                    <button
-                      onClick={() => handleNav('/app/bookings')}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff] flex items-center justify-between"
-                    >
-                      <span>My Bookings</span>
-                      {bookingsCount > 0 && (
-                        <span className="bg-[#2563eb] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          {bookingsCount}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleNav('/app/saved')}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
-                    >
-                      Saved Roles ({savedCount})
-                    </button>
-                  </>
-                )}
-                {role === 'coach' && (
-                  <button
-                    onClick={() => handleNav('/coach')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
-                  >
-                    Coach Portal
-                  </button>
-                )}
-                {role === 'admin' && (
-                  <button
-                    onClick={() => handleNav('/admin/listings')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#021F53] hover:bg-[#f0f7ff]"
-                  >
-                    Admin Moderation Queue
-                  </button>
-                )}
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  onClick={() => handleNav('/signin')}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold text-[#3f58b2] bg-[#f0f7ff] text-center"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => handleNav('/signup')}
-                  className="tactile-btn-primary w-full py-2.5 rounded-xl text-xs font-bold text-white text-center shadow-md"
-                >
-                  Get Started
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          </>
+        ) : null}
+      </Sheet>
     </header>
   );
-};
+}
