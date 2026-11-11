@@ -97,7 +97,7 @@ export function CoachingSection({ coaches, loading }: { coaches: CoachCard[]; lo
             {others.length ? (
               <div className="panel co-list">
                 {others.map((c) => (
-                  <CoachRow key={c.slug} coach={c} mode="compact" headingLevel={3} />
+                  <CoachRow key={c.slug} coach={c} mode="full" headingLevel={3} />
                 ))}
               </div>
             ) : null}

@@ -43,7 +43,7 @@ export function CoachRow({ coach, mode = 'full', headingLevel = 3, className }: 
   const full = mode === 'full';
   return (
     <article className={cn('crow', !full && 'crow-compact', className)}>
-      <Disc name={coach.display_name} size={full ? 'md' : 'sm'} />
+      <Disc name={coach.display_name} size={full ? 'md' : 'sm'} src={coach.avatar_url} />
       <div style={{ minWidth: 0 }}>
         <H className="nm">
           <Link to="/coaches/$slug" params={{ slug: coach.slug }}>
