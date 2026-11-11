@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
-import { MessageSquare, Star, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { Modal } from './Modal';
+import { Star } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { Dialog, DialogClose } from '../ui';
 
 interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const CATEGORIES = [
+  { value: 'general', label: 'General' },
+  { value: 'bug', label: 'Something broke' },
+  { value: 'feature', label: 'Idea' },
+  { value: 'internship', label: 'Internships' },
+  { value: 'coaching', label: 'Coaching' },
+] as const;
+
+const RATING_LABEL = ['', 'Poor', 'Needs work', 'Okay', 'Good', 'Great'];
+
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
-  const [category, setCategory] = useState<'general' | 'bug' | 'feature' | 'coaching' | 'internship'>('general');
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]['value']>('general');
   const [rating, setRating] = useState<number>(5);
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState(user?.email || '');
@@ -18,18 +28,10 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const categories = [
-    { value: 'general', label: 'General Feedback' },
-    { value: 'bug', label: 'Bug Report' },
-    { value: 'feature', label: 'Feature Request' },
-    { value: 'internship', label: 'Internships' },
-    { value: 'coaching', label: 'Coaching' },
-  ];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) {
-      setErrorMsg('Please enter your feedback message.');
+      setErrorMsg('Write a short message so we know what to look at.');
       return;
     }
 
@@ -49,16 +51,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
       existingFeedback.push(feedbackPayload);
       localStorage.setItem('vocation_user_feedback', JSON.stringify(existingFeedback));
 
-      // Dispatch custom event for tracking
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('app:feedback_submitted', { detail: feedbackPayload }));
       }
 
-      // Brief delay for tactile feel
       await new Promise((resolve) => setTimeout(resolve, 350));
       setIsSubmitted(true);
     } catch {
-      setErrorMsg('Failed to submit feedback. Please try again.');
+      setErrorMsg('We could not send that. Check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -72,61 +72,49 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleReset}
-      title={
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-[#3f58b2]" />
-          <span>Send In-App Feedback</span>
-        </div>
-      }
-      maxWidth="lg"
-    >
-      {isSubmitted ? (
-        <div className="py-8 text-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
-          <h3 className="text-xl font-bold text-[#021F53] font-headline">Thank You for Your Feedback!</h3>
-          <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-            Your input directly helps us build a better internship directory and coaching experience for Filipino students.
-          </p>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="tactile-btn-primary px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
-            >
-              Done
+    <Dialog
+      open={isOpen}
+      onOpenChange={(o) => {
+        if (!o) handleReset();
+      }}
+      title={isSubmitted ? 'Thanks, we got it' : 'Send feedback'}
+      description={isSubmitted ? 'The team reads every note. Your input shapes what we fix next.' : undefined}
+      size="md"
+      actions={
+        isSubmitted ? (
+          <button type="button" className="btn btn-primary" onClick={handleReset}>
+            Done
+          </button>
+        ) : (
+          <>
+            <DialogClose className="btn btn-ghost">Cancel</DialogClose>
+            <button type="submit" form="feedback-form" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Sending…' : 'Send feedback'}
             </button>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+          </>
+        )
+      }
+    >
+      {isSubmitted ? null : (
+        <form id="feedback-form" onSubmit={handleSubmit} className="stack" noValidate>
+          {errorMsg ? (
+            <p className="note is-bad" role="alert">
+              {errorMsg}
+            </p>
+          ) : null}
 
-          {/* Category */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
-              Feedback Category
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {categories.map((c) => (
+          <div className="field">
+            <span className="label" id="fb-cat">
+              What is this about?
+            </span>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 8 }} role="group" aria-labelledby="fb-cat">
+              {CATEGORIES.map((c) => (
                 <button
                   key={c.value}
                   type="button"
-                  onClick={() => setCategory(c.value as any)}
-                  className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all text-center cursor-pointer ${
-                    category === c.value
-                      ? 'border-[#3f58b2] bg-[#f0f7ff] text-[#021F53] ring-1 ring-[#3f58b2]/30'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                  }`}
+                  className="chip"
+                  aria-pressed={category === c.value}
+                  onClick={() => setCategory(c.value)}
                 >
                   {c.label}
                 </button>
@@ -134,91 +122,62 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
-          {/* Rating */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
-              How was your experience?
-            </label>
-            <div className="flex items-center gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
+          <div className="field">
+            <span className="label" id="fb-rate">
+              How is Vocation working for you?
+            </span>
+            <div className="row" style={{ gap: 2 }} role="group" aria-labelledby="fb-rate">
+              {[1, 2, 3, 4, 5].map((n) => (
                 <button
-                  key={star}
+                  key={n}
                   type="button"
-                  onClick={() => setRating(star)}
-                  className="p-1.5 text-slate-300 hover:text-[#2563eb] transition-colors cursor-pointer"
+                  className="icon-btn"
+                  style={{ border: 0 }}
+                  aria-label={`${n} of 5, ${RATING_LABEL[n]}`}
+                  aria-pressed={rating === n}
+                  onClick={() => setRating(n)}
                 >
                   <Star
-                    className={`w-6 h-6 ${
-                      star <= rating
-                        ? 'fill-[#2563eb] text-[#2563eb]'
-                        : 'text-slate-300'
-                    }`}
+                    aria-hidden="true"
+                    style={n <= rating ? { fill: 'var(--lightblue)', color: 'var(--lightblue)' } : undefined}
                   />
                 </button>
               ))}
-              <span className="text-xs font-bold text-[#021F53] ml-2">
-                {rating === 5 && 'Outstanding'}
-                {rating === 4 && 'Good'}
-                {rating === 3 && 'Average'}
-                {rating === 2 && 'Needs Improvement'}
-                {rating === 1 && 'Poor'}
+              <span className="t-meta" style={{ marginLeft: 8 }} aria-hidden="true">
+                {RATING_LABEL[rating]}
               </span>
             </div>
           </div>
 
-          {/* Message */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
-              Your Message <span className="text-rose-500">*</span>
-            </label>
+          <div className="field">
+            <label htmlFor="fb-msg">Your message</label>
             <textarea
+              id="fb-msg"
+              className="textarea"
+              rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-              placeholder="Tell us what you liked, report a problem, or suggest new features..."
-              className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-xs sm:text-sm font-medium text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2] placeholder:text-slate-400"
-              required
+              placeholder="What worked, what did not, what you wish it did"
+              aria-invalid={errorMsg && !message.trim() ? true : undefined}
             />
           </div>
 
-          {/* Email */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77]">
-              Your Email (Optional, for follow-up)
-            </label>
+          <div className="field">
+            <label htmlFor="fb-email">Email for a reply (optional)</label>
             <input
+              id="fb-email"
+              className="input"
               type="email"
+              inputMode="email"
+              autoComplete="email"
+              enterKeyHint="send"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@iskolar.edu.ph"
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2] placeholder:text-slate-400"
+              placeholder="you@school.edu.ph"
             />
-          </div>
-
-          {/* Submit */}
-          <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="tactile-btn-primary px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-              <span>Submit Feedback</span>
-            </button>
           </div>
         </form>
       )}
-    </Modal>
+    </Dialog>
   );
 };
