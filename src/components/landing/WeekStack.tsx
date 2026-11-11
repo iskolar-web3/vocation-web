@@ -377,6 +377,20 @@ export function WeekStack({ coach, role }: Props) {
         tick();
       });
 
+    /** Tip on the right end of the front card's action button, in .wk coords. */
+    const restTip = (): Pt | null => {
+      const act = cardRefs.current[orderRef.current[0]]?.querySelector<HTMLElement>('a, button');
+      if (!act) return null;
+      const r = act.getBoundingClientRect();
+      const wr = wk.getBoundingClientRect();
+      return { x: r.right - 11 - wr.left, y: r.top + r.height * 0.5 - wr.top };
+    };
+    /** The cursor never vanishes: whenever the demo can't keep its pose, it rests on the front card's button. */
+    const rest = () => {
+      const t = restTip();
+      if (t) cursorKit(wk).place(t);
+    };
+
     const onUser = () => {
       interacted = true;
       stopDemo();
@@ -418,7 +432,7 @@ export function WeekStack({ coach, role }: Props) {
         io.disconnect();
         document.removeEventListener('visibilitychange', onVis);
         demoOn.current = false; // tilt resumes on the very next move
-        kit.park(); // the cursor stays where it is; the user simply takes over
+        if (!kit.park()) rest(); // the cursor stays where it is; the user simply takes over
         cleanup();
       };
 
@@ -569,10 +583,10 @@ export function WeekStack({ coach, role }: Props) {
         dead = true;
         io.disconnect();
         document.removeEventListener('visibilitychange', onVis);
-        kit.park();
+        if (!kit.park()) rest();
         cleanup();
       };
-      run().catch(() => {});
+      run().catch(() => stopDemo());
     };
 
     /** Stack >=60% in view and the segmented control (a click target) on screen too. */
@@ -583,7 +597,12 @@ export function WeekStack({ coach, role }: Props) {
       return vis >= s.height * 0.6 && !!c && c.top >= 0 && c.bottom <= window.innerHeight - 8;
     };
     const tryStart = () => {
-      if (dead || started || interacted || !ready || document.visibilityState !== 'visible' || !inView()) return;
+      if (dead || started || !ready) return;
+      if (interacted) {
+        started = true; // the user took over before the demo began: just show the cursor at rest
+        return rest();
+      }
+      if (document.visibilityState !== 'visible' || !inView()) return;
       started = true;
       start();
     };
@@ -601,7 +620,12 @@ export function WeekStack({ coach, role }: Props) {
       { threshold: [0, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 1] }
     );
     io.observe(wk);
-    const onResize = () => started && stopDemo();
+    // layout moved: re-seat the resting cursor on the button (stops a running demo first)
+    const onResize = () => {
+      if (!started) return;
+      stopDemo();
+      rest();
+    };
     window.addEventListener('resize', onResize);
 
     // after the hero entrance (the cards' own CSS animations) and fonts

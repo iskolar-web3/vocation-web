@@ -185,9 +185,17 @@ export function cursorKit(root: HTMLElement) {
     const shown = !!cur && Number.parseFloat(getComputedStyle(cur).opacity) > 0;
     const pose = POSE.map((k) => q(k)).map((el) => [el, el ? getComputedStyle(el).transform : 'none'] as const);
     cancel();
-    if (!cur || !shown) return;
+    if (!cur || !shown) return false;
     for (const [el, t] of pose) if (el) el.style.transform = t;
     cur.style.opacity = '1';
+    return true;
+  };
+  /** Show the cursor still, with its tip at `tip` (root coords). Fallback rest when no pose is worth keeping. */
+  const place = (tip: Pt) => {
+    cancel();
+    for (const [k, v] of [['ax', `translateX(${tip.x}px)`], ['ay', `translateY(${tip.y}px)`], ['tx', `translateX(${tip.x}px)`], ['ty', `translateY(${tip.y}px)`]])
+      q(k)?.style.setProperty('transform', v);
+    q('cur')?.style.setProperty('opacity', '1');
   };
   /** Undo park before a replay so the timeline owns the cursor again. */
   const unpark = () => {
@@ -195,5 +203,5 @@ export function cursorKit(root: HTMLElement) {
     for (const k of POSE) q(k)?.style.removeProperty('transform');
   };
 
-  return { q, anims, go, fade, press, glide, arrive, cancel, release, park, unpark };
+  return { q, anims, go, fade, press, glide, arrive, cancel, release, park, place, unpark };
 }
