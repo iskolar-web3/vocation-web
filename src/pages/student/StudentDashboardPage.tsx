@@ -1,512 +1,313 @@
-import React, { useState } from 'react';
-import {
-  Bookmark,
-  Calendar,
-  Award,
-  Video,
-  ExternalLink,
-  Briefcase,
-  ArrowRight,
-  GraduationCap,
-  Clock,
-  Loader2,
-  AlertTriangle,
-  AlertCircle,
-  CreditCard,
-} from 'lucide-react';
+import { SiteLink } from '../../components/layout/shell';
+import { AlertCircle, Bookmark, Calendar, Clock, Video } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
+import { type BookingX, CancelBookingDialog } from '../../components/student/CancelBookingDialog';
+import { Progress } from '../../components/student/forms';
+import { ProfileMeter, completenessItems } from '../../components/student/ProfileMeter';
+import { Dialog, Disc, Empty, OjtCalculator, PostingRow, Skeleton, Status, daysUntil, toast } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { formatDateTime, formatPHP, MANILA_TZ } from '../../lib/utils';
 import {
-  useStudentDashboard,
-  useStudentProfile,
-  useSavedInternships,
-  useStudentBookings,
+  useFeatures,
   useInternships,
   useResumeCheckout,
-  useFeatures,
+  useSavedInternships,
+  useStudentBookings,
+  useStudentDashboard,
+  useStudentProfile,
 } from '../../services/queries';
-import { ProfileMeter } from '../../components/student/ProfileMeter';
-import { InternshipCard } from '../../components/internships/InternshipCard';
-import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
-import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
-import { formatDateTime } from '../../lib/utils';
-import { InternshipCard as InternshipCardType, InternshipDetail } from '../../types/api';
 
 interface StudentDashboardPageProps {
   navigate: (path: string) => void;
 }
 
+const today = () =>
+  new Intl.DateTimeFormat('en-PH', { timeZone: MANILA_TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+
 export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navigate }) => {
   const { user, role } = useAuth();
-  const isStudent = role === 'student';
-  const { data: dashboard, isLoading: isLoadingDash } = useStudentDashboard({ enabled: isStudent });
-  const { data: studentProfile } = useStudentProfile({ enabled: isStudent });
-  const { data: savedList = [], isLoading: isLoadingSaved } = useSavedInternships({ enabled: isStudent });
-  const { data: bookings = [], isLoading: isLoadingBookings } = useStudentBookings('upcoming', { enabled: isStudent });
-  const { data: internshipsData } = useInternships();
-  const resumeCheckoutMutation = useResumeCheckout();
+  const enabled = role === 'student';
+  const dashboard = useStudentDashboard({ enabled });
+  const { data: profile } = useStudentProfile({ enabled });
+  const saved = useSavedInternships({ enabled });
+  const bookingsQ = useStudentBookings('upcoming', { enabled });
+  const { data: internshipsData, isLoading: loadingRoles } = useInternships();
+  const resumeCheckout = useResumeCheckout();
   const features = useFeatures();
 
-  const [selectedInternship, setSelectedInternship] = useState<InternshipCardType | InternshipDetail | null>(null);
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [cancelling, setCancelling] = useState<BookingX | null>(null);
 
-  const confirmedBookings = bookings.filter((b) => b.status === 'confirmed');
-  const pendingBookings = bookings.filter((b) => b.status === 'pending');
-  const nextSession = confirmedBookings[0];
-  const pendingSession = pendingBookings[0];
+  const bookings = useMemo(
+    () => [...((bookingsQ.data ?? []) as BookingX[])].sort((a, b) => a.slot_starts_at.localeCompare(b.slot_starts_at)),
+    [bookingsQ.data]
+  );
+  const next = bookings.find((b) => b.status === 'confirmed');
+  const pending = bookings.find((b) => b.status === 'pending');
 
-  const allInternships = internshipsData?.items || [];
-  const savedIds = savedList.map((s) => s.id);
-  const recommendedInternships = allInternships
-    .filter((i) => !savedIds.includes(i.id))
-    .slice(0, 3);
+  const savedList = useMemo(
+    () => [...(saved.data ?? [])].sort((a, b) => (a.deadline ?? '9999').localeCompare(b.deadline ?? '9999')),
+    [saved.data]
+  );
 
-  // Authoritative real-time metric counts reflecting actual state (0 when empty)
-  const savedCount = savedList.length;
-  const upcomingCount = confirmedBookings.length;
-  const directoryRolesCount = internshipsData?.meta?.total ?? allInternships.length;
-  const completenessPct = dashboard?.completeness_pct ?? (user?.is_onboarded ? 85 : 40);
+  // Roles for you: unsaved roles first matching a listed skill, else the first few.
+  const roles = useMemo(() => {
+    const savedIds = new Set((saved.data ?? []).map((s) => s.id));
+    const skills = profile?.skills ?? [];
+    const all = (internshipsData?.items ?? []).filter((i) => !savedIds.has(i.id));
+    const hit = (i: (typeof all)[number]) =>
+      skills.find((s) => `${i.title} ${i.field ?? ''}`.toLowerCase().includes(s.toLowerCase()));
+    const scored = all.map((i) => ({ i, skill: hit(i) }));
+    return [...scored.filter((x) => x.skill), ...scored.filter((x) => !x.skill)].slice(0, 3);
+  }, [internshipsData, saved.data, profile?.skills]);
 
-  // OJT Practicum calculations
-  const localTargetOjt = typeof window !== 'undefined' ? Number(localStorage.getItem('vocation_target_ojt_hours')) : null;
-  const targetOjtHours = (localTargetOjt && !Number.isNaN(localTargetOjt)) ? localTargetOjt : (studentProfile?.target_ojt_hours ?? 300);
-  const localCompletedOjt = typeof window !== 'undefined' ? Number(localStorage.getItem('vocation_completed_ojt_hours')) : null;
-  const completedOjtHours = (localCompletedOjt && !Number.isNaN(localCompletedOjt)) ? localCompletedOjt : (studentProfile?.completed_ojt_hours ?? 180);
-  const ojtProgressPct = targetOjtHours > 0 ? Math.min(100, Math.round((completedOjtHours / targetOjtHours) * 100)) : 0;
-  const remainingOjtHours = Math.max(0, targetOjtHours - completedOjtHours);
+  const pct = dashboard.data?.completeness_pct ?? (user?.is_onboarded ? 85 : 40);
+  const items = profile
+    ? completenessItems(profile).filter((i) => features.uploads || (i.key !== 'photo' && i.key !== 'resume'))
+    : undefined;
 
-  const firstName = user?.full_name?.split(' ')[0] || 'Student';
+  const target = profile?.target_ojt_hours ?? null;
+  const done = profile?.completed_ojt_hours ?? 0;
+  const remaining = target ? Math.max(0, target - done) : 0;
+  const ojtPct = target ? (done / target) * 100 : 0;
+  const firstName = user?.full_name?.replace(/^(engr|dr|atty|arch|prof|mr|ms|mrs)\.?\s+/i, '').split(' ')[0] || 'there';
 
-  const handleResumePayment = async (bookingId: string) => {
+  const finishPaying = async (bookingId: string) => {
     try {
-      const res = await resumeCheckoutMutation.mutateAsync(bookingId);
+      const res = await resumeCheckout.mutateAsync(bookingId);
       if (res?.checkout_url) {
         window.location.href = res.checkout_url;
-      } else {
-        navigate('/app/bookings');
+        return;
       }
-    } catch {
-      navigate('/app/bookings');
+    } catch (err: any) {
+      toast.error(err.message || 'We couldn’t open checkout. Your booking is in Bookings.');
     }
+    navigate('/app/bookings');
   };
 
+  const failed = dashboard.isError || bookingsQ.isError;
+  const retry = () => {
+    void dashboard.refetch();
+    void bookingsQ.refetch();
+    void saved.refetch();
+  };
+
+  const nextDays = next ? daysUntil(next.slot_starts_at) : 0;
+  const mins = next ? Math.round((new Date(next.slot_ends_at).getTime() - new Date(next.slot_starts_at).getTime()) / 60000) : 0;
+  const session = (b: BookingX) => b.session_type_name || 'Coaching session';
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Student Command Station Header (Radiant Gradient & Tactile Bevels) */}
-      <div className="bg-gradient-to-r from-[#021F53] via-[#082d70] to-[#021F53] rounded-2xl p-6 sm:p-8 text-white shadow-stripe-float flex flex-col md:flex-row md:items-center justify-between gap-6 border border-[#3f58b2]/40 relative overflow-hidden">
-        <div className="stripe-grid-lines opacity-10" />
-        <div className="absolute top-0 right-1/4 w-72 h-72 bg-radial from-[#607ef2]/20 to-transparent pointer-events-none rounded-full blur-2xl" />
+    <div className="wrap py-6 min-[721px]:py-10">
+      <header className="mb-5">
+        <h1 className="t-h1">Hi, {firstName}</h1>
+        <p className="t-body muted mt-1.5">{today()}</p>
+      </header>
 
-        <div className="space-y-1.5 relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-xs px-3 py-1 rounded-md text-[11px] font-bold text-[#607ef2] uppercase tracking-wider font-accent border border-white/15 shadow-2xs">
-            <GraduationCap className="w-3.5 h-3.5 text-[#607ef2]" />
-            <span>Student Command Dashboard</span>
+      {failed ? (
+        <div className="mb-5 grid justify-items-start gap-3">
+          <div className="note is-bad" role="alert">
+            <AlertCircle aria-hidden="true" />
+            <span>We couldn’t load everything. Check your connection and try again.</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display">
-            Welcome back, {firstName}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300">
-            {user?.email} · iSkolar Practicum &amp; Career Account
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2.5 relative z-10">
-          <button
-            type="button"
-            onClick={() => navigate('/internships')}
-            className="tactile-btn-primary px-4.5 py-2.5 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md text-white"
-          >
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>Explore Roles</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/coaches')}
-            className="tactile-btn-white px-4.5 py-2.5 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md text-[#021F53]"
-          >
-            <Award className="w-3.5 h-3.5 text-[#021F53]" />
-            <span>Book a Coach</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={retry}>
+            Try again
           </button>
         </div>
-      </div>
+      ) : null}
 
-      {/* Overview Metric Tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div
-          onClick={() => navigate('/app/saved')}
-          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-[#2563eb]/40 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Saved Roles
-            </span>
-            <div className="p-1.5 rounded-xl bg-[#f0f7ff] border border-[#607ef2]/20 shadow-2xs">
-              <Bookmark className="w-4 h-4 text-[#2563eb]" />
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-[#021F53] font-display">
-            {savedCount}
-          </div>
-          <span className="text-[10px] text-slate-400 block">
-            {savedCount === 1 ? '1 role shortlisted' : `${savedCount} roles shortlisted`}
-          </span>
-        </div>
-
-        <div
-          onClick={() => navigate('/app/bookings')}
-          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-[#3f58b2]/40 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Upcoming Sessions
-            </span>
-            <Calendar className="w-4 h-4 text-[#3f58b2]" />
-          </div>
-          <div className="text-2xl font-bold text-[#021F53] font-display">
-            {upcomingCount}
-          </div>
-          <span className="text-[10px] text-slate-400 block">
-            {pendingBookings.length > 0
-              ? `${pendingBookings.length} awaiting checkout`
-              : upcomingCount === 1
-              ? '1 confirmed 1-on-1 call'
-              : `${upcomingCount} confirmed calls`}
-          </span>
-        </div>
-
-        <div
-          onClick={() => navigate('/app/profile')}
-          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-[#3f58b2]/40 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Profile Completeness
-            </span>
-            <GraduationCap className="w-4 h-4 text-[#2563eb]" />
-          </div>
-          <div className="text-2xl font-bold text-[#021F53] font-display">
-            {completenessPct}%
-          </div>
-          <span className="text-[10px] text-slate-400 block">
-            {completenessPct >= 80 ? 'Profile ready & active' : 'Complete to boost reach'}
-          </span>
-        </div>
-
-        <div
-          onClick={() => navigate('/internships')}
-          className="tactile-card rounded-2xl p-4 sm:p-5 cursor-pointer space-y-1 hover:border-[#3f58b2]/40 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Directory Roles
-            </span>
-            <Briefcase className="w-4 h-4 text-[#3f58b2]" />
-          </div>
-          <div className="text-2xl font-bold text-[#021F53] font-display">
-            {directoryRolesCount}
-          </div>
-          <span className="text-[10px] text-slate-400 block">
-            {directoryRolesCount === 1 ? '1 active opening' : `${directoryRolesCount} active openings`}
-          </span>
-        </div>
-      </div>
-
-      {/* Pending Payment Notice Banner */}
-      {pendingSession && (
-        <div className="p-4 bg-[#f0f7ff] border border-[#607ef2]/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#021F53] shadow-soft">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#2563eb] shrink-0 mt-0.5" />
+      {pending ? (
+        <div className="mb-5">
+          <div className="note is-warn">
+            <Clock aria-hidden="true" />
             <div>
-              <p className="font-bold text-[#021F53] text-sm">
-                Action Required: Pending Mentorship Booking
-              </p>
-              <p className="text-slate-600 text-xs mt-0.5">
-                Session with <strong>{pendingSession.coach_display_name}</strong> scheduled for{' '}
-                <strong className="text-[#021F53]">{formatDateTime(pendingSession.slot_starts_at)}</strong> (Asia/Manila) is waiting for checkout completion.
-              </p>
+              <b>
+                Your {session(pending).toLowerCase()} with {pending.coach_display_name} isn’t booked yet.
+              </b>{' '}
+              Finish paying <span className="num">{formatPHP(pending.amount_due_centavos ?? pending.price_centavos)}</span> to keep{' '}
+              <span className="num">{formatDateTime(pending.slot_starts_at)}</span>.
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  className="btn btn-brand btn-sm max-[720px]:!h-11"
+                  disabled={resumeCheckout.isPending || !features.checkout}
+                  onClick={() => finishPaying(pending.booking_id)}
+                >
+                  {resumeCheckout.isPending ? 'Opening checkout…' : 'Finish paying'}
+                </button>
+                {!features.checkout ? <ComingSoonBadge /> : null}
+                <button type="button" className="btn btn-secondary btn-sm max-[720px]:!h-11" onClick={() => setCancelling(pending)}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => handleResumePayment(pendingSession.booking_id)}
-              disabled={resumeCheckoutMutation.isPending || !features.checkout}
-              className="tactile-btn-primary px-4.5 py-2 text-white font-bold rounded-xl shadow-sm text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {resumeCheckoutMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <CreditCard className="w-3.5 h-3.5" />
-              )}
-              <span>Complete Payment</span>
-            </button>
-            {!features.checkout && <ComingSoonBadge />}
-            <button
-              type="button"
-              onClick={() => navigate('/app/bookings')}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl border border-slate-200 transition-colors cursor-pointer text-xs"
-            >
-              View All Bookings
-            </button>
-          </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Main Grid: Left Next Session + Roles; Right: Profile Meter */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column */}
-        <div className="lg:col-span-8 space-y-8">
-          {/* Next Scheduled Coaching Call Highlight (Updated from white to rich brand card) */}
-          {nextSession ? (
-            <div className="rounded-2xl p-6 bg-gradient-to-br from-[#021F53] via-[#092B6E] to-[#122b68] text-white border border-[#3f58b2]/40 shadow-soft space-y-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-radial from-[#3f58b2]/20 to-transparent pointer-events-none rounded-full blur-2xl" />
-              <div className="flex items-center justify-between border-b border-white/15 pb-3 relative z-10">
-                <span className="text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-[#607ef2]" /> Next Scheduled Mentorship Call
-                </span>
-                <span className="stamp-badge bg-[#1d4ed8]/30 text-[#93c5fd] border border-[#60a5fa]/40">
-                  Confirmed
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 text-white font-bold border border-white/20 flex items-center justify-center text-xl flex-shrink-0 shadow-2xs">
-                    {nextSession.coach_display_name ? nextSession.coach_display_name.charAt(0) : 'C'}
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-white font-headline">
-                      1-on-1 Career Mentorship
-                    </h4>
-                    <p className="text-xs text-slate-200 mt-0.5">
-                      With <strong className="text-white underline decoration-[#607ef2]">{nextSession.coach_display_name}</strong>
+      <div className="grid items-stretch gap-5 min-[1025px]:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+        <section className="panel panel-pad flex flex-col justify-between gap-7" aria-labelledby="d-next" aria-busy={bookingsQ.isLoading}>
+          <h2 className="t-h3" id="d-next">
+            Next session
+          </h2>
+          {bookingsQ.isLoading ? (
+            <Skeleton variant="block" height={180} />
+          ) : next ? (
+            <>
+              <div>
+                <div className="flex items-center gap-3.5 min-[721px]:gap-[18px]">
+                  <Disc name={next.coach_display_name || 'Coach'} size="lg" src={next.coach_avatar_url} className="max-[720px]:!size-16 max-[720px]:!text-xl" />
+                  <div className="min-w-0">
+                    <p className="t-title">
+                      {session(next)} with {next.coach_display_name}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-sky-200 mt-2 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-[#93c5fd]" />
-                      <span>{formatDateTime(nextSession.slot_starts_at)} (Asia/Manila)</span>
+                    <p className="mt-1.5 font-display text-[clamp(20px,5.6vw,30px)] leading-tight text-tx">
+                      <span className="num">{formatDateTime(next.slot_starts_at)}</span>
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                      <span className="t-small">
+                        {nextDays <= 0 ? 'today' : nextDays === 1 ? 'tomorrow' : `in ${nextDays} days`}
+                      </span>
+                      <Status status="confirmed" />
                     </div>
                   </div>
                 </div>
-
-                {nextSession.join_url && (
-                  <a
-                    href={nextSession.join_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="tactile-btn-primary px-5 py-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer self-start sm:self-center"
-                  >
-                    <Video className="w-4 h-4" />
-                    <span>Join Video Call</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
+                <p className="t-small mt-5">
+                  <span className="num">{mins} min</span> video call with {next.coach_display_name}.{' '}
+                  <span className="num">{formatPHP(next.price_centavos)}</span>. Times are in Manila time.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                {next.join_url ? (
+                  <a className="btn btn-brand" href={next.join_url} target="_blank" rel="noopener noreferrer">
+                    <Video aria-hidden="true" />
+                    Join video call
                   </a>
-                )}
+                ) : null}
+                <SiteLink to="/app/bookings" className="inline-flex min-h-11 items-center whitespace-nowrap">
+                  Manage booking
+                </SiteLink>
               </div>
-            </div>
-          ) : pendingSession ? (
-            <div className="tactile-card rounded-2xl p-6 bg-white border border-[#607ef2]/25 shadow-soft space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <span className="text-xs font-bold text-[#3f58b2] uppercase tracking-wider font-accent flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#2563eb]" /> Pending Mentorship Session
-                </span>
-                <span className="stamp-badge bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/25">
-                  Payment Pending
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-base font-bold text-[#021F53] font-headline">
-                    Session with {pendingSession.coach_display_name}
-                  </h4>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Scheduled for {formatDateTime(pendingSession.slot_starts_at)} (Asia/Manila)
-                  </p>
-                  <p className="text-xs text-[#3f58b2] font-semibold mt-1">
-                    Complete checkout to reserve your calendar slot with the coach.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-center">
-                  <button
-                    type="button"
-                    onClick={() => handleResumePayment(pendingSession.booking_id)}
-                    disabled={resumeCheckoutMutation.isPending || !features.checkout}
-                    className="tactile-btn-primary px-5 py-2.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Resume Checkout</span>
-                  </button>
-                  {!features.checkout && <ComingSoonBadge />}
-                </div>
-              </div>
-            </div>
+            </>
           ) : (
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-soft flex items-center justify-between gap-4">
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-[#021F53] font-headline">No upcoming coaching sessions</h4>
-                <p className="text-xs text-slate-500">Book a 1-on-1 session for resume audit or mock coding interview.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/coaches')}
-                className="px-4 py-2 bg-[#021F53] hover:bg-[#3f58b2] text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-              >
-                Browse Coaches
-              </button>
-            </div>
+            <Empty
+              icon={Calendar}
+              title="No sessions yet"
+              body={pending ? 'Finish paying above to lock in your slot.' : 'Many coaches offer a free intro call.'}
+              action={
+                <SiteLink to="/coaches" className="btn btn-brand">
+                  Browse coaches
+                </SiteLink>
+              }
+            />
           )}
+        </section>
 
-          {/* Saved Shortlist Preview */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-[#2563eb]" />
-                <h3 className="text-lg font-bold text-[#021F53] font-headline">
-                  Your Saved Shortlist ({savedCount})
-                </h3>
-              </div>
-              <button
-                onClick={() => navigate('/app/saved')}
-                className="text-xs font-bold text-[#3f58b2] hover:text-[#021F53] flex items-center gap-1 cursor-pointer"
-              >
-                <span>Manage Shortlist</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+        <div className="grid content-start gap-5">
+          <ProfileMeter pct={pct} items={items} />
 
-            {savedList.length === 0 ? (
-              <div className="bg-white rounded-2xl p-8 text-center border border-slate-200">
-                <p className="text-xs text-slate-500">No saved roles yet. Browse the directory to bookmark roles.</p>
-              </div>
+          <section className="panel panel-pad" aria-labelledby="d-ojt">
+            <h2 className="t-h3 mb-3" id="d-ojt">
+              OJT hours
+            </h2>
+            {target ? (
+              <>
+                <p className="num font-data text-[22px] leading-tight font-semibold text-tx">
+                  {done} of {target} hours
+                </p>
+                <Progress className="my-3" value={ojtPct} label="OJT hours completed" />
+                <p className="t-small">
+                  {remaining > 0 ? (
+                    <>
+                      <span className="num">{remaining}</span> hours to go. About{' '}
+                      <span className="num">{Math.ceil(remaining / 8 / 5)}</span> weeks at 8 hours a day.
+                    </>
+                  ) : (
+                    'You’ve logged all your required hours.'
+                  )}
+                </p>
+              </>
             ) : (
-              <div className="space-y-3">
-                {savedList.slice(0, 2).map((item) => (
-                  <InternshipCard
-                    key={item.id}
-                    internship={item}
-                    layout="row"
-                    onSelect={(i) => navigate(`/internships/${i.slug}`)}
-                    onApply={(i) => setSelectedInternship(i)}
-                  />
-                ))}
-              </div>
+              <p className="t-small">
+                Add your required hours in your <SiteLink to="/app/profile">profile</SiteLink> to track them here.
+              </p>
             )}
-          </div>
-
-          {/* Recommended Opportunities */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#021F53] font-headline">
-                Recommended Opportunities
-              </h3>
-              <button
-                onClick={() => navigate('/internships')}
-                className="text-xs font-bold text-[#3f58b2] hover:text-[#021F53] flex items-center gap-1 cursor-pointer"
-              >
-                <span>View all</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {recommendedInternships.map((item) => (
-                <InternshipCard
-                  key={item.id}
-                  internship={item}
-                  layout="grid"
-                  onSelect={(i) => navigate(`/internships/${i.slug}`)}
-                  onApply={(i) => setSelectedInternship(i)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: OJT Practicum Tracker & Profile Completeness Meter */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* OJT Practicum Hours Tracker Card */}
-          <div className="tactile-card rounded-2xl p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#f0f7ff] border border-[#607ef2]/20 text-[#3f58b2] flex items-center justify-center font-bold shadow-2xs">
-                  <Clock className="w-4 h-4 text-[#3f58b2]" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-[#021F53] text-sm sm:text-base font-headline">
-                    OJT Practicum Tracker
-                  </h3>
-                  <p className="text-xs text-slate-500">Graduation &amp; academic requirements</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] font-bold px-2.5 py-1 rounded-md border border-[#607ef2]/20">
-                  {ojtProgressPct}%
-                </span>
-              </div>
-            </div>
-
-            {/* Skeuomorphic Tactile OJT Gauge */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold text-[#021F53]">
-                <span>Progress to Completion</span>
-                <span className="font-bold text-[#3f58b2]">{completedOjtHours} / {targetOjtHours} hrs</span>
-              </div>
-              <div className="w-full h-3.5 tactile-track p-0.5">
-                <div
-                  className="h-full tactile-gauge-fill transition-all duration-700"
-                  style={{ width: `${ojtProgressPct}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Metric Boxes */}
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-              <div className="bg-[#f0f7ff]/60 p-3 rounded-xl border border-[#607ef2]/15 shadow-2xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Completed So Far
-                </span>
-                <span className="text-lg font-bold text-[#021F53] font-display">
-                  {completedOjtHours} <span className="text-xs font-normal text-slate-500">hrs</span>
-                </span>
-              </div>
-              <div className="bg-[#f0f7ff]/60 p-3 rounded-xl border border-[#607ef2]/15 shadow-2xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Remaining Hours
-                </span>
-                <span className="text-lg font-bold text-[#021F53] font-display">
-                  {remainingOjtHours} <span className="text-xs font-normal text-slate-500">hrs</span>
-                </span>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-500">
-              {remainingOjtHours > 0
-                ? `${remainingOjtHours} hours remaining to satisfy your academic practicum requirement.`
-                : 'Curriculum practicum target completed! All required hours satisfied.'}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => navigate('/app/profile')}
-              className="tactile-btn-sapphire w-full py-2.5 px-4 text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>Update Practicum Hours in Profile</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+            <button type="button" className="link-btn mt-1 inline-flex min-h-11 items-center" onClick={() => setCalcOpen(true)}>
+              See how long it takes
             </button>
-          </div>
-
-          <ProfileMeter
-            completenessPct={completenessPct}
-            onEditProfile={() => navigate('/app/profile')}
-            targetOjtHours={targetOjtHours}
-            completedOjtHours={completedOjtHours}
-          />
+          </section>
         </div>
       </div>
 
-      <LeavingSiteModal
-        isOpen={!!selectedInternship}
-        onClose={() => setSelectedInternship(null)}
-        internship={selectedInternship}
-      />
+      <section className="mt-9" aria-labelledby="d-sv">
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-4">
+          <h2 className="t-h2" id="d-sv">
+            Saved roles closing soon
+          </h2>
+          {savedList.length ? (
+            <SiteLink to="/app/saved" className="inline-flex min-h-11 items-center whitespace-nowrap">
+              All saved (<span className="num">{savedList.length}</span>)
+            </SiteLink>
+          ) : null}
+        </div>
+        {saved.isLoading ? (
+          <div className="grid gap-2.5" aria-busy="true">
+            <Skeleton variant="row" count={2} />
+          </div>
+        ) : savedList.length ? (
+          <div className="grid gap-2.5">
+            {savedList.slice(0, 3).map((i) => (
+              <PostingRow key={i.id} internship={i} compact headingLevel={3} />
+            ))}
+          </div>
+        ) : (
+          <Empty
+            icon={Bookmark}
+            title="Nothing saved yet"
+            body="Tap the bookmark on any role to keep it here, with its deadline."
+            action={
+              <SiteLink to="/internships" className="btn btn-brand">
+                Browse internships
+              </SiteLink>
+            }
+          />
+        )}
+      </section>
+
+      <section className="mt-9" aria-labelledby="d-rf">
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-4">
+          <h2 className="t-h2" id="d-rf">
+            Roles for you
+          </h2>
+          <SiteLink to="/internships" className="inline-flex min-h-11 items-center whitespace-nowrap">
+            All internships
+          </SiteLink>
+        </div>
+        {loadingRoles ? (
+          <div className="grid gap-2.5" aria-busy="true">
+            <Skeleton variant="row" count={3} />
+          </div>
+        ) : roles.length ? (
+          <div className="grid gap-2.5">
+            {roles.map(({ i, skill }) => (
+              <div key={i.id}>
+                <PostingRow internship={i} compact headingLevel={3} />
+                {skill ? <p className="t-meta mt-1.5 ml-4">Because you listed {skill}</p> : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="note">
+            <Bookmark aria-hidden="true" />
+            <span>Add your skills in your profile and we’ll match roles to them.</span>
+          </div>
+        )}
+      </section>
+
+      <Dialog open={calcOpen} onOpenChange={setCalcOpen} title="OJT hours calculator" size="lg" showClose>
+        <OjtCalculator stacked defaultHours={target ?? undefined} />
+      </Dialog>
+      <CancelBookingDialog booking={cancelling} onClose={() => setCancelling(null)} />
     </div>
   );
 };

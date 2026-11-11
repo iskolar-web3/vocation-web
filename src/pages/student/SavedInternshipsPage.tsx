@@ -1,83 +1,88 @@
-import React, { useState } from 'react';
-import { Bookmark, ArrowLeft, Loader2 } from 'lucide-react';
-import { useSavedInternships } from '../../services/queries';
+import { SiteLink } from '../../components/layout/shell';
+import { AlertCircle, Bookmark } from 'lucide-react';
+import React from 'react';
+import { PageHead } from '../../components/student/forms';
+import { Empty, PostingRow, SaveButton, Skeleton, toast, daysUntil } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { InternshipCard } from '../../components/internships/InternshipCard';
-import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
-import { InternshipCard as InternshipCardType, InternshipDetail } from '../../types/api';
+import { useSavedInternships, useUnsaveInternship } from '../../services/queries';
+import type { InternshipCard } from '../../types/api';
 
 interface SavedInternshipsPageProps {
   navigate: (path: string) => void;
 }
 
-export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = ({ navigate }) => {
+const byDeadline = (a: InternshipCard, b: InternshipCard) =>
+  (a.deadline ?? '9999-12-31').localeCompare(b.deadline ?? '9999-12-31');
+
+export const SavedInternshipsPage: React.FC<SavedInternshipsPageProps> = () => {
   const { role } = useAuth();
-  const { data: savedRoles = [], isLoading } = useSavedInternships({ enabled: role === 'student' });
-  const [selectedInternship, setSelectedInternship] = useState<InternshipCardType | InternshipDetail | null>(null);
+  const { data = [], isLoading, error, refetch } = useSavedInternships({ enabled: role === 'student' });
+  const unsave = useUnsaveInternship();
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <button
-        onClick={() => navigate('/app')}
-        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to Student Dashboard</span>
-      </button>
+  const list = [...data].sort(byDeadline);
+  const soon = list.filter((i) => i.deadline && daysUntil(i.deadline) <= 7);
+  const later = list.filter((i) => !(i.deadline && daysUntil(i.deadline) <= 7));
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
-            Saved Internships
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Your bookmarked opportunities and upcoming application deadlines.
-          </p>
-        </div>
-        <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] font-bold px-3 py-1.5 rounded-md border border-[#607ef2]/20">
-          {savedRoles.length} Saved
-        </span>
-      </div>
+  const remove = (i: InternshipCard) =>
+    unsave.mutate(i.id, {
+      onSuccess: () => toast.success('Removed from saved'),
+      onError: () => toast.error('We couldn’t remove that role. Try again.'),
+    });
 
-      {isLoading ? (
-        <div className="flex items-center justify-center p-16 bg-white rounded-2xl border border-slate-200">
-          <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
-        </div>
-      ) : savedRoles.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center border border-[#3f58b2]/10 shadow-soft space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
-            <Bookmark className="w-8 h-8" />
-          </div>
-          <h3 className="text-lg font-bold text-[#021F53]">No Saved Internships Yet</h3>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
-            Click the bookmark icon on any internship posting in the directory to save it to this list.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/internships')}
-            className="tactile-btn-primary px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
-          >
-            Explore Directory
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {savedRoles.map((item) => (
-            <InternshipCard
-              key={item.id}
-              internship={item}
-              onSelect={() => navigate(`/internships/${item.slug}`)}
-              onApply={(int) => setSelectedInternship(int)}
+  const group = (title: string, id: string, items: InternshipCard[]) =>
+    items.length ? (
+      <section aria-labelledby={id}>
+        <h2 className="t-h3 mb-3.5" id={id}>
+          {title}
+        </h2>
+        <div className="grid gap-2.5">
+          {items.map((i) => (
+            <PostingRow
+              key={i.id}
+              internship={i}
+              headingLevel={3}
+              save={<SaveButton saved onToggle={() => remove(i)} label={i.title} />}
             />
           ))}
         </div>
-      )}
+      </section>
+    ) : null;
 
-      <LeavingSiteModal
-        isOpen={!!selectedInternship}
-        onClose={() => setSelectedInternship(null)}
-        internship={selectedInternship}
-      />
+  return (
+    <div className="wrap py-6 min-[721px]:py-10">
+      <PageHead title="Saved roles" sub="Sorted by closing date." />
+
+      {isLoading ? (
+        <div className="grid gap-2.5" aria-busy="true">
+          <Skeleton variant="row" count={3} />
+        </div>
+      ) : error ? (
+        <div className="grid justify-items-start gap-3.5">
+          <div className="note is-bad" role="alert">
+            <AlertCircle aria-hidden="true" />
+            <span>We couldn’t load your saved roles. Check your connection and try again.</span>
+          </div>
+          <button type="button" className="btn btn-secondary" onClick={() => refetch()}>
+            Try again
+          </button>
+        </div>
+      ) : list.length === 0 ? (
+        <Empty
+          icon={Bookmark}
+          title="Nothing saved yet"
+          body="Tap the bookmark on any role to keep it here, with its deadline."
+          action={
+            <SiteLink to="/internships" className="btn btn-brand">
+              Browse internships
+            </SiteLink>
+          }
+        />
+      ) : (
+        <div className="grid gap-9">
+          {group('Closing this week', 'sv-wk', soon)}
+          {group(soon.length ? 'Later' : 'Saved', 'sv-lt', later)}
+        </div>
+      )}
     </div>
   );
 };
