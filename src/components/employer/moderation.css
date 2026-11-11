@@ -1,0 +1,35 @@
+/* Admin listings (S-051). Page-scoped; tokens and atoms come from index.css. */
+.cm-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin-bottom: 16px; }
+.cm-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.cm-seg .seg { max-width: none; }
+.cm-seg .seg button { white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+.cm-seg .seg .num { color: var(--tx-3); font-size: 13px; }
+.cm-seg .seg [aria-checked="true"] .num { color: var(--tx-2); }
+.cm-bar .search { flex: 1 1 240px; max-width: 340px; }
+.cm .table th, .cm .table td { padding: 12px 10px; font-size: 14px; }
+.cm .table th:first-child, .cm .table td:first-child { padding-left: 20px; }
+.cm .table th:last-child, .cm .table td:last-child { padding-right: 16px; }
+.cm-t { display: block; font: 400 16px/1.3 var(--f-display); color: var(--tx); overflow-wrap: anywhere; }
+.cm .t-meta { display: block; }
+.cm-act { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 1023.98px) {
+  .cm .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cm .table, .cm .table tbody { display: block; }
+  .cm .table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .cm .table tr:last-child { border-bottom: 0; }
+  .cm .table td, .cm .table td:first-child, .cm .table td:last-child { display: block; padding: 0; border: 0; text-align: left; }
+  .cm .table td::before { content: attr(data-l); display: block; font: 500 12px/1.4 var(--f-body); color: var(--tx-3); margin-bottom: 2px; }
+  .cm .table td.role { grid-column: 1 / 3; }
+  .cm .table td.role::before, .cm .table td.act::before, .cm .table td.st::before { display: none; }
+  .cm .table td.st { grid-column: 3; justify-self: end; }
+  .cm .table td.act { grid-column: 1 / -1; }
+  .cm-act { justify-content: flex-start; }
+  .cm .table tbody tr:hover td { background: none; }
+}
+@media (max-width: 720px) {
+  .cm .table tr { grid-template-columns: 1fr 1fr; padding: 16px; }
+  .cm .table td.role { grid-column: 1 / -1; }
+  .cm .table td.st { grid-column: 1 / -1; justify-self: start; grid-row: 2; }
+  .cm-bar .search { max-width: none; flex-basis: 100%; }
+  .cm-act .btn { flex: 1; }
+}

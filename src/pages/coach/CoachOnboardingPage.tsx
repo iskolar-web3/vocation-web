@@ -1,20 +1,45 @@
-import React, { useState } from 'react';
-import {
-  Compass,
-  ArrowRight,
-  ShieldCheck,
-  Plus,
-  X,
-  Loader2,
-  AlertCircle,
-  ExternalLink,
-} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCreateCoachProfile, useFeatures } from '../../services/queries';
 import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
+import { Segmented } from '../../components/ui';
+import './coach.css';
 
 interface CoachOnboardingPageProps {
   navigate: (path: string) => void;
+}
+
+const SUGGESTED = [
+  'Career Guidance',
+  'Resume Review',
+  'Mock Interview',
+  'Portfolio Review',
+  'System Design',
+  'Behavioral (STAR)',
+  'OJT Readiness',
+];
+
+const STEPS = [
+  { h: 'Your profile', l: 'This is what students see first.' },
+  { h: 'What you coach', l: 'Help students find the right coach.' },
+  { h: 'Pricing and agreement', l: 'Last step. Choose how you charge, then agree to the terms.' },
+];
+
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+type Errors = Partial<Record<'name' | 'slug' | 'headline' | 'bio' | 'skills' | 'agree', string>>;
+
+function Err({ id, msg }: { id: string; msg?: string }) {
+  return msg ? (
+    <p className="error" id={`${id}-e`} role="alert">
+      {msg}
+    </p>
+  ) : null;
 }
 
 export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ navigate }) => {
@@ -22,182 +47,251 @@ export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ naviga
   const features = useFeatures();
   const createCoachMutation = useCreateCoachProfile();
 
+  const [step, setStep] = useState(1);
   const [displayName, setDisplayName] = useState(user?.full_name || '');
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
-  const [experience, setExperience] = useState('');
-  const [slug, setSlug] = useState(() => {
-    return user?.full_name
-      ? user.full_name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/(^-|-$)/g, '')
-      : '';
-  });
+  const [slug, setSlug] = useState(() => (user?.full_name ? slugify(user.full_name) : ''));
   const [priceType, setPriceType] = useState<'free' | 'paid'>('paid');
   const [skills, setSkills] = useState<string[]>(['Career Guidance', 'Resume Review']);
   const [newSkill, setNewSkill] = useState('');
   const [acceptedAgreement, setAcceptedAgreement] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Errors>({});
+  const [serverError, setServerError] = useState<string | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const firstRender = useRef(true);
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    window.scrollTo(0, 0);
+    headingRef.current?.focus();
+  }, [step]);
+
+  const toggleSkill = (s: string) =>
+    setSkills((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
 
   const handleAddSkill = () => {
     const trimmed = newSkill.trim();
-    if (trimmed && !skills.includes(trimmed)) {
-      setSkills([...skills, trimmed]);
-      setNewSkill('');
+    if (trimmed.length < 2) return;
+    if (!skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())) setSkills([...skills, trimmed]);
+    setNewSkill('');
+    setErrors((e) => ({ ...e, skills: undefined }));
+  };
+
+  const finalSlug = () => (slug.trim() || slugify(displayName)).toLowerCase();
+
+  const validate = (s: number): Errors => {
+    const e: Errors = {};
+    if (s === 1) {
+      if (!displayName.trim()) e.name = 'Add the name students will see, like Maria Santos.';
+      if (!finalSlug()) e.slug = 'Add a profile link, like maria-santos.';
+      if (!headline.trim()) e.headline = 'Add a headline, like "Senior Software Engineer".';
+      if (!bio.trim()) e.bio = 'Tell students what to expect from your sessions.';
     }
+    if (s === 2 && skills.length === 0) e.skills = 'Pick at least one focus area.';
+    if (s === 3 && !acceptedAgreement) e.agree = 'You must review and agree to the Coach Agreement before onboarding.';
+    return e;
   };
 
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((s) => s !== skillToRemove));
-  };
-
-  const handleSlugify = (val: string) => {
-    const generated = val
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    setSlug(generated);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-
-    const finalSlug = (
-      slug.trim() ||
-      displayName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '')
-    );
-
-    if (!displayName.trim() || !headline.trim() || !bio.trim() || !finalSlug) {
-      setErrorMsg('Please fill in all required coach profile fields.');
+  const handleSubmit = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setServerError(null);
+    const e = validate(step);
+    setErrors(e);
+    const firstBad = Object.keys(e)[0];
+    if (firstBad) {
+      document.getElementById(`ob-${firstBad}`)?.focus();
       return;
     }
-
-    if (!acceptedAgreement) {
-      setErrorMsg('You must review and agree to the Coach Agreement before onboarding.');
+    if (step < STEPS.length) {
+      setStep(step + 1);
       return;
     }
-
     try {
       await createCoachMutation.mutateAsync({
         display_name: displayName.trim(),
         headline: headline.trim(),
         bio: bio.trim(),
-        experience: experience.trim() || undefined,
         languages: ['English', 'Filipino'],
-        slug: finalSlug.trim().toLowerCase(),
+        slug: finalSlug(),
         price_type: priceType,
         skills,
       });
-
-      // Refetch user session so AuthContext immediately reflects is_onboarded: true
+      // Refetch so AuthContext immediately reflects is_onboarded: true
       await refetchUser();
-
       navigate('/coach');
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to complete coach onboarding.');
+    } catch (err: unknown) {
+      setServerError(err instanceof Error && err.message ? err.message : 'Failed to complete coach onboarding.');
     }
   };
 
+  const { h, l } = STEPS[step - 1];
+  const pending = createCoachMutation.isPending;
+  const aria = (k: keyof Errors) => ({
+    'aria-invalid': errors[k] ? (true as const) : undefined,
+    'aria-describedby': errors[k] ? `ob-${k}-e` : undefined,
+  });
+
   return (
-    <div className="min-h-screen bg-[#f0f7ff]/40 py-12 px-4 sm:px-6 flex items-center justify-center">
-      <div className="max-w-xl w-full bg-white rounded-2xl border border-slate-200 p-8 shadow-xs space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-xl bg-[#021F53] text-[#607ef2] flex items-center justify-center mx-auto shadow-xs">
-            <Compass className="w-6 h-6" />
+    <div className="lit lit-left pcp-ob">
+      <header className="pcp-ob-w pcp-ob-head">
+        <div className="pcp-ob-prog">
+          <div
+            className="pcp-ob-bar"
+            role="progressbar"
+            aria-label="Setup progress"
+            aria-valuemin={1}
+            aria-valuemax={STEPS.length}
+            aria-valuenow={step}
+            aria-valuetext={`Step ${step} of ${STEPS.length}`}
+          >
+            <i style={{ width: `${(step / STEPS.length) * 100}%` }} />
           </div>
-          <h1 className="text-2xl font-bold text-[#021F53] font-headline">
-            Coach Onboarding
-          </h1>
-          <p className="text-xs text-slate-600 max-w-sm mx-auto">
-            Build your public mentor profile and start offering 1-on-1 mentorship to Filipino college students.
+          <p className="t-label num">
+            Step {step} of {STEPS.length}
           </p>
         </div>
+        <h1 className="t-h1" ref={headingRef} tabIndex={-1}>
+          {h}
+        </h1>
+        <p className="t-lede">{l}</p>
+      </header>
 
-        {errorMsg && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-700">
-            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-            <span>{errorMsg}</span>
-          </div>
+      <form
+        className="pcp-ob-w pcp-ob-form"
+        noValidate
+        onSubmit={handleSubmit}
+        aria-label={`Step ${step} of ${STEPS.length}: ${h}`}
+      >
+        {step === 1 && (
+          <>
+            <div className="field">
+              <label htmlFor="ob-name">Display name</label>
+              <input
+                id="ob-name"
+                className="input"
+                type="text"
+                autoComplete="name"
+                placeholder="Maria Santos"
+                value={displayName}
+                onChange={(e) => {
+                  setDisplayName(e.target.value);
+                  if (!slug) setSlug(slugify(e.target.value));
+                  setErrors((x) => ({ ...x, name: undefined }));
+                }}
+                {...aria('name')}
+              />
+              <Err id="ob-name" msg={errors.name} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="ob-slug">Your profile link</label>
+              <div className="pcp-ob-url">
+                <span aria-hidden="true">iskolar.io/coaches/</span>
+                <input
+                  id="ob-slug"
+                  className="input"
+                  type="text"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder="maria-santos"
+                  value={slug}
+                  onChange={(e) => {
+                    setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+                    setErrors((x) => ({ ...x, slug: undefined }));
+                  }}
+                  {...aria('slug')}
+                />
+              </div>
+              <span className="hint">A permanent link to your profile. It stays the same once you finish.</span>
+              <Err id="ob-slug" msg={errors.slug} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="ob-headline">Headline</label>
+              <input
+                id="ob-headline"
+                className="input"
+                type="text"
+                maxLength={90}
+                placeholder="Senior Software Engineer"
+                value={headline}
+                onChange={(e) => {
+                  setHeadline(e.target.value);
+                  setErrors((x) => ({ ...x, headline: undefined }));
+                }}
+                {...aria('headline')}
+              />
+              <Err id="ob-headline" msg={errors.headline} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="ob-bio">Bio</label>
+              <textarea
+                id="ob-bio"
+                className="textarea"
+                rows={5}
+                placeholder="What happens in your sessions, and who you help most."
+                value={bio}
+                onChange={(e) => {
+                  setBio(e.target.value);
+                  setErrors((x) => ({ ...x, bio: undefined }));
+                }}
+                {...aria('bio')}
+              />
+              <Err id="ob-bio" msg={errors.bio} />
+            </div>
+
+            {!features.uploads && (
+              <div className="pcp-ob-photo" aria-disabled="true">
+                <span>Profile photo</span>
+                <ComingSoonBadge />
+              </div>
+            )}
+          </>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-              Public Display Name
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Maria Santos"
-              value={displayName}
-              onChange={(e) => {
-                setDisplayName(e.target.value);
-                if (!slug) handleSlugify(e.target.value);
-              }}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-[#021F53] outline-none focus:bg-white focus:border-[#3f58b2] focus:ring-2 focus:ring-[#3f58b2]/20"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-              Profile URL Slug (unique permanent link)
-            </label>
-            <div className="flex items-center">
-              <span className="px-3 py-2.5 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs text-slate-500">
-                iskolar.io/coaches/
-              </span>
-              <input
-                type="text"
-                required
-                placeholder="maria-santos"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-r-xl text-xs font-medium text-[#021F53] outline-none focus:bg-white focus:border-[#3f58b2] focus:ring-2 focus:ring-[#3f58b2]/20 font-mono"
-              />
+        {step === 2 && (
+          <div className="field">
+            <span className="label" id="ob-skills-l">
+              Focus areas
+            </span>
+            <div className="pcp-chips" role="group" aria-labelledby="ob-skills-l">
+              {[...new Set([...SUGGESTED, ...skills])].map((s) => {
+                const on = skills.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    className="chip"
+                    aria-pressed={on}
+                    onClick={() => {
+                      toggleSkill(s);
+                      setErrors((x) => ({ ...x, skills: undefined }));
+                    }}
+                  >
+                    {on ? <Check aria-hidden="true" /> : null}
+                    {s}
+                  </button>
+                );
+              })}
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-              Professional Headline
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Senior Software Engineer at Tech Corp | Tech Career Mentor"
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-[#021F53] outline-none focus:bg-white focus:border-[#3f58b2] focus:ring-2 focus:ring-[#3f58b2]/20"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-              Mentorship Bio
-            </label>
-            <textarea
-              required
-              rows={3}
-              placeholder="Share your industry experience and what students can learn from your 1-on-1 sessions..."
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-[#021F53] outline-none focus:bg-white focus:border-[#3f58b2] focus:ring-2 focus:ring-[#3f58b2]/20"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-              Mentorship Focus / Skills
-            </label>
-            <div className="flex gap-2 mb-2">
+            <div className="pcp-add">
+              <label className="sr-only" htmlFor="ob-skills">
+                Add your own focus area
+              </label>
               <input
+                id="ob-skills"
+                className="input"
                 type="text"
-                placeholder="Add focus area (e.g. Mock Interview, Resume Audit, System Design)"
+                autoComplete="off"
+                maxLength={30}
+                enterKeyHint="done"
+                placeholder="Add your own, then press Enter"
                 value={newSkill}
                 onChange={(e) => setNewSkill(e.target.value)}
                 onKeyDown={(e) => {
@@ -206,88 +300,89 @@ export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ naviga
                     handleAddSkill();
                   }
                 }}
-                className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-[#021F53] outline-none focus:bg-white focus:border-[#3f58b2]"
+                {...aria('skills')}
               />
-              <button
-                type="button"
-                onClick={handleAddSkill}
-                className="px-3.5 py-2 bg-[#3f58b2] hover:bg-[#021F53] text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
-              >
-                <Plus className="w-4 h-4" />
+              <button type="button" className="btn btn-secondary" onClick={handleAddSkill}>
+                Add
               </button>
             </div>
-
-            <div className="flex flex-wrap gap-1.5 min-h-[32px]">
-              {skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#f0f7ff] border border-[#3f58b2]/20 text-[#3f58b2] text-xs font-semibold"
-                >
-                  <span>{skill}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSkill(skill)}
-                    className="hover:text-rose-600 cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
+            <Err id="ob-skills" msg={errors.skills} />
           </div>
+        )}
 
-          {!features.uploads && (
-            <div
-              aria-disabled="true"
-              className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-400"
-            >
-              <span>Profile photo</span>
-              <ComingSoonBadge />
-            </div>
-          )}
-
-          {/* Coach Agreement Acceptance (Issue #23) */}
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                required
-                checked={acceptedAgreement}
-                onChange={(e) => setAcceptedAgreement(e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded text-[#3f58b2] focus:ring-[#3f58b2]"
-              />
-              <span className="text-xs text-slate-700 leading-relaxed">
-                I agree to the{' '}
-                <button
-                  type="button"
-                  onClick={() => navigate('/coach-agreement')}
-                  className="text-[#3f58b2] font-semibold underline inline-flex items-center gap-0.5 cursor-pointer"
-                >
-                  Coach Marketplace Agreement <ExternalLink className="w-3 h-3" />
-                </button>
-                . I understand the platform takes a 10% fee on paid sessions (I receive 90%), payouts are disbursed via Philippine bank/e-wallet, and dispute/refund claims are subject to a 24-hour window.
+        {step === 3 && (
+          <>
+            <div className="field">
+              <span className="label" id="ob-price-l">
+                How do you charge?
               </span>
-            </label>
-          </div>
+              <Segmented
+                label="How do you charge?"
+                value={priceType}
+                onValueChange={setPriceType}
+                options={[
+                  { value: 'paid', label: 'Paid sessions' },
+                  { value: 'free', label: 'Free sessions' },
+                ]}
+              />
+              <span className="hint">
+                {priceType === 'paid'
+                  ? 'Students pay before a session is confirmed.'
+                  : 'Free sessions are confirmed right away.'}
+              </span>
+            </div>
 
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={createCoachMutation.isPending || !acceptedAgreement}
-              className="tactile-btn-primary w-full py-3.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {createCoachMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <span>Create Coach Profile</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+            <div className="note">
+              <p>
+                <b>You keep 90% of each paid session; iSkolar's fee is 10%.</b> Earnings clear 24 hours after a session
+                ends. Payouts go to your Philippine bank account or e-wallet.
+              </p>
+            </div>
+
+            <div className="pcp-agree">
+              <label className="check" htmlFor="ob-agree">
+                <input
+                  id="ob-agree"
+                  type="checkbox"
+                  checked={acceptedAgreement}
+                  onChange={(e) => {
+                    setAcceptedAgreement(e.target.checked);
+                    setErrors((x) => ({ ...x, agree: undefined }));
+                  }}
+                  {...aria('agree')}
+                />
+                <span className="t-small">
+                  I agree to the{' '}
+                  <a href="/coach-agreement" target="_blank" rel="noopener noreferrer">
+                    Coach Agreement
+                    <ExternalLink aria-hidden="true" className="ml-1 inline h-3.5 w-3.5 align-[-2px]" />
+                  </a>
+                  . I understand the platform takes a 10% fee on paid sessions (I receive 90%), payouts are disbursed
+                  via Philippine bank or e-wallet, and dispute and refund claims are subject to a 24-hour window.
+                </span>
+              </label>
+              <Err id="ob-agree" msg={errors.agree} />
+            </div>
+          </>
+        )}
+
+        {serverError && (
+          <p className="note is-bad" role="alert">
+            {serverError}
+          </p>
+        )}
+
+        <div className="pcp-ob-actions">
+          {step > 1 && (
+            <button type="button" className="btn btn-ghost" onClick={() => setStep(step - 1)} disabled={pending}>
+              Back
             </button>
-          </div>
-        </form>
-      </div>
+          )}
+          <button type="submit" className="btn btn-brand" disabled={pending}>
+            {step < STEPS.length ? 'Continue' : pending ? 'Creating profile…' : 'Create coach profile'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
