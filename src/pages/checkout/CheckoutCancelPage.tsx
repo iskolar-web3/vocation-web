@@ -1,114 +1,94 @@
-import React, { useState } from 'react';
-import { AlertTriangle, ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
-import { useStudentBookings, useResumeCheckout, useFeatures } from '../../services/queries';
-import { formatDateTime, formatPHP } from '../../lib/utils';
-import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
+import { Link } from '@tanstack/react-router';
+import { useState } from 'react';
+import { whenLabel } from '../../components/coaching/Booking';
+import { Disc, Skeleton } from '../../components/ui';
+import { formatPHP } from '../../lib/utils';
+import { useFeatures, useResumeCheckout, useStudentBookings } from '../../services/queries';
+import '../../components/coaching/coaching.css';
 
 interface CheckoutCancelPageProps {
   navigate: (path: string) => void;
 }
 
-export const CheckoutCancelPage: React.FC<CheckoutCancelPageProps> = ({ navigate }) => {
-  const searchParams = new URLSearchParams(window.location.search);
-  const bookingId = searchParams.get('booking_id');
+export function CheckoutCancelPage(_props: CheckoutCancelPageProps) {
+  const bookingId = new URLSearchParams(window.location.search).get('booking_id');
+  const { data: bookings, isLoading } = useStudentBookings('upcoming');
+  const booking = bookings?.find((b) => b.booking_id === bookingId) ?? null;
 
-  const { data: bookings } = useStudentBookings('upcoming');
-  const booking = bookings?.find((b) => b.booking_id === bookingId);
-
-  const resumeCheckoutMutation = useResumeCheckout();
+  const resume = useResumeCheckout();
   const features = useFeatures();
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRetryCheckout = async () => {
+  const finish = async () => {
     if (!bookingId) return;
-    setErrorMsg(null);
+    setError(null);
     try {
-      const res = await resumeCheckoutMutation.mutateAsync(bookingId);
-      if (res.checkout_url) {
-        window.location.href = res.checkout_url;
-      } else {
-        setErrorMsg('Unable to retrieve checkout session. Please try again.');
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to resume payment session.');
+      const res = await resume.mutateAsync(bookingId);
+      if (res.checkout_url) window.location.href = res.checkout_url;
+      else setError('Checkout did not open. Please try again in a moment.');
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Could not restart payment.');
     }
   };
 
+  const due = booking ? (booking.amount_due_centavos ?? booking.price_centavos) : 0;
+
   return (
-    <div className="min-h-screen bg-[#f0f7ff]/30 py-12 px-4 sm:px-6">
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
-            <AlertTriangle className="w-8 h-8" />
-          </div>
-
-          <div className="inline-block px-3 py-1 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-md text-[#021F53] text-xs font-semibold">
-            Checkout Incomplete
-          </div>
-
-          <h1 className="text-2xl font-bold text-[#021F53]">Payment Cancelled</h1>
-          <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-            You exited the checkout process before payment was completed. Your coaching session slot is temporarily reserved but not yet confirmed.
-          </p>
-
-          {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
-              {errorMsg}
-            </div>
-          )}
-
-          {booking && (
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-left space-y-2 text-xs text-slate-700">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Coach:</span>
-                <span className="font-semibold text-[#021F53]">{booking.coach_display_name}</span>
+    <div className="pd">
+      <div className="pd-col" aria-busy={isLoading}>
+        <h1 className="t-h1">Payment not finished</h1>
+        {isLoading ? (
+          <Skeleton variant="block" height={150} />
+        ) : (
+          <>
+            <p className="t-body">
+              {booking
+                ? `Your ${whenLabel(booking.slot_starts_at)} session isn’t booked until the payment goes through.`
+                : 'Your session isn’t booked until the payment goes through.'}
+            </p>
+            {booking ? (
+              <div className="panel pd-sum">
+                <div className="who">
+                  <Disc name={booking.coach_display_name} size="sm" />
+                  <h2 className="t-title">{booking.coach_display_name}</h2>
+                </div>
+                <dl>
+                  <div>
+                    <dt>When, Manila time</dt>
+                    <dd className="num">{whenLabel(booking.slot_starts_at)}</dd>
+                  </div>
+                  <div className="tot">
+                    <dt>Amount due</dt>
+                    <dd className="num">{formatPHP(due)}</dd>
+                  </div>
+                </dl>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Scheduled Time:</span>
-                <span className="font-semibold text-[#021F53]">{formatDateTime(booking.slot_starts_at)}</span>
+            ) : null}
+            {error ? (
+              <div className="note is-bad" role="alert">
+                <span>{error}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Amount Due:</span>
-                <span className="font-semibold text-[#3f58b2]">
-                  {formatPHP(booking.amount_due_centavos ?? booking.price_centavos)}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
-            {bookingId && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleRetryCheckout}
-                  disabled={resumeCheckoutMutation.isPending || !features.checkout}
-                  className="w-full sm:w-auto px-6 py-2.5 tactile-btn-primary text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {resumeCheckoutMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <CreditCard className="w-4 h-4" />
-                      <span>Complete Payment</span>
-                    </>
-                  )}
+            ) : null}
+            <div className="pd-acts">
+              {bookingId ? (
+                <button type="button" className="btn btn-primary" onClick={() => void finish()} disabled={resume.isPending || !features.checkout}>
+                  {resume.isPending ? 'Opening checkout…' : features.checkout ? `Finish paying${booking ? ` ${formatPHP(due)}` : ''}` : 'Paid sessions are coming soon'}
                 </button>
-                {!features.checkout && <ComingSoonBadge />}
-              </>
-            )}
-
-            <button
-              type="button"
-              onClick={() => navigate('/coaches')}
-              className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Coaches</span>
-            </button>
-          </div>
-        </div>
+              ) : null}
+              {booking ? (
+                <Link to="/coaches/$slug" params={{ slug: booking.coach_slug }} className="btn btn-secondary">
+                  Choose another time
+                </Link>
+              ) : (
+                <Link to="/coaches" className="btn btn-secondary">
+                  Back to coaches
+                </Link>
+              )}
+            </div>
+            <p className="t-meta">If you already paid, don’t pay again. Check My bookings in a minute.</p>
+          </>
+        )}
       </div>
     </div>
   );
-};
+}

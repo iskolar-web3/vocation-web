@@ -1,206 +1,246 @@
-import React, { useState, useEffect } from 'react';
-import {
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  MessageSquareHeart,
-  RefreshCw,
-  Video,
-} from 'lucide-react';
-import { useStudentBookings } from '../../services/queries';
-import { formatDateTime, formatPHP } from '../../lib/utils';
+import { Link } from '@tanstack/react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Disc, Skeleton, Status } from '../../components/ui';
+import { whenLabel } from '../../components/coaching/Booking';
 import { analytics } from '../../lib/analytics';
-import { FeedbackModal } from '../../components/common/FeedbackModal';
+import { formatPHP } from '../../lib/utils';
+import { useFeatures, useResumeCheckout, useStudentBookings } from '../../services/queries';
+import type { BookingItem } from '../../types/api';
+import '../../components/coaching/coaching.css';
+
+/* BR-007: "confirmed" only when the API says confirmed. The browser returning from checkout
+   proves nothing; everything else reads as confirming until the webhook lands. */
 
 interface CheckoutSuccessPageProps {
   navigate: (path: string) => void;
 }
 
-export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ navigate }) => {
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const searchParams = new URLSearchParams(window.location.search);
-  const bookingId = searchParams.get('booking_id');
+const FAST_MS = 4000;
+const SLOW_AFTER_MS = 90_000;
+const SLOW_MS = 10_000;
+const GIVE_UP_MS = 300_000;
 
-  const { data: bookings, isLoading, refetch, isRefetching } = useStudentBookings('upcoming');
-  const booking = bookings?.find((b) => b.booking_id === bookingId);
+type View = 'confirming' | 'slow' | 'confirmed' | 'failed' | 'expired';
 
-  useEffect(() => {
-    if (booking) {
-      analytics.bookingConfirmed(booking.price_centavos === 0, booking.payment_status);
-    }
-  }, [booking]);
+const viewOf = (b: BookingItem, slow: boolean): View => {
+  if (b.status === 'confirmed' || b.status === 'completed') return 'confirmed';
+  if (b.payment_status === 'expired') return 'expired';
+  if (b.payment_status === 'failed') return 'failed';
+  return slow ? 'slow' : 'confirming';
+};
 
-  const isPending = booking?.status === 'pending' || booking?.payment_status === 'pending';
+const minutesOf = (b: BookingItem) =>
+  b.slot_ends_at ? Math.round((new Date(b.slot_ends_at).getTime() - new Date(b.slot_starts_at).getTime()) / 60000) : null;
 
+function Summary({ b, totalLabel, amount, rise }: { b: BookingItem | null; totalLabel: string; amount?: number; rise?: boolean }) {
+  if (!b) return null;
+  const mins = minutesOf(b);
   return (
-    <div className="min-h-screen bg-[#f0f7ff]/30 py-12 px-4 sm:px-6">
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs text-center space-y-5">
-          {isLoading ? (
-            <div className="py-12 flex flex-col items-center justify-center space-y-3">
-              <RefreshCw className="w-8 h-8 text-[#3f58b2] animate-spin" />
-              <p className="text-sm text-slate-600 font-medium">Verifying booking status...</p>
-            </div>
-          ) : !booking ? (
-            <div className="py-8 space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
-                <Clock className="w-8 h-8" />
-              </div>
-              <h1 className="text-2xl font-bold text-[#021F53]">Payment Received</h1>
-              <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                Thank you! We received your return from the payment gateway. Your session confirmation is processing.
-              </p>
-              {bookingId && (
-                <div className="text-xs font-mono text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200 inline-block">
-                  Reference: {bookingId}
-                </div>
-              )}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/app/bookings')}
-                  className="px-6 py-2.5 bg-[#3f58b2] text-white hover:bg-[#021F53] text-xs font-bold rounded-xl transition-all cursor-pointer"
-                >
-                  Go to My Bookings
-                </button>
-              </div>
-            </div>
-          ) : isPending ? (
-            // BR-007: Show pending, NEVER confirmed until webhook verifies
-            <div className="space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
-                <Clock className="w-8 h-8 animate-pulse" />
-              </div>
-              <div className="inline-block px-3 py-1 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-md text-[#021F53] text-xs font-semibold">
-                Status: Payment Pending Verification
-              </div>
-              <h1 className="text-2xl font-bold text-[#021F53]">Payment Processing</h1>
-              <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                Your payment is currently being verified with the payment gateway. Per platform security (BR-007), bookings are finalized upon server webhook confirmation.
-              </p>
-
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-left space-y-2.5 text-xs text-slate-700">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Coach:</span>
-                  <span className="font-semibold text-[#021F53]">{booking.coach_display_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Scheduled Time:</span>
-                  <span className="font-semibold text-[#021F53]">{formatDateTime(booking.slot_starts_at)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Amount:</span>
-                  <span className="font-semibold text-[#3f58b2]">{formatPHP(booking.price_centavos)}</span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => refetch()}
-                  disabled={isRefetching}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
-                  <span>Check Confirmation Status</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/app/bookings')}
-                  className="w-full sm:w-auto px-5 py-2.5 tactile-btn-primary text-white font-bold text-xs rounded-xl flex items-center justify-center shadow-md transition-all cursor-pointer"
-                >
-                  Go to My Bookings
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-10 h-10" />
-              </div>
-              <div className="inline-block px-3 py-1 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-md text-[#021F53] text-xs font-semibold">
-                Status: Confirmed
-              </div>
-              <h1 className="text-2xl font-bold text-[#021F53]">Session Confirmed!</h1>
-              <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                Your 1-on-1 mentorship session with <strong>{booking.coach_display_name}</strong> is locked in.
-              </p>
-
-              <div className="p-4 bg-[#f0f7ff] rounded-xl border border-[#3f58b2]/20 text-left space-y-2.5 text-xs text-slate-700">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Coach:</span>
-                  <span className="font-bold text-[#021F53]">{booking.coach_display_name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Time:</span>
-                  <span className="font-semibold text-[#021F53]">{formatDateTime(booking.slot_starts_at)} (PHT)</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Session Fee:</span>
-                  <span className="font-bold text-[#3f58b2]">{formatPHP(booking.price_centavos)}</span>
-                </div>
-                {booking.join_url && (
-                  <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
-                    <span className="text-slate-500 flex items-center gap-1">
-                      <Video className="w-3.5 h-3.5 text-[#3f58b2]" />
-                      Meeting Link:
-                    </span>
-                    <a
-                      href={booking.join_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#3f58b2] hover:underline font-semibold flex items-center gap-1"
-                    >
-                      Join Meeting <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate('/app/bookings')}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-[#3f58b2] text-white hover:bg-[#021F53] text-xs font-bold rounded-xl flex items-center justify-center transition-all cursor-pointer"
-                >
-                  View in My Bookings
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/coaches')}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl flex items-center justify-center transition-all cursor-pointer"
-                >
-                  Browse More Coaches
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center flex-shrink-0">
-              <MessageSquareHeart className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-[#021F53]">Help us improve iSkolar</h4>
-              <p className="text-[11px] text-slate-500">Tell us about your booking experience in a 1-minute survey.</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsFeedbackOpen(true)}
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-[#021F53] text-xs font-bold rounded-xl flex items-center gap-1.5 flex-shrink-0 transition-all cursor-pointer"
-          >
-            <span>Send Feedback</span>
-          </button>
-        </div>
+    <div className={`panel pd-sum${rise ? ' pd-rise' : ''}`} style={rise ? { ['--i' as string]: 1 } : undefined}>
+      <div className="who">
+        <Disc name={b.coach_display_name} size="sm" />
+        <h2 className="t-title">{b.coach_display_name}</h2>
       </div>
-
-      <FeedbackModal
-        isOpen={isFeedbackOpen}
-        onClose={() => setIsFeedbackOpen(false)}
-      />
+      <dl>
+        <div>
+          <dt>When, Manila time</dt>
+          <dd className="num">{whenLabel(b.slot_starts_at)}</dd>
+        </div>
+        {mins ? (
+          <div>
+            <dt>Duration</dt>
+            <dd className="num">{mins} min</dd>
+          </div>
+        ) : null}
+        <div className="tot">
+          <dt>{totalLabel}</dt>
+          <dd className="num">{formatPHP(amount ?? b.price_centavos)}</dd>
+        </div>
+        <div>
+          <dt>Reference</dt>
+          <dd className="num">{b.booking_id}</dd>
+        </div>
+      </dl>
     </div>
   );
-};
+}
+
+export function CheckoutSuccessPage(_props: CheckoutSuccessPageProps) {
+  const bookingId = new URLSearchParams(window.location.search).get('booking_id');
+  const upcoming = useStudentBookings('upcoming');
+  const foundUpcoming = upcoming.data?.find((x) => x.booking_id === bookingId);
+  // a failed or expired booking leaves the upcoming list, so look in past before giving up
+  const past = useStudentBookings('past', { enabled: Boolean(bookingId) && !upcoming.isLoading && !foundUpcoming });
+  const booking = foundUpcoming ?? past.data?.find((x) => x.booking_id === bookingId) ?? null;
+  const loading = upcoming.isLoading || (!booking && past.isLoading);
+
+  const features = useFeatures();
+  const resume = useResumeCheckout();
+  const [error, setError] = useState<string | null>(null);
+  const [slow, setSlow] = useState(false);
+  const started = useRef(Date.now());
+
+  const view = booking ? viewOf(booking, slow) : null;
+  const waiting = !loading && (view === null || view === 'confirming' || view === 'slow');
+  const { refetch: refetchUp } = upcoming;
+  const { refetch: refetchPast } = past;
+  const recheck = () => {
+    void refetchUp();
+    if (!booking) void refetchPast();
+  };
+
+  // "This page updates by itself": poll while waiting, slower once it drags on, stop after a while.
+  useEffect(() => {
+    if (!waiting) return;
+    let t = 0;
+    const tick = () => {
+      const age = Date.now() - started.current;
+      if (age > SLOW_AFTER_MS) setSlow(true);
+      if (age > GIVE_UP_MS) return;
+      recheck();
+      t = window.setTimeout(tick, age > SLOW_AFTER_MS ? SLOW_MS : FAST_MS);
+    };
+    t = window.setTimeout(tick, FAST_MS);
+    return () => window.clearTimeout(t);
+  }, [waiting]);
+
+  useEffect(() => {
+    if (view === 'confirmed' && booking) analytics.bookingConfirmed(booking.price_centavos === 0, booking.payment_status);
+  }, [view, booking]);
+
+  const retry = async () => {
+    if (!bookingId) return;
+    setError(null);
+    try {
+      const res = await resume.mutateAsync(bookingId);
+      if (res.checkout_url) window.location.href = res.checkout_url;
+      else setError('Checkout did not open. Please try again in a moment.');
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Could not restart payment.');
+    }
+  };
+
+  const bookingsLink = (
+    <Link to="/app/bookings" className="btn btn-primary">
+      Go to my bookings
+    </Link>
+  );
+  const again = (
+    <button type="button" className="btn btn-secondary" onClick={recheck} disabled={upcoming.isFetching}>
+      Check again
+    </button>
+  );
+
+  let body: React.ReactNode;
+  if (loading) {
+    body = (
+      <div aria-busy="true" style={{ display: 'grid', gap: 16, justifyItems: 'center', width: '100%' }}>
+        <Skeleton width={160} height={28} />
+        <Skeleton width={220} height={36} />
+        <Skeleton variant="block" height={150} />
+      </div>
+    );
+  } else if (!booking) {
+    body = (
+      <>
+        <Status status="confirming" />
+        <h1 className="t-h1">Payment received</h1>
+        <p className="t-body">
+          We’re matching it to your booking. Your session is confirmed once the payment provider confirms it. This page updates by itself,
+          and the booking will show in My bookings. Please don’t pay again.
+        </p>
+        <div className="bar-shimmer pd-bar" role="progressbar" aria-label="Looking for your booking" />
+        {bookingId ? <p className="t-meta num">Reference {bookingId}</p> : null}
+        <div className="pd-acts">
+          {bookingsLink}
+          {again}
+        </div>
+      </>
+    );
+  } else if (view === 'confirmed') {
+    body = (
+      <>
+        <span className="pd-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        </span>
+        <h1 className="t-h1 pd-rise" style={{ ['--i' as string]: 0 }}>
+          You’re booked.
+        </h1>
+        <p className="t-body pd-rise" style={{ ['--i' as string]: 0 }}>
+          Your session with {booking.coach_display_name} is confirmed for {whenLabel(booking.slot_starts_at)}, Manila time.
+          {booking.join_url ? '' : ' The meeting link shows up in My bookings.'}
+        </p>
+        <Summary b={booking} totalLabel={booking.price_centavos ? 'Total paid' : 'Total'} rise />
+        <div className="pd-acts pd-rise" style={{ ['--i' as string]: 2 }}>
+          {booking.join_url ? (
+            <a className="btn btn-secondary" href={booking.join_url} target="_blank" rel="noopener noreferrer">
+              Open meeting link
+            </a>
+          ) : null}
+          {bookingsLink}
+        </div>
+      </>
+    );
+  } else if (view === 'failed' || view === 'expired') {
+    body = (
+      <>
+        <Status status={view} />
+        <h1 className="t-h1">{view === 'expired' ? 'Payment window closed' : 'Payment didn’t go through'}</h1>
+        <p className="t-body">You weren’t charged for this attempt. You can try again, or pick another time.</p>
+        {error ? (
+          <div className="note is-bad" role="alert">
+            <span>{error}</span>
+          </div>
+        ) : null}
+        <Summary b={booking} totalLabel="Amount due" amount={booking.amount_due_centavos ?? booking.price_centavos} />
+        <div className="pd-acts">
+          <button type="button" className="btn btn-primary" onClick={() => void retry()} disabled={resume.isPending || !features.checkout}>
+            {resume.isPending ? 'Opening checkout…' : 'Try again'}
+          </button>
+          <Link to="/coaches/$slug" params={{ slug: booking.coach_slug }} className="btn btn-secondary">
+            Choose another time
+          </Link>
+        </div>
+      </>
+    );
+  } else if (view === 'slow') {
+    body = (
+      <>
+        <span className="status status-wait">Still confirming</span>
+        <h1 className="t-h1">Still confirming</h1>
+        <p className="t-body">
+          This is taking longer than usual. Your payment is with the provider and we keep checking. Please don’t pay again. The booking
+          will show as confirmed in My bookings once it goes through.
+        </p>
+        <Summary b={booking} totalLabel="Amount" amount={booking.amount_due_centavos ?? booking.price_centavos} />
+        <div className="pd-acts">
+          {bookingsLink}
+          {again}
+        </div>
+      </>
+    );
+  } else {
+    body = (
+      <>
+        <Status status="confirming" />
+        <h1 className="t-h1">Almost there</h1>
+        <p className="t-body">
+          We’re waiting for the payment provider to confirm. This page updates by itself, so you can leave it open. Please don’t pay
+          again.
+        </p>
+        <div className="bar-shimmer pd-bar" role="progressbar" aria-label="Confirming payment" />
+        <Summary b={booking} totalLabel="Amount" amount={booking.amount_due_centavos ?? booking.price_centavos} />
+      </>
+    );
+  }
+
+  return (
+    <div className="pd">
+      <div className="pd-col" key={loading ? 'loading' : (view ?? 'none')}>
+        {body}
+      </div>
+    </div>
+  );
+}
