@@ -20,9 +20,11 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ResetRouteImport } from './routes/reset'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminListingsRouteImport } from './routes/admin/listings'
 import { Route as AppIndexRouteImport } from './routes/app/index'
@@ -98,6 +100,11 @@ const ResetRoute = ResetRouteImport.update({
   path: '/reset',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
@@ -111,6 +118,11 @@ const SignupRoute = SignupRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -221,9 +233,11 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/refunds': typeof RefundsRoute
   '/reset': typeof ResetRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/admin/listings': typeof AdminListingsRoute
   '/app/bookings': typeof AppBookingsRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -253,9 +267,11 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/refunds': typeof RefundsRoute
   '/reset': typeof ResetRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/admin/listings': typeof AdminListingsRoute
   '/app/bookings': typeof AppBookingsRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -289,9 +305,11 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/refunds': typeof RefundsRoute
   '/reset': typeof ResetRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/admin/listings': typeof AdminListingsRoute
   '/app/bookings': typeof AppBookingsRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -326,9 +344,11 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/refunds'
     | '/reset'
+    | '/reset-password'
     | '/signin'
     | '/signup'
     | '/terms'
+    | '/verify-email'
     | '/admin/listings'
     | '/app/bookings'
     | '/app/onboarding'
@@ -358,9 +378,11 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/refunds'
     | '/reset'
+    | '/reset-password'
     | '/signin'
     | '/signup'
     | '/terms'
+    | '/verify-email'
     | '/admin/listings'
     | '/app/bookings'
     | '/app/onboarding'
@@ -393,9 +415,11 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/refunds'
     | '/reset'
+    | '/reset-password'
     | '/signin'
     | '/signup'
     | '/terms'
+    | '/verify-email'
     | '/admin/listings'
     | '/app/bookings'
     | '/app/onboarding'
@@ -429,9 +453,11 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   RefundsRoute: typeof RefundsRoute
   ResetRoute: typeof ResetRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   CheckoutCancelRoute: typeof CheckoutCancelRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   CoachesSlugRoute: typeof CoachesSlugRoute
@@ -522,6 +548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signin': {
       id: '/signin'
       path: '/signin'
@@ -541,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -741,9 +781,11 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   RefundsRoute: RefundsRoute,
   ResetRoute: ResetRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   CheckoutCancelRoute: CheckoutCancelRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   CoachesSlugRoute: CoachesSlugRoute,

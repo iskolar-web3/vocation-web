@@ -1,28 +1,32 @@
 import React from 'react';
-import { Compass, ArrowLeft } from 'lucide-react';
 
 interface NotFoundPageProps {
   navigate?: (path: string) => void;
 }
 
-export const NotFoundPage: React.FC<NotFoundPageProps> = ({ navigate: propNavigate }) => {
-  const navigate = propNavigate ?? ((path: string) => { if (typeof window !== 'undefined') { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); } });
-  return (
-    <div className="max-w-md mx-auto px-4 py-24 text-center space-y-5">
-      <div className="w-16 h-16 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/20 flex items-center justify-center mx-auto">
-        <Compass className="w-8 h-8" />
-      </div>
-      <h1 className="text-3xl font-bold text-[#021F53] font-display">404 - Page Not Found</h1>
-      <p className="text-xs sm:text-sm text-[#2c3f77] leading-relaxed">
-        The page you are looking for does not exist, or the listing has been withdrawn.
-      </p>
-      <button
-        onClick={() => navigate('/')}
-        className="tactile-btn-primary px-6 py-3 text-white font-bold text-xs rounded-xl shadow-md transition-all inline-flex items-center gap-1.5 cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Return to Homepage</span>
-      </button>
-    </div>
-  );
+const go = (navigate: NotFoundPageProps['navigate'], path: string) => (e: React.MouseEvent) => {
+  if (!navigate || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+  e.preventDefault();
+  navigate(path);
 };
+
+export const NotFoundPage: React.FC<NotFoundPageProps> = ({ navigate }) => (
+  <div className="wrap lit lit-left py-14 sm:py-24">
+    <div className="grid justify-items-start gap-4">
+      <h1 className="t-h1">This page isn't here</h1>
+      <p className="t-lede max-w-[44ch]">The link may be old, or the role was taken down.</p>
+      <div className="mt-3 flex w-full flex-wrap gap-3">
+        <a href="/" onClick={go(navigate, '/')} className="btn btn-primary btn-lg max-sm:flex-[1_1_100%]">
+          Go home
+        </a>
+        <a
+          href="/internships"
+          onClick={go(navigate, '/internships')}
+          className="btn btn-secondary btn-lg max-sm:flex-[1_1_100%]"
+        >
+          Browse internships
+        </a>
+      </div>
+    </div>
+  </div>
+);

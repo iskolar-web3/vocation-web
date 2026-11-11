@@ -1,7 +1,9 @@
+import { SiteLink } from '../../components/layout/shell';
+import { AlertCircle, Check, Clock, Mail } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { MailCheck, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
-import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { ApiError, api } from '../../lib/api';
+import { cn } from '../../lib/utils';
 
 interface VerifyEmailPageProps {
   navigate: (path: string) => void;
@@ -15,7 +17,7 @@ type VerifyState = 'verifying' | 'verified' | 'invalid' | 'error';
  * token once. An unknown, expired or used token is 422 → invalid state.
  * Sign-in is never blocked by an unverified email, so every state links on.
  */
-export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ navigate }) => {
+export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = () => {
   const { refetchUser } = useAuth();
   const [state, setState] = useState<VerifyState>('verifying');
   const sent = useRef(false);
@@ -44,38 +46,45 @@ export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ navigate }) =>
       .catch((err) => {
         setState(err instanceof ApiError && (err.status === 422 || err.status === 400) ? 'invalid' : 'error');
       });
-  }, []);
+  }, [refetchUser]);
+
+  const Icon = { verifying: Mail, verified: Check, invalid: Clock, error: AlertCircle }[state];
+  const tone = state === 'verified' ? 'ok' : state === 'verifying' ? 'info' : 'bad';
 
   return (
-    <div className="max-w-md mx-auto px-4 py-24 text-center space-y-5">
-      <div className="w-16 h-16 rounded-full bg-[#f0f7ff] text-[#3f58b2] flex items-center justify-center mx-auto">
-        {state === 'verifying' && <Loader2 className="w-8 h-8 animate-spin" />}
-        {state === 'verified' && <MailCheck className="w-8 h-8 text-emerald-600" />}
-        {(state === 'invalid' || state === 'error') && <AlertCircle className="w-8 h-8 text-rose-500" />}
-      </div>
-      <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
-        {state === 'verifying' && 'Verifying your email…'}
-        {state === 'verified' && 'Email verified'}
-        {state === 'invalid' && 'This link is invalid or has expired'}
-        {state === 'error' && 'We could not verify your email'}
-      </h1>
-      <p className="text-xs sm:text-sm text-[#2c3f77] leading-relaxed">
-        {state === 'verifying' && 'One moment while we confirm your address.'}
-        {state === 'verified' && 'Thanks for confirming your address. You can continue to your account.'}
-        {state === 'invalid' &&
-          'Verification links are single-use and expire after 24 hours. Sign in and request a new one from your account.'}
-        {state === 'error' && 'Something went wrong on our side. Please try the link again in a few minutes.'}
-      </p>
-      {state !== 'verifying' && (
-        <button
-          type="button"
-          onClick={() => navigate('/signin')}
-          className="px-6 py-3 bg-[#3f58b2] text-white font-bold text-xs rounded-xl shadow-xs hover:bg-[#021F53] transition-all inline-flex items-center gap-1.5 cursor-pointer"
+    <div className="flex min-h-[calc(100svh-var(--nav-h,72px)-var(--tabbar-total))] justify-center px-4 py-8 sm:items-center sm:py-12">
+      <div className="panel panel-pad h-fit w-full max-w-[440px] sm:p-7" aria-live="polite">
+        <div
+          className={cn(
+            'mb-5 grid size-14 place-items-center rounded-full [&_svg]:size-[26px]',
+            tone === 'ok' && 'bg-ok-wash text-ok',
+            tone === 'bad' && 'bg-danger-wash text-danger',
+            tone === 'info' && 'bg-[rgba(96,139,255,.12)] text-link'
+          )}
         >
-          <span>Continue to sign in</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      )}
+          <Icon aria-hidden="true" />
+        </div>
+        <h1 className="t-h2">
+          {state === 'verifying' && 'Verifying your email…'}
+          {state === 'verified' && 'Email verified'}
+          {state === 'invalid' && 'This link has expired'}
+          {state === 'error' && 'We couldn’t verify your email'}
+        </h1>
+        <p className="t-body mt-2">
+          {state === 'verifying' && 'This takes a few seconds.'}
+          {state === 'verified' && 'You’re all set. Carry on to your account.'}
+          {state === 'invalid' &&
+            'Verification links work once and expire after 24 hours. Sign in and ask for a new one from your account.'}
+          {state === 'error' && 'Something went wrong on our side. Try the link again in a minute.'}
+        </p>
+        {state === 'verifying' ? (
+          <div className="bar-shimmer mt-6" aria-hidden="true" />
+        ) : (
+          <SiteLink to="/signin" className={cn('btn btn-block mt-6', state === 'error' ? 'btn-secondary' : 'btn-brand')}>
+            {state === 'verified' ? 'Continue to sign in' : state === 'invalid' ? 'Sign in' : 'Back to sign in'}
+          </SiteLink>
+        )}
+      </div>
     </div>
   );
 };
