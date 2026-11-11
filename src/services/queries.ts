@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { api } from '../lib/api';
+import { ApiError, api } from '../lib/api';
 import {
   LandingResponseSchema,
   InternshipCardSchema,
@@ -144,6 +144,10 @@ export function useInternships(filters?: {
   });
 }
 
+// A missing or closed listing (404) won't appear on retry; show not-found right away.
+const noRetryOn4xx = (count: number, err: unknown) =>
+  !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 3;
+
 export function useInternship(slug: string) {
   return useQuery({
     queryKey: queryKeys.internship(slug),
@@ -154,6 +158,7 @@ export function useInternship(slug: string) {
       return res.data;
     },
     enabled: Boolean(slug),
+    retry: noRetryOn4xx,
   });
 }
 
@@ -196,6 +201,7 @@ export function useCompany(slug: string) {
       return res.data;
     },
     enabled: Boolean(slug),
+    retry: noRetryOn4xx,
   });
 }
 
