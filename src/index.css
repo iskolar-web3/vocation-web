@@ -937,6 +937,69 @@ textarea {
     }
   }
 
+  /* Scroll arrows: pinned inside a scrolling strip, shown only on a side with more content
+     (data-fade-l / data-fade-r are set by useScrollFade). */
+  .scroll-arrow {
+    position: sticky;
+    z-index: 3;
+    display: none;
+    flex: none;
+    align-self: center;
+    width: 0;
+    height: 0;
+  }
+  .scroll-arrow[data-side="l"] {
+    left: 6px;
+  }
+  .scroll-arrow[data-side="r"] {
+    right: 6px;
+  }
+  [data-fade-l] > .scroll-arrow[data-side="l"],
+  [data-fade-r] > .scroll-arrow[data-side="r"] {
+    display: block;
+  }
+  .scroll-arrow[data-side] > .scroll-btn {
+    position: absolute;
+    top: 0;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    translate: 0 -50%;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: #16316f;
+    color: var(--tx);
+    box-shadow: 0 2px 8px rgba(0, 4, 20, 0.5);
+    animation: scroll-arrow-in 200ms var(--ease-out) backwards;
+    transition: transform 140ms var(--ease-out);
+  }
+  .scroll-arrow[data-side="l"] .scroll-btn {
+    left: 0;
+  }
+  .scroll-arrow[data-side="r"] .scroll-btn {
+    right: 0;
+  }
+  .scroll-arrow .scroll-btn::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+  .scroll-arrow .scroll-btn:active {
+    transform: scale(0.94);
+  }
+  .scroll-arrow svg {
+    width: 16px;
+    height: 16px;
+  }
+  @keyframes scroll-arrow-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
   /* ── small data atoms ─────────────────────────────────────────────────── */
   .tag {
     display: inline-flex;

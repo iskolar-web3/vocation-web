@@ -1,5 +1,7 @@
 import { type KeyboardEvent, type ReactNode, useId, useRef } from 'react';
 import { useSlidingIndicator } from '../../lib/motion';
+import { useScrollFade } from '../../lib/scrollFade';
+import { ScrollArrows } from './ScrollArrows';
 import { cn } from '../../lib/utils';
 
 /* M7: pill / underline indicator that slides (transform + width, 200ms ease-out) and never
@@ -49,6 +51,7 @@ export interface SegmentedProps<T extends string | number> {
 export function Segmented<T extends string | number>({ value, onValueChange, options, label, className }: SegmentedProps<T>) {
   const ref = useRef<HTMLDivElement>(null);
   const ind = useSlidingIndicator(ref, value);
+  useScrollFade(ref);
   return (
     <div
       ref={ref}
@@ -58,6 +61,7 @@ export function Segmented<T extends string | number>({ value, onValueChange, opt
       className={cn('seg', className)}
       onKeyDown={(e) => onArrows(e, options, value, onValueChange)}
     >
+      <ScrollArrows side="l" />
       <span ref={ind} className="slide-ind" aria-hidden="true" />
       {options.map((o) => (
         <button
@@ -73,6 +77,7 @@ export function Segmented<T extends string | number>({ value, onValueChange, opt
           {o.label}
         </button>
       ))}
+      <ScrollArrows side="r" />
     </div>
   );
 }
@@ -92,6 +97,7 @@ export function Tabs<T extends string>({ value, onValueChange, options, label, i
   const base = idBase ?? auto;
   const ref = useRef<HTMLDivElement>(null);
   const ind = useSlidingIndicator(ref, value);
+  useScrollFade(ref);
   return (
     <div
       ref={ref}
@@ -100,6 +106,7 @@ export function Tabs<T extends string>({ value, onValueChange, options, label, i
       className={cn('tabs', className)}
       onKeyDown={(e) => onArrows(e, options, value, onValueChange)}
     >
+      <ScrollArrows side="l" />
       <span ref={ind} className="slide-ind" aria-hidden="true" />
       {options.map((o) => (
         <button
@@ -118,6 +125,7 @@ export function Tabs<T extends string>({ value, onValueChange, options, label, i
           {o.count != null ? <span className="tab-count num">{o.count}</span> : null}
         </button>
       ))}
+      <ScrollArrows side="r" />
     </div>
   );
 }

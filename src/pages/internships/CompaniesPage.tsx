@@ -2,6 +2,8 @@ import { Link } from '@tanstack/react-router';
 import { AlertCircle, Building2, ChevronRight, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Mono, Skeleton } from '../../components/ui';
+import { ScrollArrows } from '../../components/ui/ScrollArrows';
+import { useScrollFade } from '../../lib/scrollFade';
 import { useCompanies } from '../../services/queries';
 import type { CompanyCard } from '../../types/api';
 import './discovery.css';
@@ -26,6 +28,8 @@ export function CompaniesPage(_props: Props) {
     () => [...new Set((universe.data?.items ?? []).map((c) => c.industry).filter(Boolean))].sort(),
     [universe.data]
   );
+  const indsRef = useRef<HTMLDivElement>(null);
+  useScrollFade(indsRef, industries.length > 1);
 
   // Keep the last list on screen while the next one loads.
   const last = useRef<CompanyCard[] | null>(null);
@@ -74,12 +78,14 @@ export function CompaniesPage(_props: Props) {
             </div>
           </form>
           {industries.length > 1 ? (
-            <div className="pg-inds" role="group" aria-label="Industry">
+            <div className="pg-inds" role="group" aria-label="Industry" ref={indsRef}>
+              <ScrollArrows side="l" />
               {['', ...industries].map((i) => (
                 <button key={i || 'all'} type="button" className="chip" aria-pressed={industry === i} onClick={() => setIndustry(i)}>
                   {i || 'All'}
                 </button>
               ))}
+              <ScrollArrows side="r" />
             </div>
           ) : null}
         </header>
