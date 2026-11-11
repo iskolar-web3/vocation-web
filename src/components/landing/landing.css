@@ -1,0 +1,285 @@
+/* Landing page (S-001). Everything is scoped under .pg-home. Light only, no section backgrounds
+   or dot patches: the page atmosphere is the global body layer (BUILD 1.1). */
+
+.pg-home { overflow-x: clip; }
+
+/* ── hero ─────────────────────────────────────────────────────────────── */
+.pg-home .hero { position: relative; }
+.pg-home .hero-in { display: grid; gap: 40px; padding-top: 40px; padding-bottom: 56px; }
+.pg-home .hero-in > * { min-width: 0; }
+.pg-home .h-title { font-size: clamp(44px, 12.4vw, 76px); }
+.pg-home .h-title > span { display: block; }
+.pg-home .h-title .l2 { white-space: nowrap; margin-top: 0.06em; }
+.pg-home .h-tone { display: inline; color: rgba(160, 180, 255, 0.62); }
+.pg-home .h-box {
+  display: inline-block;
+  background: var(--sapphire);
+  color: #fff;
+  border-radius: 18px;
+  padding: 0.02em 0.16em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.pg-home .h-sub { margin-top: 24px; font-size: 21px; line-height: 1.4; color: var(--tx-2); }
+.pg-home .h-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.pg-home .h-note { margin-top: 16px; }
+@media (max-width: 560px) { .pg-home .h-cta .btn { flex: 1 1 100%; } }
+@media (min-width: 1024px) {
+  .pg-home .hero-in {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+    align-items: center;
+    gap: 40px;
+    min-height: calc(100svh - 88px);
+    padding-top: 24px;
+    padding-bottom: 56px;
+  }
+  .pg-home .h-title { font-size: min(6.4vw, 92px); }
+}
+
+/* ── the week stack (M12) ─────────────────────────────────────────────── */
+.pg-home .wk { position: relative; width: 100%; max-width: 420px; margin: 0 auto; }
+@media (min-width: 1024px) { .pg-home .wk { max-width: none; margin: 0; } }
+.pg-home .wk-stage { position: relative; border-radius: var(--r-lg); }
+.pg-home .wk-group { position: relative; height: 100%; transform-origin: 40% 60%; }
+.pg-home .wk-card {
+  position: absolute;
+  left: var(--cl, 0px);
+  top: var(--anchor, 36px);
+  width: var(--cw, 100%);
+  padding: 18px 20px;
+  border-radius: var(--r-lg);
+  transform-origin: 50% 0;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+.pg-home .wk-card[data-front] { cursor: grab; }
+.pg-home .wk-card.is-drag { cursor: grabbing; }
+.pg-home .wk-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--canvas-deep);
+  opacity: var(--dim, 0);
+  pointer-events: none;
+}
+.pg-home .wk-head { display: flex; align-items: center; gap: 14px; }
+.pg-home .wk-head > div { min-width: 0; }
+.pg-home .wk-title { font: 400 21px/1.2 var(--f-display); color: var(--tx); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.pg-home .wk-sub { font-size: 14px; color: var(--tx-2); margin-top: 2px; overflow-wrap: anywhere; }
+.pg-home .wk-tile {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: var(--r);
+  background: linear-gradient(160deg, #1d3f93, #13307a);
+  border: 1px solid var(--line-strong);
+  color: #dbe5ff;
+}
+.pg-home .wk-tile svg { width: 20px; height: 20px; }
+.pg-home .wk-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.pg-home .wk-foot > * { flex: none; }
+.pg-home .wk-when { display: inline-flex; min-width: 0; white-space: nowrap; align-items: center; gap: 8px; font-size: 14px; color: var(--tx-2); }
+.pg-home .wk-when svg { width: 16px; height: 16px; flex: none; color: var(--tx-3); }
+.pg-home .wk-when .num { font-weight: 600; font-size: 13.5px; color: var(--tx); }
+@media (max-width: 440px) { .pg-home .wk-in { display: none; } }
+.pg-home .wk-act { display: none; align-items: center; gap: 8px; margin-top: 14px; }
+.pg-home .wk-card[data-front] .wk-act { display: flex; }
+.pg-home .wk-notes { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: n; }
+.pg-home .wk-notes[hidden] { display: none; }
+.pg-home .wk-notes li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--tx);
+  counter-increment: n;
+}
+.pg-home .wk-notes li::before {
+  content: counter(n);
+  font: 600 12px/22px var(--f-data);
+  color: var(--tx-3);
+  text-align: center;
+  border-radius: 50%;
+  background: rgba(160, 180, 255, 0.1);
+  height: 22px;
+}
+.pg-home .wk-card:not([data-front]) .wk-notes { display: none; }
+.pg-home .wk-ctl { display: grid; justify-items: center; gap: 10px; margin-top: 20px; }
+@media (min-width: 1024px) { .pg-home .wk-ctl { justify-items: start; } }
+.pg-home .wk-ctl .seg button { min-width: 88px; }
+.pg-home .wk-stage:focus-visible { outline-offset: 8px; }
+
+/* ── section heads ────────────────────────────────────────────────────── */
+.pg-home .sh p { margin-top: 12px; max-width: 46ch; }
+
+/* ── closing soon ─────────────────────────────────────────────────────── */
+.pg-home .cl { display: grid; gap: 32px; }
+.pg-home .cl > *, .pg-home .fq > *, .pg-home .co-grid > * { min-width: 0; }
+.pg-home .cl .seg { margin-top: 24px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.pg-home .cl .seg::-webkit-scrollbar { display: none; }
+.pg-home .cl .seg button { flex: none; padding: 0 14px; white-space: nowrap; }
+.pg-home .cl-list { display: grid; gap: 10px; }
+.pg-home .cl-all { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 12px; font-size: 15px; }
+.pg-home .cl-all svg { width: 16px; height: 16px; }
+@media (min-width: 1200px) {
+  .pg-home .cl { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 56px; align-items: start; }
+  .pg-home .cl .sh { position: sticky; top: 112px; }
+}
+
+/* ── coaching ─────────────────────────────────────────────────────────── */
+.pg-home .co-top { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.pg-home .co-top a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.pg-home .co-top svg { width: 16px; height: 16px; }
+.pg-home .co-grid { display: grid; gap: 20px; margin-top: 32px; }
+@media (min-width: 1024px) { .pg-home .co-grid[data-two] { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: stretch; } }
+.pg-home .co-hl { position: relative; isolation: isolate; display: grid; gap: 24px; padding: 32px; }
+@media (min-width: 720px) { .pg-home .co-hl { grid-template-columns: 168px 1fr; gap: 32px; align-items: start; } }
+@media (max-width: 719px) { .pg-home .co-hl { padding: 24px 20px; } }
+.pg-home .co-disc { position: relative; justify-self: start; }
+/* light only: feathered, never a box */
+.pg-home .co-disc::before {
+  content: "";
+  position: absolute;
+  inset: -110px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(96, 139, 255, 0.22), rgba(63, 88, 178, 0.08) 60%, transparent);
+}
+.pg-home .co-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 6px; }
+.pg-home .co-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.pg-home .co-q { margin: 20px 0 0; font: 400 18px/1.5 var(--f-display); color: var(--tx); max-width: 44ch; }
+.pg-home .co-q footer { margin-top: 6px; font: 400 14px/1.4 var(--f-body); color: var(--tx-3); }
+.pg-home .co-next { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 24px; }
+.pg-home .co-next .t-small { display: inline-flex; align-items: center; gap: 8px; }
+.pg-home .co-next svg { width: 16px; height: 16px; color: var(--tx-3); }
+.pg-home .co-next .num { color: var(--tx); font-size: 14px; }
+.pg-home .co-list { display: grid; align-content: start; padding: 4px 0; }
+.pg-home .co-list .crow { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.pg-home .co-list .crow + .crow { border-top: 1px solid var(--line); }
+.pg-home .pl { margin-top: 48px; }
+.pg-home .pl-grid { display: grid; gap: 4px 56px; margin-top: 16px; }
+@media (min-width: 768px) { .pg-home .pl-grid { grid-template-columns: 1fr 1fr; } }
+.pg-home .pl-item { padding: 16px 0; border-top: 1px solid var(--line); }
+.pg-home .pl-line { display: flex; align-items: baseline; gap: 10px; }
+.pg-home .pl-name { font: 400 19px/1.3 var(--f-display); color: var(--tx); overflow-wrap: anywhere; }
+.pg-home .pl-dots { flex: 1; min-width: 16px; border-bottom: 2px dotted var(--line-strong); transform: translateY(-5px); }
+.pg-home .pl-price { font: 600 14px/1.3 var(--f-data); color: var(--tx); white-space: nowrap; }
+.pg-home .pl-price small { font: 500 13px/1 var(--f-data); color: var(--tx-3); }
+
+/* ── ojt ──────────────────────────────────────────────────────────────── */
+.pg-home .oj .panel { margin-top: 32px; padding: 32px; }
+@media (max-width: 720px) { .pg-home .oj .panel { padding: 20px 16px; } .pg-home .ojtc-out { padding: 20px; } }
+
+/* ── how applying works ───────────────────────────────────────────────── */
+.pg-home .af-stage { position: relative; margin-top: 32px; }
+.pg-home .af-steps { display: grid; gap: 12px; }
+@media (min-width: 900px) { .pg-home .af-steps { grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr) 44px minmax(0, 1fr); align-items: stretch; } }
+@media (min-width: 1100px) { .pg-home .af-steps { grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr) 72px minmax(0, 1fr); } }
+.pg-home .af-step { position: relative; display: grid; align-content: start; gap: 16px; padding: 24px; min-width: 0; }
+.pg-home .af-step h3 { font-size: 20px; line-height: 1.25; }
+.pg-home .af-n { font: 600 12px/1 var(--f-data); color: var(--tx-3); }
+/* connector: a track the comet runs along (clipped to it) + arrowhead; vertical when stacked */
+.pg-home .af-conn { display: flex; align-items: center; justify-content: center; color: var(--tx-3); margin-inline: -10px; min-width: 0; }
+.pg-home .af-track { position: relative; flex: 1; height: 2px; overflow: hidden; border-radius: 1px; background: var(--line); }
+.pg-home .af-comet { position: absolute; left: 0; top: 0; width: 24px; height: 2px; border-radius: 1px; opacity: 0; background: linear-gradient(90deg, transparent, var(--color-lightblue)); box-shadow: 0 0 6px var(--color-lightblue); }
+.pg-home .af-hd { position: relative; display: block; width: 18px; height: 18px; flex: none; margin-left: -2px; }
+.pg-home .af-hd svg { position: absolute; inset: 0; width: 18px; height: 18px; }
+.pg-home .af-hd .af-lit { color: var(--color-lightblue); opacity: 0; }
+@media (max-width: 899px) {
+  .pg-home .af-conn { flex-direction: column; margin-inline: 0; min-height: 48px; margin-block: -4px; }
+  .pg-home .af-track { width: 2px; height: auto; }
+  .pg-home .af-comet { width: 2px; height: 24px; background: linear-gradient(180deg, transparent, var(--color-lightblue)); }
+  .pg-home .af-hd { margin-left: 0; margin-top: -2px; rotate: 90deg; }
+}
+/* demo overlays (decorative) */
+.pg-home .af-ov { position: absolute; inset: -1px; border-radius: inherit; border: 1.5px solid var(--color-lightblue); opacity: 0; pointer-events: none; }
+.pg-home .af-mini { position: relative; }
+.pg-home .af-bar { display: block; height: 2px; margin-top: 8px; border-radius: 1px; background: var(--color-lightblue); transform-origin: left; opacity: 0; }
+.pg-home .af-act { display: grid; justify-items: start; gap: 8px; }
+.pg-home .af-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; max-width: 100%; padding: 4px 10px; border-radius: 999px; font: 500 12px/1.2 var(--f-data); color: var(--tx-2, var(--tx-3)); background: var(--canvas-deep); border: 1px solid var(--line); overflow-wrap: anywhere; }
+.pg-home .af-chip svg { width: 13px; height: 13px; flex: none; }
+/* armed/playing: JS owns the reveal; otherwise (no JS, reduced motion, done) the final state shows */
+/* panels stay visible while waiting; only the click's results (domain, chip) are held back */
+.pg-home .af-stage[data-af="armed"] .af-chip,
+.pg-home .af-stage[data-af="play"] .af-chip { opacity: 0; }
+.pg-home .af-stage[data-af="armed"] [data-af-el="dom"] { clip-path: inset(0 100% 0 0); }
+/* Figma-style multiplayer cursor: arrow tip is the origin of the x/y wrappers; the tag is its own trailing layer */
+.pg-home .af-cursor { --af-cur: var(--color-lightblue); --af-ink: #021f53; position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; pointer-events: none; z-index: var(--af-z, 5); }
+.pg-home .af-mv { position: absolute; left: 0; top: 0; display: block; }
+.pg-home .af-arrow { display: block; max-width: none; margin: -1px 0 0 -1px; color: var(--af-cur); filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35)); transform-origin: 1px 1px; }
+.pg-home .af-tag { left: 14px; top: 18px; padding: 4px 8px; border-radius: 6px; background: var(--af-cur); color: var(--af-ink); font: 500 12px/16px var(--f-data); white-space: nowrap; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 8px rgb(0 0 0 / 0.2); transform-origin: 0 0; }
+/* hero cursor demo: the shared Figma cursor sits above the stack (cards reach z-index 300 when the group has no transform) */
+.pg-home .wk { --af-z: 400; }
+.pg-home .wk-seg-ring { z-index: 398; border-radius: var(--r-pill, 999px); }
+.pg-home .wk-ctl .seg button[data-demo] { color: var(--tx); }
+.pg-home .af-stage[data-af="play"] .af-mv,
+.pg-home .wk[data-af="play"] .af-mv { will-change: transform; }
+.pg-home .af-stage[data-af="play"] .af-cursor,
+.pg-home .wk[data-af="play"] .af-cursor { will-change: opacity; }
+.pg-home .af-rp { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: calc(var(--af-z, 5) - 1); }
+.pg-home .af-rp i { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--color-lightblue); background: rgb(96 139 255 / 0.16); opacity: 0; }
+.pg-home .af-pedge { border-radius: var(--r-pill, 999px); }
+.pg-home .af-foot { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-top: 24px; }
+.pg-home .af-replay { display: inline-flex; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; margin: -8px -12px -8px auto; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: var(--tx-3); font: 500 13px/1 var(--f-data); cursor: pointer; opacity: 0; visibility: hidden; transition: opacity 200ms var(--ease-out), color 150ms ease, transform 100ms ease-out, visibility 0s linear 200ms; }
+.pg-home .af-replay svg { width: 14px; height: 14px; }
+.pg-home .af-replay[data-show] { opacity: 1; visibility: visible; transition-delay: 0s; }
+.pg-home .af-replay:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .pg-home .af-replay:hover { color: var(--tx); } }
+@media (prefers-reduced-motion: reduce) {
+  .pg-home .af-cursor, .pg-home .af-rp, .pg-home .af-replay { display: none; }
+}
+.pg-home .af-mini { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r); background: var(--canvas-deep); border: 1px solid var(--line); min-width: 0; }
+.pg-home .af-mini > div { min-width: 0; }
+.pg-home .af-mini .dom { font: 400 22px/1.15 var(--f-display); color: var(--tx); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.pg-home .af-mini .ttl { font: 400 16px/1.3 var(--f-display); color: var(--tx); overflow-wrap: anywhere; }
+.pg-home .af-pill {
+  position: relative;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill, 999px);
+  background: #fff;
+  color: var(--tx-on-light);
+  font: 600 14px/1.2 var(--f-data);
+  overflow-wrap: anywhere;
+}
+.pg-home .af-pill svg { width: 16px; height: 16px; flex: none; }
+.pg-home .af-copy { font: 400 19px/1.5 var(--f-display); color: var(--tx); max-width: 52ch; }
+
+/* ── faq ──────────────────────────────────────────────────────────────── */
+.pg-home .fq { display: grid; gap: 32px; }
+@media (min-width: 1024px) { .pg-home .fq { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 56px; } }
+.pg-home .fq .sh a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; }
+
+/* ── closing band ─────────────────────────────────────────────────────── */
+.pg-home .end { text-align: center; }
+.pg-home .end .row { justify-content: center; flex-wrap: wrap; margin-top: 32px; }
+@media (max-width: 560px) { .pg-home .end .row .btn { flex: 1 1 100%; } }
+
+/* M11: hero entrance, once per session. Uses `translate` so the stack's own transform is untouched. */
+@keyframes pg-rise { from { opacity: 0; translate: 0 8px; } }
+@keyframes pg-settle { from { opacity: 0; translate: 0 16px; } }
+@keyframes pg-fade { from { opacity: 0; } }
+.pg-home[data-enter] .hx { animation: pg-rise 500ms var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 80ms); }
+.pg-home[data-enter] .wk-card { animation: pg-settle 500ms var(--ease-out) backwards; animation-delay: calc(480ms + var(--ci, 0) * 60ms); }
+@media (prefers-reduced-motion: reduce) {
+  .pg-home[data-enter] .hx,
+  .pg-home[data-enter] .wk-card { animation: pg-fade 150ms linear backwards; animation-delay: 0ms; }
+}
