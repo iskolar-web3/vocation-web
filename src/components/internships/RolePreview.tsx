@@ -32,7 +32,7 @@ export function RolePreview({
         <div>
           <h2 className="t-h3">{role.title}</h2>
           <p className="t-small">
-            {role.company.name} · {role.location}
+            {role.company.name}, {role.location}
           </p>
         </div>
       </div>

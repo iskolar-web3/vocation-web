@@ -41,7 +41,7 @@ export function PostingRow({ internship: i, current, compact, save, enter, headi
           </Link>
         </H>
         <p className="p-sub">
-          {i.company.name} · {i.location}
+          {i.company.name}, {i.location}
         </p>
         {compact ? null : (
           <div className="p-tags">
@@ -49,7 +49,7 @@ export function PostingRow({ internship: i, current, compact, save, enter, headi
             {i.ojt_hours ? (
               <span className="tag tag-ojt">
                 <GraduationCap aria-hidden="true" />
-                OJT · <span className="num">{i.ojt_hours}</span> h
+                OJT <span className="num">{i.ojt_hours}</span> h
               </span>
             ) : null}
           </div>

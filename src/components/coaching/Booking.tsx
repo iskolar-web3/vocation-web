@@ -437,7 +437,7 @@ export function BookingBody({ b, pfx, heading }: { b: BookingState; pfx: string;
               <span className="nm">{s.name}</span>
               <span className="pr">{formatPHP(s.price_centavos)}</span>
               <span className="sub">
-                <span className="num">{s.duration_minutes}</span> min{off ? ' · Paid sessions are coming soon' : ''}
+                <span className="num">{s.duration_minutes}</span> min{off ? '. Paid sessions are coming soon' : ''}
               </span>
             </label>
           );

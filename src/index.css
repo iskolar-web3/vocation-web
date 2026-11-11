@@ -962,14 +962,9 @@ textarea {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 10px;
+    gap: 4px 16px;
     color: var(--tx-3);
     font-size: 14px;
-  }
-  .meta > * + *::before {
-    content: "·";
-    margin-right: 10px;
-    color: var(--tx-3);
   }
   .deadline {
     display: inline-flex;

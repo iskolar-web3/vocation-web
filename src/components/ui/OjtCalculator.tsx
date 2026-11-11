@@ -126,7 +126,7 @@ export function OjtCalculator({
           <span className="ojtc-big num">{weeks}</span>
           <span className="ojtc-unit">weeks</span>
           <p className="t-meta">
-            {days} working days · about {months.toFixed(1)} months
+            {days} working days, about {months.toFixed(1)} months
           </p>
         </div>
         <div>

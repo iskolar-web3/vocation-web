@@ -80,7 +80,7 @@ export function CancelBookingDialog({ booking, onClose }: { booking: BookingX | 
                 {b.session_type_name || 'Coaching session'} with {b.coach_display_name}
               </b>
               <p className="t-small">
-                <span className="num">{formatDateTime(b.slot_starts_at)}</span> · Manila time
+                <span className="num">{formatDateTime(b.slot_starts_at)}</span>, Manila time
               </p>
             </div>
           </div>

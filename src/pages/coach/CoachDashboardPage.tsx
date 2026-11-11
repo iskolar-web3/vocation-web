@@ -334,7 +334,7 @@ export const CoachDashboardPage: React.FC<CoachDashboardPageProps> = () => {
                   <Segmented label="Week" value={week} onValueChange={setWeek} options={weekOptions} />
                 </div>
                 <p className="t-meta">
-                  <span className="num">{openCount}</span> open · <span className="num">{bookedCount}</span> booked
+                  <span className="num">{openCount}</span> open, <span className="num">{bookedCount}</span> booked
                 </p>
               </div>
               <div className="pcp-av-grid">

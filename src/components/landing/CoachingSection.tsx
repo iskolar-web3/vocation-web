@@ -113,7 +113,7 @@ export function CoachingSection({ coaches, loading }: { coaches: CoachCard[]; lo
                       <span className="pl-name">{s.name}</span>
                       <span className="pl-dots" aria-hidden="true" />
                       <span className="pl-price">
-                        {formatPHP(s.price_centavos)} <small>· {s.duration_minutes} min</small>
+                        {formatPHP(s.price_centavos)} <small>{s.duration_minutes} min</small>
                       </span>
                     </div>
                   </div>

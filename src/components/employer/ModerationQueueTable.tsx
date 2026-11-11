@@ -137,7 +137,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({ navi
                 <tr>
                   <th scope="col">Role</th>
                   <th scope="col">Field</th>
-                  <th scope="col">Setup · City</th>
+                  <th scope="col">Setup, City</th>
                   <th scope="col">Pay</th>
                   <th scope="col">Status</th>
                   <th scope="col">
@@ -156,8 +156,8 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({ navi
                       {item.field}
                       {item.duration_weeks != null && <span className="t-meta">{item.duration_weeks} weeks</span>}
                     </td>
-                    <td data-l="Setup · City">
-                      {[setupLabel(item.work_setup), item.location].filter(Boolean).join(' · ')}
+                    <td data-l="Setup, City">
+                      {[setupLabel(item.work_setup), item.location].filter(Boolean).join(', ')}
                     </td>
                     <td data-l="Pay">
                       <Money paid={item.is_paid} unpaid={!item.is_paid} />

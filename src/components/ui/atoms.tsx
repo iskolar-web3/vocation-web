@@ -54,7 +54,7 @@ const STATUS = {
   confirming: ['status-wait', 'Confirming payment…'],
   completed: ['status-muted', 'Completed'],
   cancelled: ['status-muted', 'Cancelled'],
-  refunded: ['status-muted', 'Cancelled · refunded'],
+  refunded: ['status-muted', 'Cancelled, refunded'],
   failed: ['status-bad', 'Payment failed'],
   expired: ['status-bad', 'Payment expired'],
   open: ['status-ok', 'Open'],
@@ -150,7 +150,7 @@ export function Money({ allowance, label, unpaid, paid, className }: MoneyProps)
       </span>
     );
   }
-  if (unpaid) return <span className={cn('money is-unstated', className)}>Unpaid · for credit</span>;
+  if (unpaid) return <span className={cn('money is-unstated', className)}>Unpaid, for credit</span>;
   if (paid) return <span className={cn('money', className)}>Paid</span>;
   return <span className={cn('money is-unstated', className)}>Pay not stated</span>;
 }

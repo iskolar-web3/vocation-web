@@ -127,7 +127,7 @@ export function CompaniesPage(_props: Props) {
             <div className="panel pg-rows">
               {items?.map((c) => {
                 const perks = (c.perks ?? []).slice(0, 2);
-                const sub = [c.industry, c.location, (c as { size?: string | null }).size].filter(Boolean).join(' · ');
+                const sub = [c.industry, c.location, (c as { size?: string | null }).size].filter(Boolean).join(', ');
                 return (
                   <Link key={c.slug} to="/companies/$slug" params={{ slug: c.slug }} className="pg-corow">
                     <Mono name={c.name} />

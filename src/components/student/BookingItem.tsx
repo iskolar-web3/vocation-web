@@ -41,7 +41,7 @@ export function BookingItem({ booking: b, onPay, onCancel, onReview, payDisabled
         <h3 className="font-display text-lg leading-snug font-normal text-tx">{coach}</h3>
         <p className="text-sm text-tx-2">{session}</p>
         <p className="mt-0.5 text-sm text-tx-2">
-          <span className="num">{formatDateTime(b.slot_starts_at)}</span> · Manila time
+          <span className="num">{formatDateTime(b.slot_starts_at)}</span>, Manila time
         </p>
         <p className="text-[13px] text-tx-3">
           Ref <span className="num">{b.booking_id.slice(0, 8)}</span>

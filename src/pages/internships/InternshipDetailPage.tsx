@@ -119,8 +119,8 @@ export function InternshipDetailPage({ slug }: Props) {
               <p className="pg-rco">
                 <Link to="/companies/$slug" params={{ slug: role.company.slug }}>
                   {role.company.name}
-                </Link>{' '}
-                · {role.location}
+                </Link>
+                , {role.location}
               </p>
               <div className="meta pg-rmeta">
                 {role.duration_weeks ? (
@@ -257,7 +257,7 @@ export function InternshipDetailPage({ slug }: Props) {
                   <Mono name={c.name} size="sm" />
                   <h2 id="pg-about-h">About {c.name}</h2>
                 </div>
-                <p className="t-meta">{[c.industry, c.size, c.location].filter(Boolean).join(' · ')}</p>
+                <p className="t-meta">{[c.industry, c.size, c.location].filter(Boolean).join(', ')}</p>
                 {about ? (
                   <p className="t-small" style={{ marginTop: 10 }}>
                     {firstSentence(about)}

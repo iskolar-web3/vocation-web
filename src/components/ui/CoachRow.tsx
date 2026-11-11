@@ -14,7 +14,7 @@ export function coachFromPrice(coach: Coach): string {
   const hasFree = types.some((t) => t.price_centavos === 0);
   if (!paid.length) return hasFree ? 'Free' : 'Paid sessions';
   const from = formatPHP(Math.min(...paid));
-  return hasFree ? `Free intro · from ${from}` : `From ${from}`;
+  return hasFree ? `Free intro, from ${from}` : `From ${from}`;
 }
 
 export function Stars({ coach }: { coach: Coach }) {

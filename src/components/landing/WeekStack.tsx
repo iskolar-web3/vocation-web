@@ -705,7 +705,7 @@ export function WeekStack({ coach, role }: Props) {
               <span className="wk-when">
                 <Calendar aria-hidden="true" />
                 <span className="num">{slot}</span>
-                <span className="wk-in">· in 2 days</span>
+                <span className="wk-in">in 2 days</span>
               </span>
               <Status status="confirmed" />
             </div>
@@ -728,7 +728,7 @@ export function WeekStack({ coach, role }: Props) {
               <Mono name={role?.company.name ?? 'Your next role'} />
               <div>
                 <p className="wk-title">{role?.title ?? 'Your next internship'}</p>
-                <p className="wk-sub">{role ? `${role.company.name} · ${role.location}` : 'Open roles, soonest deadline first'}</p>
+                <p className="wk-sub">{role ? `${role.company.name}, ${role.location}` : 'Open roles, soonest deadline first'}</p>
               </div>
             </div>
             {role ? (

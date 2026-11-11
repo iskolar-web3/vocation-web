@@ -36,7 +36,7 @@ export function withPay<T extends Role>(i: T): T {
   return allowance ? { ...i, compensation_details: `${formatPesos(allowance)}/mo` } : i;
 }
 
-/** "Closes Tue 24 Nov · in 14 days". Honey when it closes within 7 days. */
+/** "Closes Tue 24 Nov, in 14 days". Honey when it closes within 7 days. */
 export function CloseLine({ date, className }: { date?: string | null; className?: string }) {
   if (!date) return null;
   const d = daysUntil(date);
@@ -45,7 +45,7 @@ export function CloseLine({ date, className }: { date?: string | null; className
   return (
     <span className={cn('deadline', d <= 7 && 'is-soon', className)}>
       <Clock aria-hidden="true" />
-      {d === 0 ? 'Closes today' : `Closes ${formatDay(date)} · ${rel}`}
+      {d === 0 ? 'Closes today' : `Closes ${formatDay(date)}, ${rel}`}
     </span>
   );
 }

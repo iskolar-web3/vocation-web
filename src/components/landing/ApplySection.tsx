@@ -137,7 +137,7 @@ function hostOf(url?: string): string | null {
 export function ApplySection({ role }: { role?: InternshipCard }) {
   const host = hostOf(useInternship(role?.slug ?? '').data?.external_apply_url);
   const title = role?.title ?? 'A role you like';
-  const company = role ? `${role.company.name} · ${role.location}` : 'Company · City';
+  const company = role ? `${role.company.name}, ${role.location}` : 'Company, City';
   const where = host ?? 'the company’s own site';
   const stageRef = useRef<HTMLDivElement>(null);
   const replayRef = useRef<() => void>(() => {});
