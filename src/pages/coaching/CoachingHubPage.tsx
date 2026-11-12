@@ -1,148 +1,171 @@
-import React, { useState } from 'react';
-import {
-  Award,
-  Star,
-  ArrowRight,
-  Loader2,
-} from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { useMemo, useState } from 'react';
+import { CoachRow, Skeleton, TabPanel, Tabs } from '../../components/ui';
 import { useCoaches } from '../../services/queries';
-import { CoachCard } from '../../components/coaching/CoachCard';
-import { SessionTopicMatcher } from '../../components/coaching/SessionTopicMatcher';
-import { BookingDialog } from '../../components/coaching/BookingDialog';
-import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
+import type { CoachCard } from '../../types/api';
+import '../../components/coaching/coaching.css';
 
 interface CoachingHubPageProps {
   navigate: (path: string) => void;
 }
 
-export const CoachingHubPage: React.FC<CoachingHubPageProps> = ({ navigate }) => {
-  const { data, isLoading } = useCoaches();
-  const coaches = data?.items || [];
-  const [selectedCoach, setSelectedCoach] = useState<CoachCardType | CoachDetail | null>(null);
+// Tracks are matched against each coach's real expertise tags.
+const TRACKS = [
+  {
+    id: 'technical',
+    label: 'Technical',
+    match: /technical|system design|coding|data structures|sql|backend|frontend/i,
+    points: ['Live problem solving, talked through out loud', 'Follow-up questions like the real round', 'Notes on what to practice next'],
+  },
+  {
+    id: 'resume',
+    label: 'Resume & portfolio',
+    match: /resume|portfolio|case stud/i,
+    points: ['Line-by-line feedback on your resume or portfolio', 'What to cut and what to lead with', 'A version you can send this week'],
+  },
+  {
+    id: 'behavioral',
+    label: 'Behavioral (STAR)',
+    match: /behavioral|\bstar\b|hr /i,
+    points: ['Stories for the questions every panel asks', 'Structure with the STAR method', 'Feedback on how you come across'],
+  },
+  {
+    id: 'ojt',
+    label: 'OJT readiness',
+    match: /ojt|practicum|workplace/i,
+    points: ['What a practicum interview looks like in your field', 'Questions about hours, schedule, and school requirements', 'What to ask the company back'],
+  },
+] as const;
+type TrackId = (typeof TRACKS)[number]['id'];
 
-  const topCoaches = coaches.slice(0, 3);
+const STEPS = [
+  { t: 'Pick a coach', d: 'Read their bio and what students said about them.' },
+  { t: 'Choose a time', d: 'Open times show in Manila time.' },
+  { t: 'Pay or confirm', d: 'Free intro calls confirm right away. Paid sessions are confirmed once the payment provider confirms.' },
+  { t: 'Meet on video', d: 'The meeting link appears in My bookings once your session is confirmed.' },
+] as const;
+
+export function CoachingHubPage(_props: CoachingHubPageProps) {
+  const { data, isLoading, isError } = useCoaches();
+  const [track, setTrack] = useState<TrackId>('technical');
+  const coaches = data?.items ?? [];
+
+  const byTrack = useMemo(() => {
+    const out = {} as Record<TrackId, { coaches: CoachCard[]; tag: string }>;
+    for (const t of TRACKS) {
+      const list = coaches.filter((c) => c.expertise?.some((e) => t.match.test(e)));
+      const tag = list[0]?.expertise?.find((e) => t.match.test(e)) ?? '';
+      out[t.id] = { coaches: list, tag };
+    }
+    return out;
+  }, [coaches]);
+
+  const featured = [...coaches].sort((a, b) => (b.rating_avg ?? 0) - (a.rating_avg ?? 0)).slice(0, 3);
+  const active = TRACKS.find((t) => t.id === track) ?? TRACKS[0];
+  const info = byTrack[track];
 
   return (
-    <div className="space-y-16 pb-20">
-      {/* Hero */}
-      <section className="bg-[#021F53] text-white py-16 px-4 sm:px-6 lg:px-8 border-b border-[#3f58b2]/30 relative overflow-hidden">
-        <div className="absolute inset-0 grid-subtle opacity-20 pointer-events-none" />
-
-        <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-md bg-white/10 border border-white/15 text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent">
-            <Award className="w-3.5 h-3.5 text-[#607ef2]" />
-            <span>1-on-1 Career Mentorship &amp; Interview Preparation</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl font-bold font-display leading-tight">
-            Get coached by the practitioners who actually hire interns.
-          </h1>
-
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Gain unfair advantages with personalized feedback, mock interview practice, and direct advice from engineers and recruiters at Grab, Canva, Maya, and Thinking Machines.
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <button
-              onClick={() => navigate('/coaches')}
-              className="tactile-btn-primary px-6 py-3.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span>Explore All Coaches</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => navigate('/coaches?price=free')}
-              className="px-6 py-3.5 bg-white/10 hover:bg-white/15 text-white font-semibold text-xs rounded-xl border border-white/20 transition-colors cursor-pointer"
-            >
-              Browse Free Intro Sessions
-            </button>
-          </div>
+    <div className="hub">
+      <header className="hub-head wrap">
+        <h1 className="t-hero">Practice before the real round</h1>
+        <p className="t-lede">
+          Mock interviews, resume reviews, and portfolio feedback from working professionals. Some coaches offer a free intro call.
+        </p>
+        <div className="hub-ctas">
+          <Link to="/coaches" className="btn btn-primary btn-lg">
+            Find a coach
+          </Link>
+          <Link to="/coaches" search={{ price: 'free', expertise: '', q: '' }} className="btn btn-secondary btn-lg">
+            Free intro calls
+          </Link>
         </div>
-      </section>
+      </header>
 
-      {/* Interactive Session Simulator Stage */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SessionTopicMatcher
-          onBookCoach={(c) => setSelectedCoach(c)}
-          navigate={navigate}
+      <section className="wrap hub-blk" aria-labelledby="hub-track-h">
+        <h2 className="t-h2" id="hub-track-h">
+          Which round are you preparing for?
+        </h2>
+        <Tabs
+          label="Track"
+          idBase="hub-track"
+          value={track}
+          onValueChange={setTrack}
+          options={TRACKS.map((t) => ({ value: t.id, label: t.label }))}
         />
-      </section>
-
-      {/* Transparent Step by Step Booking Workflow */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="tactile-card rounded-2xl p-8 sm:p-10">
-          <div className="max-w-2xl mb-8 space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#3f58b2] font-accent">
-              Transparent Workflow
-            </span>
-            <h3 className="text-2xl font-bold text-[#021F53] font-display">
-              How the Booking Process Works
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-            {[
-              { step: '01', title: 'Choose Coach', desc: 'Filter by expertise, industry background, and session rate.' },
-              { step: '02', title: 'Pick Live Slot', desc: 'Select an open date & time slot directly in Asia/Manila time.' },
-              { step: '03', title: 'Hosted Checkout', desc: 'Free sessions confirm instantly; paid sessions redirect via PayMongo.' },
-              { step: '04', title: 'Live 1-on-1 Call', desc: 'Join via video call and receive actionable feedback.' },
-            ].map((s) => (
-              <div key={s.step} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <span className="stamp-badge bg-white text-[#3f58b2] border border-[#3f58b2]/20 font-black">
-                  Step {s.step}
-                </span>
-                <h4 className="text-sm font-bold text-[#021F53] font-headline">{s.title}</h4>
-                <p className="text-xs text-slate-600 leading-relaxed">{s.desc}</p>
+        {TRACKS.map((t) => (
+          <TabPanel key={t.id} idBase="hub-track" value={t.id} active={track === t.id}>
+            <div className="panel hub-track">
+              <div>
+                <h3 className="t-h3">What you work on</h3>
+                <ul className="hub-points">
+                  {t.points.map((p) => (
+                    <li key={p}>{p}</li>
+                  ))}
+                </ul>
               </div>
-            ))}
-          </div>
-        </div>
+              <div aria-busy={isLoading}>
+                <h3 className="t-h3">Coaches for this track</h3>
+                {isLoading ? (
+                  <div className="hub-list">
+                    <Skeleton variant="block" count={2} height={72} />
+                  </div>
+                ) : info.coaches.length ? (
+                  <>
+                    <div className="hub-list">
+                      {info.coaches.slice(0, 3).map((c) => (
+                        <CoachRow key={c.slug} coach={c} mode="compact" headingLevel={4} />
+                      ))}
+                    </div>
+                    <Link to="/coaches" search={{ expertise: info.tag, price: 'all', q: '' }} className="link-btn hub-more">
+                      See all {active.label} coaches
+                    </Link>
+                  </>
+                ) : (
+                  <p className="t-body">
+                    No coaches are listed for this track yet.{' '}
+                    <Link to="/coaches" className="link-btn">
+                      Browse all coaches
+                    </Link>
+                  </p>
+                )}
+              </div>
+            </div>
+          </TabPanel>
+        ))}
       </section>
 
-      {/* Top Coaches Showcase */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#3f58b2] font-accent">
-              Verified Mentors
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-display">
-              Featured Top-Rated Coaches
-            </h2>
-          </div>
-          <button
-            onClick={() => navigate('/coaches')}
-            className="text-xs font-bold text-[#3f58b2] hover:text-[#021F53] flex items-center gap-1 cursor-pointer"
-          >
-            <span>View all coaches</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center p-12 bg-white rounded-2xl border border-slate-200">
-            <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {topCoaches.map((coach) => (
-              <CoachCard
-                key={coach.slug}
-                coach={coach}
-                onSelect={() => navigate(`/coaches/${coach.slug}`)}
-                onBook={(c) => setSelectedCoach(c)}
-              />
-            ))}
-          </div>
-        )}
+      <section className="wrap hub-blk" aria-labelledby="hub-how-h">
+        <h2 className="t-h2" id="hub-how-h">
+          How booking works
+        </h2>
+        <ol className="hub-steps">
+          {STEPS.map((s, i) => (
+            <li key={s.t}>
+              <span className="n num">{i + 1}</span>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
+          ))}
+        </ol>
       </section>
 
-      <BookingDialog
-        isOpen={!!selectedCoach}
-        onClose={() => setSelectedCoach(null)}
-        coach={selectedCoach}
-        onBookingSuccess={() => navigate('/app/bookings')}
-      />
+      <section className="wrap hub-blk" aria-labelledby="hub-feat-h" style={{ paddingBottom: 72 }}>
+        <h2 className="t-h2" id="hub-feat-h">
+          Featured coaches
+        </h2>
+        <div className="hub-list" aria-busy={isLoading}>
+          {isLoading ? (
+            <Skeleton variant="row" count={3} />
+          ) : featured.length ? (
+            featured.map((c) => <CoachRow key={c.slug} coach={c} mode="compact" />)
+          ) : (
+            <p className="t-body">{isError ? 'Couldn’t load coaches. Check your connection and refresh.' : 'No coaches are listed yet. Check back soon.'}</p>
+          )}
+        </div>
+        <Link to="/coaches" className="btn btn-secondary" style={{ marginTop: 20 }}>
+          Browse all coaches
+        </Link>
+      </section>
     </div>
   );
-};
+}

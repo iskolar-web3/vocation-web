@@ -1,255 +1,226 @@
-import React, { useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { ArrowLeft, Star } from 'lucide-react';
+import { useState } from 'react';
 import {
-  ArrowLeft,
-  Star,
-  Clock,
-  Calendar,
-  CheckCircle2,
-  AlertCircle,
-} from 'lucide-react';
-import { useCoach, useCoachReviews } from '../../services/queries';
-import { formatPHP, formatDate } from '../../lib/utils';
-import { BookingDialog } from '../../components/coaching/BookingDialog';
+  BookingBody,
+  BookingFoot,
+  type BookingState,
+  useBooking,
+  useIsDesktop,
+} from '../../components/coaching/Booking';
+import { Disc, Empty, Sheet, Skeleton, Stars, coachFromPrice } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { formatDate, formatPHP } from '../../lib/utils';
+import { useCoach, useCoachReviews } from '../../services/queries';
+import type { CoachDetail } from '../../types/api';
+import '../../components/coaching/coaching.css';
 
 interface CoachDetailPageProps {
   slug: string;
   navigate: (path: string) => void;
 }
 
-export const CoachDetailPage: React.FC<CoachDetailPageProps> = ({ slug, navigate }) => {
-  const { role, user } = useAuth();
-  const { data: coach, isLoading, error } = useCoach(slug);
-  const { data: reviews = [] } = useCoachReviews(slug);
+const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? '';
 
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
+export function CoachDetailPage({ slug, navigate }: CoachDetailPageProps) {
+  const { data: coach, isLoading } = useCoach(slug);
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-16 text-center">
-        <div className="w-10 h-10 border-4 border-[#3f58b2] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm font-bold text-[#021F53]">Loading coach profile...</p>
+      <div className="wrap" style={{ paddingBlock: 56 }} aria-busy="true">
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 14 }}>
+          <Skeleton variant="circle" width={128} height={128} />
+          <Skeleton width={240} height={32} />
+          <Skeleton width={320} height={16} />
+        </div>
       </div>
     );
   }
 
-  if (error || !coach) {
+  if (!coach) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
-        <h2 className="text-xl font-bold text-[#021F53]">Coach Not Found</h2>
-        <p className="text-xs text-slate-500">
-          This coach profile might have been archived or does not exist.
-        </p>
-        <button
-          onClick={() => navigate('/coaches')}
-          className="px-6 py-2.5 bg-[#3f58b2] text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-[#021F53]"
-        >
-          Back to Find a Coach
-        </button>
+      <div className="wrap" style={{ paddingBlock: 72 }}>
+        <div className="panel panel-pad" style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', display: 'grid', gap: 14, justifyItems: 'center' }}>
+          <h1 className="t-h1">Coach not found</h1>
+          <p className="t-body">This profile may have been archived, or the link is off. Browse the directory to find someone else.</p>
+          <button type="button" className="btn btn-primary" onClick={() => navigate('/coaches')}>
+            Browse coaches
+          </button>
+        </div>
       </div>
     );
   }
 
-  const coachName = coach.display_name || (coach as any).name || 'Coach';
-  const sessionTypes = coach.session_types || [];
-  const ratingAvg = coach.rating_avg != null ? coach.rating_avg.toFixed(1) : 'New';
+  return <CoachProfile coach={coach} navigate={navigate} />;
+}
+
+function CoachProfile({ coach, navigate }: { coach: CoachDetail; navigate: (path: string) => void }) {
+  const { role, user } = useAuth();
+  const { data: reviews = [] } = useCoachReviews(coach.slug);
+  const b = useBooking(coach);
+  const desktop = useIsDesktop();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const isOwn = role === 'coach' && user?.full_name === coach.display_name;
+  const canBook = role !== 'coach';
+  const sessions = coach.session_types ?? [];
+
+  const choose = (id: string) => {
+    b.setSession(id);
+    if (!desktop) setSheetOpen(true);
+  };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
-      <button
-        onClick={() => navigate('/coaches')}
-        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to Find a Coach</span>
-      </button>
-
-      {/* Main Profile Header */}
-      <div className="bg-white rounded-2xl p-6 sm:p-10 border border-[#3f58b2]/15 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-100">
-          <div className="flex items-start gap-5">
-            {coach.avatar_url ? (
-              <img
-                src={coach.avatar_url}
-                alt={coachName}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white shadow-xs flex-shrink-0"
-              />
-            ) : (
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#021F53] text-white font-bold flex items-center justify-center text-3xl flex-shrink-0">
-                {coachName.charAt(0)}
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-headline">
-                {coachName}
-              </h1>
-              <p className="text-sm font-semibold text-[#3f58b2]">{coach.headline}</p>
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
-                <div className="flex items-center gap-1 text-[#021F53] font-bold bg-[#f0f7ff] px-2 py-0.5 rounded-md border border-[#607ef2]/20">
-                  <Star className="w-3.5 h-3.5 fill-[#2563eb] text-[#2563eb]" />
-                  <span>{ratingAvg}</span>
-                  <span className="text-slate-400 font-normal">({coach.rating_count} reviews)</span>
-                </div>
-                <span>•</span>
-                <span className="capitalize">{coach.price_type === 'free' ? 'Free Mentorship' : 'Paid Sessions'}</span>
-              </div>
-            </div>
-          </div>
-
-          {role === 'coach' ? (
-            user?.full_name === (coach.display_name || (coach as any).name) || slug === 'engr-mark-villanueva' ? (
-              <button
-                type="button"
-                onClick={() => navigate('/coach')}
-                className="w-full sm:w-auto px-6 py-3.5 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] font-bold text-sm rounded-xl border border-[#3f58b2]/20 shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Manage in Coach Portal</span>
-              </button>
-            ) : null
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsBookingOpen(true)}
-              className="tactile-btn-primary w-full sm:w-auto px-8 py-3.5 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Calendar className="w-4 h-4 text-white" />
-              <span>Book a Session</span>
-            </button>
-          )}
-        </div>
-
-        {/* Expertise Tags */}
-        <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-[#3f58b2] mb-3">
-            Areas of Specialization
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {(coach.expertise || []).map((exp, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[#f0f7ff] text-[#3f58b2] border border-[#607ef2]/20"
-              >
-                {exp}
+    <div className="cp">
+      <header className="cp-head wrap">
+        <Link to="/coaches" className="link-btn cp-back">
+          <ArrowLeft aria-hidden="true" /> All coaches
+        </Link>
+        <Disc name={coach.display_name} src={coach.avatar_url} size="xl" />
+        <h1 className="t-h1">{coach.display_name}</h1>
+        <p className="t-lede">{coach.headline}</p>
+        <Stars coach={coach} />
+        {coach.expertise.length ? (
+          <div className="tags">
+            {coach.expertise.map((e) => (
+              <span className="tag" key={e}>
+                {e}
               </span>
             ))}
           </div>
-        </div>
+        ) : null}
+      </header>
 
-        {/* Bio */}
-        <div className="pt-4 border-t border-slate-100 space-y-2">
-          <h3 className="text-base font-bold text-[#021F53] font-headline">About {coachName}</h3>
-          <p className="text-sm text-[#2c3f77] leading-relaxed max-w-4xl whitespace-pre-line">
-            {coach.bio}
-          </p>
-        </div>
-      </div>
+      <div className="wrap cp-layout">
+        <div className="cp-main">
+          <section>
+            <h2 className="t-h2">About</h2>
+            <p className="t-body measure" style={{ whiteSpace: 'pre-line' }}>
+              {coach.bio}
+            </p>
+            {coach.experience ? (
+              <p className="t-body measure" style={{ marginTop: 12 }}>
+                {coach.experience}
+              </p>
+            ) : null}
+            {coach.languages?.length ? <p className="t-small" style={{ marginTop: 12 }}>Speaks {coach.languages.join(', ')}</p> : null}
+          </section>
 
-      {/* Session Types Offerings */}
-      <div className="space-y-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-[#021F53] font-headline">
-          Available Session Offerings
-        </h2>
+          <section>
+            <h2 className="t-h2">Sessions</h2>
+            {sessions.length ? (
+              <div className="panel">
+                {sessions.map((s) => {
+                  const soon = s.price_centavos > 0 && !b.checkoutEnabled;
+                  return (
+                    <div className="cp-srow" key={s.id}>
+                      <div>
+                        <h3>
+                          {s.name}
+                          <span className="min num">{s.duration_minutes} min</span>
+                        </h3>
+                        {s.is_intro_call ? <p className="t-small">Intro call</p> : null}
+                      </div>
+                      <div className="r">
+                        <span className="pr">{formatPHP(s.price_centavos)}</span>
+                        {soon ? (
+                          <span className="soon">Paid sessions are coming soon</span>
+                        ) : canBook ? (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            aria-pressed={b.sessionId === s.id}
+                            aria-label={`Choose ${s.name}`}
+                            onClick={() => choose(s.id)}
+                          >
+                            Choose
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <Empty title="No sessions yet" body="This coach has not published any sessions." />
+            )}
+          </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {sessionTypes.map((st) => (
-            <div
-              key={st.id}
-              className="bg-white rounded-2xl p-6 border border-[#3f58b2]/10 shadow-xs flex flex-col justify-between space-y-4 hover:border-[#607ef2]/40 transition-all"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-lg text-[#021F53]">
-                    {formatPHP(st.price_centavos)}
+          <section>
+            <h2 className="t-h2">What students say</h2>
+            {reviews.length ? (
+              <div className="panel">
+                {reviews.map((r, i) => (
+                  <div className="cp-rev" key={`${r.created_at}-${i}`}>
+                    <div className="by">
+                      {r.reviewer_first_name ? firstName(r.reviewer_first_name) : null}
+                      <span className="stars">
+                        <Star aria-hidden="true" />
+                        <span className="num">{r.rating}.0</span>
+                      </span>
+                      <span className="when">{formatDate(r.created_at)}</span>
+                    </div>
+                    {r.body ? <p>{r.body}</p> : null}
                   </div>
-                  {st.is_intro_call && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#f0f7ff] text-[#1d4ed8] border border-[#607ef2]/30">
-                      Intro Call
-                    </span>
-                  )}
-                </div>
-                <h4 className="font-bold text-base text-[#021F53] font-headline">{st.name}</h4>
-                <p className="text-xs text-[#2c3f77] leading-relaxed">
-                  Dedicated {st.duration_minutes}-minute 1-on-1 career consultation
-                </p>
+                ))}
               </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{st.duration_minutes} mins</span>
-                </span>
-                {role !== 'coach' && (
-                  <button
-                    type="button"
-                    onClick={() => setIsBookingOpen(true)}
-                    className="px-4 py-2 bg-[#f0f7ff] hover:bg-[#3f58b2] hover:text-white text-[#3f58b2] font-bold text-xs rounded-xl border border-[#3f58b2]/20 transition-all cursor-pointer"
-                  >
-                    Book This
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Student Reviews Section (BR-011: First name only) */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-[#021F53] font-headline">
-              Student Reviews &amp; Ratings
-            </h2>
-            <span className="text-xs bg-[#f0f7ff] text-[#3f58b2] px-2.5 py-0.5 rounded-md font-bold">
-              {reviews.length} Verified
-            </span>
-          </div>
-          <span className="text-xs text-slate-500 hidden sm:inline">
-            Public reviews display student first name only (BR-011)
-          </span>
+            ) : (
+              <Empty icon={Star} title="No reviews yet" body="Reviews show up here after students finish a session." />
+            )}
+          </section>
         </div>
 
-        {reviews.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center border border-slate-200">
-            <p className="text-xs text-slate-500">No reviews yet for this coach.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {reviews.map((rev, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-2xl p-6 border border-[#3f58b2]/10 shadow-xs space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-[#2563eb]">
-                    {Array.from({ length: rev.rating }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-[#2563eb]" />
-                    ))}
-                  </div>
-                  <span className="text-[11px] text-slate-400">{formatDate(rev.created_at)}</span>
-                </div>
-                {rev.body && (
-                  <p className="text-xs text-[#2c3f77] leading-relaxed italic">
-                    "{rev.body}"
-                  </p>
-                )}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#021F53]">{rev.reviewer_first_name}</span>
-                </div>
+        {desktop ? (
+          <aside className="cp-aside panel" aria-label="Book a session">
+            {isOwn ? (
+              <div className="bk">
+                <h2>Your profile</h2>
+                <button type="button" className="btn btn-secondary" onClick={() => navigate('/coach')}>
+                  Manage in coach portal
+                </button>
               </div>
-            ))}
-          </div>
-        )}
+            ) : (
+              <>
+                <BookingBody b={b} pfx="p" heading />
+                <div className="bk-panel-foot">
+                  <BookingFoot b={b} pfx="p" />
+                </div>
+              </>
+            )}
+          </aside>
+        ) : null}
       </div>
 
-      <BookingDialog
-        isOpen={isBookingOpen}
-        onClose={() => setIsBookingOpen(false)}
-        coach={coach}
-        onBookingSuccess={() => navigate('/app/bookings')}
-      />
+      {!desktop && !isOwn && canBook ? (
+        <>
+          <MobileBar b={b} price={coachFromPrice(coach)} onOpen={() => setSheetOpen(true)} />
+          <Sheet
+            open={sheetOpen}
+            onOpenChange={setSheetOpen}
+            title="Book a session"
+            footer={<BookingFoot b={b} pfx="s" />}
+          >
+            <BookingBody b={b} pfx="s" />
+          </Sheet>
+        </>
+      ) : null}
     </div>
   );
-};
+}
+
+function MobileBar({ b, price, onOpen }: { b: BookingState; price: string; onOpen: () => void }) {
+  return (
+    <div className="bk-bar">
+      <div className="t">{b.done ? 'You’re booked.' : price}</div>
+      {b.done ? (
+        <Link to="/app/bookings" className="btn btn-primary">
+          See my bookings
+        </Link>
+      ) : (
+        <button type="button" className="btn btn-primary" onClick={onOpen}>
+          Book a session
+        </button>
+      )}
+    </div>
+  );
+}

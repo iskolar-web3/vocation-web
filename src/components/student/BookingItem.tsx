@@ -1,190 +1,126 @@
-import React, { useState } from 'react';
-import {
-  Clock,
-  Video,
-  CreditCard,
-  Star,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  XCircle,
-  RotateCcw,
-  ShieldAlert,
-} from 'lucide-react';
-import { StudentBooking } from '../../types/api';
-import { formatDateTime, formatPHP, formatTimeOnly } from '../../lib/utils';
-import { Modal } from '../common/Modal';
+import { Check, Star, Video } from 'lucide-react';
 import { ComingSoonBadge } from '../common/ComingSoonBadge';
+import { Disc, Status } from '../ui';
+import { formatDateTime, formatPHP } from '../../lib/utils';
+import type { BookingX } from './CancelBookingDialog';
 
-interface BookingItemProps {
-  booking: StudentBooking;
-  onPay: (bookingId: string) => void;
-  onCancel: (booking: StudentBooking) => void;
-  onReview?: (booking: StudentBooking) => void;
-  payDisabled?: boolean;
+/** BR-007: a paid booking is only "confirmed" when the API says so. Pending stays "waiting for payment". */
+export function statusOf(b: BookingX): string {
+  if (b.status === 'cancelled') return b.payment_status === 'refunded' ? 'refunded' : 'cancelled';
+  if (b.payment_status === 'failed') return 'failed';
+  if (b.payment_status === 'expired') return 'expired';
+  return b.status;
 }
 
-export const BookingItem: React.FC<BookingItemProps> = ({
-  booking,
-  onPay,
-  onCancel,
-  onReview,
-  payDisabled = false,
-}) => {
-  const getStatusBadge = () => {
-    if (booking.status === 'cancelled') {
-      return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-          <XCircle className="w-3 h-3 text-slate-500" />
-          <span>Cancelled {booking.payment_status === 'refunded' ? '(Refunded)' : ''}</span>
-        </span>
-      );
-    }
+interface BookingItemProps {
+  booking: BookingX;
+  onPay: (bookingId: string) => void;
+  onCancel: (booking: BookingX) => void;
+  onReview?: (booking: BookingX) => void;
+  payDisabled?: boolean;
+  payPending?: boolean;
+  /** Rated during this visit (the API may not echo it back yet). */
+  rated?: boolean;
+}
 
-    if (booking.payment_status === 'failed') {
-      return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
-          <AlertCircle className="w-3 h-3 text-rose-500" />
-          <span>Payment Failed</span>
-        </span>
-      );
-    }
-
-    if (booking.payment_status === 'expired') {
-      return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#f0f7ff] text-slate-700 border border-slate-200">
-          <AlertCircle className="w-3 h-3 text-slate-500" />
-          <span>Payment Expired</span>
-        </span>
-      );
-    }
-
-    switch (booking.status) {
-      case 'confirmed':
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#1d4ed8] border border-[#607ef2]/30">
-            <CheckCircle2 className="w-3 h-3 text-[#2563eb]" />
-            <span>Confirmed</span>
-          </span>
-        );
-      case 'pending':
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/20">
-            <AlertCircle className="w-3 h-3 text-[#2563eb]" />
-            <span>Pending Payment</span>
-          </span>
-        );
-      case 'completed':
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#3f58b2] border border-[#3f58b2]/20">
-            <CheckCircle2 className="w-3 h-3 text-[#3f58b2]" />
-            <span>Completed</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-            <span>{booking.status}</span>
-          </span>
-        );
-    }
-  };
-
-  const coachName = booking.coach_display_name || 'Coach';
-  const priceCentavos = booking.amount_due_centavos ?? booking.price_centavos;
-  const isCancellable =
-    booking.status === 'confirmed' || booking.status === 'pending';
+export function BookingItem({ booking: b, onPay, onCancel, onReview, payDisabled, payPending, rated }: BookingItemProps) {
+  const coach = b.coach_display_name || 'Coach';
+  const session = b.session_type_name || 'Coaching session';
+  const full = `${session} with ${coach}`;
+  const needsPay = b.status === 'pending' || b.payment_status === 'failed' || b.payment_status === 'expired';
+  const retry = b.payment_status === 'failed' || b.payment_status === 'expired';
+  const cancellable = b.status === 'confirmed' || b.status === 'pending';
+  const refunded = b.status === 'cancelled' && b.payment_status === 'refunded';
+  const price = b.amount_due_centavos ?? b.price_centavos;
+  const hasActions = (b.status === 'confirmed' && b.join_url) || needsPay || cancellable || b.status === 'completed';
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-[#3f58b2]/30 transition-all space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        <div className="flex items-start gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-[#021F53] text-white font-bold flex items-center justify-center text-base flex-shrink-0">
-            {coachName.charAt(0)}
-          </div>
-          <div>
-            <h4 className="text-base font-bold text-[#021F53]">
-              1-on-1 Mentorship with {coachName}
-            </h4>
-            <p className="text-xs text-slate-600 mt-0.5">
-              Coach: <strong>{coachName}</strong>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-start gap-1.5">
-          {getStatusBadge()}
-          <span className="text-xs font-bold text-[#021F53]">
-            {formatPHP(booking.price_centavos)}
-          </span>
-        </div>
+    <article className="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 rounded-[var(--r-lg)] border border-line bg-surface p-4 min-[721px]:grid-cols-[56px_minmax(0,1fr)_auto]">
+      <Disc name={coach} src={b.coach_avatar_url} className="max-[720px]:!size-10 max-[720px]:!text-[15px]" />
+      <div className="min-w-0">
+        <h3 className="font-display text-lg leading-snug font-normal text-tx">{coach}</h3>
+        <p className="text-sm text-tx-2">{session}</p>
+        <p className="mt-0.5 text-sm text-tx-2">
+          <span className="num">{formatDateTime(b.slot_starts_at)}</span>, Manila time
+        </p>
+        <p className="text-[13px] text-tx-3">
+          Ref <span className="num">{b.booking_id.slice(0, 8)}</span>
+        </p>
+      </div>
+      <div className="col-span-full mt-1.5 flex items-center justify-between min-[721px]:col-span-1 min-[721px]:mt-0 min-[721px]:grid min-[721px]:justify-items-end min-[721px]:gap-2">
+        <span className="num t-title">{formatPHP(price)}</span>
+        <Status status={statusOf(b)} />
       </div>
 
-      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2 text-[#021F53] font-semibold">
-          <Clock className="w-3.5 h-3.5 text-[#3f58b2]" />
-          <span>{formatDateTime(booking.slot_starts_at)}</span>
-        </div>
+      {hasActions || refunded ? (
+        <div className="col-span-full mt-2.5 flex flex-wrap items-center gap-2 min-[721px]:col-start-2 min-[721px]:col-end-[-1]">
+          {b.status === 'confirmed' && b.join_url ? (
+            <a
+              className="btn btn-brand btn-sm max-[720px]:!h-11 max-[720px]:flex-1"
+              href={b.join_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Join video call for ${full}`}
+            >
+              <Video aria-hidden="true" />
+              Join video call
+            </a>
+          ) : null}
 
-        <div className="text-slate-500 text-[11px]">
-          Ref: <span className="font-mono">{booking.booking_id.slice(0, 8)}</span>
-        </div>
-      </div>
+          {needsPay ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-brand btn-sm max-[720px]:!h-11 max-[720px]:flex-1"
+                onClick={() => onPay(b.booking_id)}
+                disabled={payDisabled || payPending}
+                aria-label={`${retry ? 'Retry payment' : 'Finish paying'} for ${full}`}
+              >
+                {payPending ? 'Opening checkout…' : retry ? 'Retry payment' : 'Finish paying'}
+              </button>
+              {payDisabled ? <ComingSoonBadge /> : null}
+            </>
+          ) : null}
 
-      {/* Action Row */}
-      <div className="pt-1 flex flex-wrap items-center justify-end gap-2">
-        {booking.status === 'confirmed' && booking.join_url && (
-          <a
-            href={booking.join_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#2563eb] hover:bg-[#1d4ed8] shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Video className="w-3.5 h-3.5" />
-            <span>Join Video Call</span>
-            <ExternalLink className="w-3 h-3 ml-0.5" />
-          </a>
-        )}
-
-        {(booking.status === 'pending' ||
-          booking.payment_status === 'failed' ||
-          booking.payment_status === 'expired') && (
-          <>
+          {cancellable ? (
             <button
               type="button"
-              onClick={() => onPay(booking.booking_id)}
-              disabled={payDisabled}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#3f58b2] hover:bg-[#021F53] shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-ghost btn-sm max-[720px]:!h-11"
+              onClick={() => onCancel(b)}
+              aria-label={`Cancel ${full}`}
             >
-              <CreditCard className="w-3.5 h-3.5" />
-              <span>{booking.payment_status === 'failed' || booking.payment_status === 'expired' ? 'Retry Payment' : 'Complete Payment'}</span>
+              Cancel
             </button>
-            {payDisabled && <ComingSoonBadge />}
-          </>
-        )}
+          ) : null}
 
-        {isCancellable && (
-          <button
-            type="button"
-            onClick={() => onCancel(booking)}
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            <XCircle className="w-3.5 h-3.5" />
-            <span>Cancel Session</span>
-          </button>
-        )}
+          {b.status === 'completed' ? (
+            b.has_reviewed || rated ? (
+              <span className="inline-flex items-center gap-1.5 text-sm text-tx-2">
+                <Star className="size-[15px] fill-honey text-honey" aria-hidden="true" />
+                You rated this session
+              </span>
+            ) : onReview ? (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm max-[720px]:!h-11"
+                onClick={() => onReview(b)}
+                aria-label={`Rate ${full}`}
+              >
+                Rate session
+              </button>
+            ) : null
+          ) : null}
 
-        {booking.status === 'completed' && onReview && (
-          <button
-            type="button"
-            onClick={() => onReview(booking)}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-[#021F53] bg-[#f0f7ff] hover:bg-[#e0efff] border border-[#607ef2]/20 transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Star className="w-3.5 h-3.5 fill-[#2563eb] text-[#2563eb]" />
-            <span>Rate This Session</span>
-          </button>
-        )}
-      </div>
-    </div>
+          {refunded ? (
+            <div className="note is-ok basis-full">
+              <Check aria-hidden="true" />
+              <span>
+                <span className="num">{formatPHP(b.price_centavos)}</span> refunded.
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
   );
-};
+}

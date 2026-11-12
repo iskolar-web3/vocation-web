@@ -1,40 +1,110 @@
-import React, { useState, useEffect } from 'react';
-import { GraduationCap, ArrowRight, Mail, Lock, User, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { UserRole } from '../../types/api';
-import { api } from '../../lib/api';
-import { useFeatures } from '../../services/queries';
+import { SiteLink } from '../../components/layout/shell';
+import { AlertCircle, Check, Info, Mail } from 'lucide-react';
+import React, { type ReactNode, useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
 import { ComingSoonBadge } from '../../components/common/ComingSoonBadge';
+import {
+  type Errors,
+  PasswordField,
+  PasswordRule,
+  TextField,
+  check,
+  focusFirstInvalid,
+} from '../../components/student/forms';
+import { toast } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
+import { ApiError, api } from '../../lib/api';
+import { cn } from '../../lib/utils';
+import { useFeatures } from '../../services/queries';
+import { UserRole } from '../../types/api';
 
 interface AuthPageProps {
   mode: 'signin' | 'signup' | 'reset';
   navigate: (path: string) => void;
 }
 
+const email = z
+  .string()
+  .trim()
+  .min(1, 'Enter your email.')
+  .regex(/^\S+@\S+\.\S+$/, 'Enter a valid email, like you@school.edu.ph.');
+const newPassword = z.string().min(1, 'Enter a password.').min(8, 'Use at least 8 characters.');
+
+const signinSchema = z.object({ email, password: z.string().min(1, 'Enter your password.') });
+const signupSchema = z.object({
+  full_name: z.string().trim().min(1, 'Enter your full name.'),
+  email,
+  password: newPassword,
+  terms: z.literal(true, { message: 'Agree to the Terms and Privacy Policy to continue.' }),
+});
+const requestSchema = z.object({ email });
+const confirmSchema = z
+  .object({ password: newPassword, confirm: z.string() })
+  .refine((v) => v.password === v.confirm, { path: ['confirm'], message: 'The two passwords don’t match.' });
+
+const ROLES: { role: UserRole; title: string; body: string }[] = [
+  { role: 'student', title: 'Student', body: 'Find OJT roles and book coaches.' },
+  { role: 'coach', title: 'Coach', body: 'Run paid or free sessions.' },
+];
+
+const isSafeRedirect = (url: string | null): url is string =>
+  !!url && url.startsWith('/') && !url.startsWith('//') && !url.includes('\\');
+
+function Card({ children, icon, tone }: { children: ReactNode; icon?: ReactNode; tone?: 'ok' | 'bad' }) {
+  return (
+    <div className="flex min-h-[calc(100svh-var(--nav-h,72px)-var(--tabbar-total))] justify-center px-4 py-8 sm:items-center sm:py-12">
+      <div className="panel panel-pad h-fit w-full max-w-[440px] sm:p-7">
+        {icon ? (
+          <div
+            className={cn(
+              'mb-5 grid size-14 place-items-center rounded-full [&_svg]:size-[26px]',
+              tone === 'ok' ? 'bg-ok-wash text-ok' : tone === 'bad' ? 'bg-danger-wash text-danger' : 'bg-[rgba(96,139,255,.12)] text-link'
+            )}
+          >
+            {icon}
+          </div>
+        ) : null}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Notice({ children }: { children: ReactNode }) {
+  return (
+    <div className="note is-bad" role="alert">
+      <AlertCircle aria-hidden="true" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
 export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
   const { signin, signup, user } = useAuth();
   const features = useFeatures();
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
-  const [email, setEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(() =>
+    new URLSearchParams(window.location.search).get('role') === 'coach' ? 'coach' : 'student'
+  );
+  const [emailVal, setEmailVal] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [agreeLegal, setAgreeLegal] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetConfirmed, setResetConfirmed] = useState(false);
+  const [tokenInvalid, setTokenInvalid] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Errors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check for reset token in URL (API-025 / Issue #16). Read it synchronously so
   // a token link never renders the first paint as a tokenless request page.
-  const [resetToken, setResetToken] = useState<string | null>(
-    () => new URLSearchParams(window.location.search).get('token')
-  );
+  const [resetToken, setResetToken] = useState<string | null>(() => new URLSearchParams(window.location.search).get('token'));
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+    const token = new URLSearchParams(window.location.search).get('token');
     if (token) {
       setResetToken(token);
       // Keep the token in state only; drop it from the address bar and history.
@@ -55,39 +125,46 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
     }
   }, [user, mode]);
 
+  const clear = (key: string) => setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
+  const fail = (errs: Errors) => {
+    setErrors(errs);
+    focusFirstInvalid(formRef.current);
+  };
+
+  const requestReset = async () => {
+    await api.post('/auth/password-reset/request', { email: emailVal.trim() });
+    setResetSent(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrorMsg(null);
+
+    const errs =
+      mode === 'signin'
+        ? check(signinSchema, { email: emailVal, password })
+        : mode === 'signup'
+          ? check(signupSchema, { full_name: fullName, email: emailVal, password, terms: agreeLegal })
+          : resetToken
+            ? check(confirmSchema, { password, confirm: confirmPassword })
+            : check(requestSchema, { email: emailVal });
+    if (Object.keys(errs).length) return fail(errs);
+    setErrors({});
     setIsSubmitting(true);
 
     try {
       if (mode === 'reset') {
         if (resetToken) {
-          // Confirming password reset with token
-          if (password !== confirmPassword) {
-            throw new Error('Passwords do not match.');
-          }
-          if (password.length < 8) {
-            throw new Error('Password must be at least 8 characters long.');
-          }
-          await api.post('/auth/password-reset/confirm', {
-            token: resetToken,
-            password: password,
-          });
+          await api.post('/auth/password-reset/confirm', { token: resetToken, password });
           setResetConfirmed(true);
         } else {
-          // Requesting password reset email
-          await api.post('/auth/password-reset/request', { email });
-          setResetSent(true);
+          await requestReset();
         }
       } else if (mode === 'signin') {
-        const session = await signin({ email, password });
+        const session = await signin({ email: emailVal.trim(), password });
         // Role-based post-signin redirect (SEC-31: restricted to same-origin relative paths)
         const rawRedirect = new URLSearchParams(window.location.search).get('redirect');
-        const isSafeRedirect = (url: string | null): url is string => {
-          if (!url) return false;
-          return url.startsWith('/') && !url.startsWith('//') && !url.includes('\\');
-        };
         const safeRedirect = isSafeRedirect(rawRedirect) ? rawRedirect : null;
 
         if (session?.role === 'coach') {
@@ -98,325 +175,306 @@ export const AuthPages: React.FC<AuthPageProps> = ({ mode, navigate }) => {
           }
         } else if (session?.role === 'admin') {
           navigate('/admin/listings');
+        } else if (safeRedirect && !safeRedirect.startsWith('/coach') && !safeRedirect.startsWith('/admin')) {
+          navigate(safeRedirect);
         } else {
-          if (
-            safeRedirect &&
-            !safeRedirect.startsWith('/coach') &&
-            !safeRedirect.startsWith('/admin')
-          ) {
-            navigate(safeRedirect);
-          } else {
-            navigate(session?.is_onboarded ? '/app' : '/app/onboarding');
-          }
+          navigate(session?.is_onboarded ? '/app' : '/app/onboarding');
         }
-      } else if (mode === 'signup') {
-        if (!agreeLegal) {
-          throw new Error('Please agree to the Terms of Service and Privacy Policy to proceed.');
-        }
-        await signup({
-          email,
-          password,
-          role: selectedRole,
-          full_name: fullName.trim(),
-        });
-
-        if (selectedRole === 'coach') {
-          navigate('/coach/onboarding');
-        } else {
-          navigate('/app/onboarding');
-        }
+      } else {
+        await signup({ email: emailVal.trim(), password, role: selectedRole, full_name: fullName.trim() });
+        navigate(selectedRole === 'coach' ? '/coach/onboarding' : '/app/onboarding');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
+      if (mode === 'reset' && resetToken && err instanceof ApiError && (err.status === 400 || err.status === 422)) {
+        setTokenInvalid(true);
+      } else {
+        setErrorMsg(
+          err.message ||
+            (mode === 'signin'
+              ? 'That email and password don’t match. Try again or reset your password.'
+              : 'Something went wrong. Try again in a moment.')
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="max-w-md mx-auto px-4 py-16 space-y-6">
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-[#021F53] text-white flex items-center justify-center mx-auto shadow-sm">
-          <GraduationCap className="w-6 h-6 text-[#607ef2]" />
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#021F53]">
-          {mode === 'signin' && 'Sign in to iSkolar Vocation'}
-          {mode === 'signup' && 'Create Your iSkolar Account'}
-          {mode === 'reset' &&
-            (resetToken
-              ? 'Set New Password'
-              : !features.email
-              ? 'Password Reset'
-              : 'Reset Your Password')}
-        </h1>
-        <p className="text-xs text-[#2c3f77]">
-          {mode === 'signin' && 'Access your internships, bookings, and coaching sessions'}
-          {mode === 'signup' && 'Join thousands of students and industry mentors'}
-          {mode === 'reset' &&
-            (resetToken
-              ? 'Choose a strong password for your account'
-              : !features.email
-              ? 'Email reset links are not available yet.'
-              : 'We will send a secure password reset link to your email')}
-        </p>
-      </div>
-
-      <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-soft space-y-5">
-        {errorMsg && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
-            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-            <span>{errorMsg}</span>
+  /* ── reset: terminal states ─────────────────────────────────────────── */
+  if (mode === 'reset') {
+    if (resetConfirmed) {
+      return (
+        <Card icon={<Check aria-hidden="true" />} tone="ok">
+          <h1 className="t-h2">Password updated</h1>
+          <p className="t-body mt-2">You can sign in with your new password now.</p>
+          <SiteLink to="/signin" className="btn btn-brand btn-block mt-6">
+            Sign in
+          </SiteLink>
+        </Card>
+      );
+    }
+    if (tokenInvalid) {
+      return (
+        <Card icon={<AlertCircle aria-hidden="true" />} tone="bad">
+          <h1 className="t-h2">This reset link has expired</h1>
+          <p className="t-body mt-2">Reset links work once and expire after an hour. Ask for a new one and try again.</p>
+          <div className="mt-6 grid gap-2.5">
+            {features.email ? (
+              <button
+                type="button"
+                className="btn btn-brand btn-block"
+                onClick={() => {
+                  setTokenInvalid(false);
+                  setResetToken(null);
+                  setPassword('');
+                  setConfirmPassword('');
+                }}
+              >
+                Request a new link
+              </button>
+            ) : null}
+            <SiteLink to="/signin" className="btn btn-ghost btn-block">
+              Back to sign in
+            </SiteLink>
           </div>
-        )}
-
-        {mode === 'reset' && !resetToken && !features.email ? (
-          <div className="text-center py-6 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center mx-auto">
-              <Mail className="w-6 h-6" />
-            </div>
-            <h3 className="font-bold text-base text-[#021F53]">Reset By Email Unavailable</h3>
-            <p className="text-xs text-slate-500">Password reset by email is coming soon.</p>
+        </Card>
+      );
+    }
+    if (!resetToken && !features.email) {
+      return (
+        <Card icon={<Info aria-hidden="true" />}>
+          <h1 className="t-h2">Password reset</h1>
+          <p className="t-body mt-2">Password reset by email is coming soon.</p>
+          <div className="mt-3">
             <ComingSoonBadge />
+          </div>
+          <SiteLink to="/signin" className="btn btn-secondary btn-block mt-6">
+            Back to sign in
+          </SiteLink>
+        </Card>
+      );
+    }
+    if (resetSent) {
+      return (
+        <Card icon={<Mail aria-hidden="true" />}>
+          <h1 className="t-h2">Check your inbox</h1>
+          <p className="t-body mt-2">
+            If an account exists for <b className="font-normal text-tx">{emailVal.trim()}</b>, a reset link is on its way.
+          </p>
+          <div className="mt-6 grid gap-2.5">
             <button
               type="button"
-              onClick={() => navigate('/signin')}
-              className="mt-1 px-6 py-2.5 bg-[#021F53] text-white font-bold text-xs rounded-xl cursor-pointer hover:bg-[#002774] transition-colors"
-            >
-              Back to sign in
-            </button>
-          </div>
-        ) : resetConfirmed ? (
-          <div className="text-center py-6 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/30 flex items-center justify-center mx-auto font-bold shadow-inner">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <h3 className="font-bold text-base text-[#021F53]">Password Updated</h3>
-            <p className="text-xs text-slate-500">
-              Your password has been successfully reset. You can now sign in with your new credentials.
-            </p>
-            <button
-              onClick={() => navigate('/signin')}
-              className="tactile-btn-primary mt-3 px-6 py-2.5 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md"
-            >
-              Sign In Now
-            </button>
-          </div>
-        ) : resetSent ? (
-          <div className="text-center py-6 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#f0f7ff] text-[#2563eb] border border-[#607ef2]/30 flex items-center justify-center mx-auto font-bold shadow-inner">
-              ✓
-            </div>
-            <h3 className="font-bold text-base text-[#021F53]">Reset Email Sent</h3>
-            <p className="text-xs text-slate-500">
-              If an account exists for {email}, you will receive a secure password reset link shortly.
-            </p>
-            <button
-              onClick={() => navigate('/signin')}
-              className="mt-3 px-6 py-2.5 bg-[#021F53] text-white font-bold text-xs rounded-xl cursor-pointer hover:bg-[#002774] transition-colors"
-            >
-              Return to Sign In
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
-              <>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1.5">
-                    I want to register as
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { role: 'student', label: 'Student / Intern' },
-                      { role: 'coach', label: 'Industry Coach' },
-                    ].map((item) => (
-                      <button
-                        key={item.role}
-                        type="button"
-                        onClick={() => setSelectedRole(item.role as UserRole)}
-                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          selectedRole === item.role
-                            ? 'bg-[#021F53] text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Maria Santos"
-                    className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
-                    required
-                  />
-                </div>
-              </>
-            )}
-
-            {mode === 'reset' && resetToken ? (
-              <>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
-                    required
-                    minLength={8}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat new password"
-                    className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
-                    required
-                    minLength={8}
-                  />
-                </div>
-              </>
-            ) : (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@university.edu.ph"
-                  className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
-                  required
-                />
-              </div>
-            )}
-
-            {mode !== 'reset' && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] mb-1 flex items-center justify-between">
-                  <span>Password</span>
-                  {mode === 'signin' &&
-                    (features.email ? (
-                      <button
-                        type="button"
-                        onClick={() => navigate('/reset-password')}
-                        className="text-[11px] text-[#3f58b2] font-semibold hover:underline cursor-pointer"
-                      >
-                        Forgot password?
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                        Forgot password?
-                        <ComingSoonBadge />
-                      </span>
-                    ))}
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 bg-[#f0f7ff] border border-[#607ef2]/20 rounded-xl text-sm font-semibold text-[#021F53] outline-none focus:ring-2 focus:ring-[#3f58b2]"
-                  required
-                />
-              </div>
-            )}
-
-            {mode === 'signup' && (
-              <div className="pt-2">
-                <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={agreeLegal}
-                    onChange={(e) => setAgreeLegal(e.target.checked)}
-                    className="w-4 h-4 mt-0.5 text-[#021F53] rounded border-slate-300 focus:ring-[#021F53]"
-                  />
-                  <span>
-                    I agree to the{' '}
-                    <button
-                      type="button"
-                      onClick={() => navigate('/terms')}
-                      className="text-[#3f58b2] font-semibold underline hover:text-[#021F53]"
-                    >
-                      Terms of Service
-                    </button>{' '}
-                    and{' '}
-                    <button
-                      type="button"
-                      onClick={() => navigate('/privacy')}
-                      className="text-[#3f58b2] font-semibold underline hover:text-[#021F53]"
-                    >
-                      Privacy Policy
-                    </button>.
-                  </span>
-                </label>
-              </div>
-            )}
-
-            <button
-              type="submit"
+              className="btn btn-secondary btn-block"
               disabled={isSubmitting}
-              className="tactile-btn-primary w-full py-3.5 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer disabled:opacity-60"
+              onClick={async () => {
+                setIsSubmitting(true);
+                try {
+                  await requestReset();
+                  toast.success('Reset link sent again');
+                } catch (err: any) {
+                  toast.error(err.message || 'Could not send the link. Try again in a moment.');
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
             >
-              {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <span>
-                    {mode === 'signin' && 'Sign In'}
-                    {mode === 'signup' && 'Create Account'}
-                    {mode === 'reset' && (resetToken ? 'Update Password' : 'Send Reset Link')}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              Send the link again
             </button>
-          </form>
+            <SiteLink to="/signin" className="btn btn-ghost btn-block">
+              Back to sign in
+            </SiteLink>
+          </div>
+        </Card>
+      );
+    }
+  }
+
+  /* ── forms ──────────────────────────────────────────────────────────── */
+  const heading =
+    mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create your account' : resetToken ? 'Choose a new password' : 'Reset your password';
+  const lede =
+    mode === 'signin'
+      ? 'Pick up your saved roles and bookings.'
+      : mode === 'signup'
+        ? 'Free for students. Takes a minute.'
+        : resetToken
+          ? 'Pick something you haven’t used on iSkolar before.'
+          : 'Enter the email you signed up with. We’ll send you a link.';
+  const cta =
+    mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : resetToken ? 'Update password' : 'Send reset link';
+  const busy =
+    mode === 'signin' ? 'Signing in…' : mode === 'signup' ? 'Creating account…' : resetToken ? 'Updating…' : 'Sending…';
+
+  return (
+    <Card>
+      <h1 className="t-h2">{heading}</h1>
+      <p className="t-body mt-2 mb-6">{lede}</p>
+
+      <form ref={formRef} onSubmit={handleSubmit} noValidate className="grid gap-[18px]" aria-busy={isSubmitting}>
+        {errorMsg ? <Notice>{errorMsg}</Notice> : null}
+
+        {mode === 'signup' && (
+          <>
+            <fieldset className="m-0 grid min-w-0 grid-cols-2 gap-2.5 border-0 p-0">
+              <legend className="mb-2 p-0 font-data text-sm font-semibold leading-tight text-tx">I’m joining as</legend>
+              {ROLES.map((r) => (
+                <label
+                  key={r.role}
+                  className="relative grid cursor-pointer content-start gap-1 rounded-[var(--r)] border border-line-strong bg-field p-3.5 has-[:checked]:border-lightblue has-[:checked]:bg-[rgba(96,139,255,.16)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-lightblue"
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={r.role}
+                    checked={selectedRole === r.role}
+                    onChange={() => setSelectedRole(r.role)}
+                    className="absolute inset-0 m-0 cursor-pointer opacity-0"
+                  />
+                  <b className="font-display text-lg font-normal leading-tight text-tx">{r.title}</b>
+                  <span className="text-[13.5px] leading-snug text-tx-3">{r.body}</span>
+                </label>
+              ))}
+            </fieldset>
+
+            <TextField
+              id="auth-name"
+              label="Full name"
+              value={fullName}
+              onChange={(e) => {
+                setFullName(e.target.value);
+                clear('full_name');
+              }}
+              error={errors.full_name}
+              autoComplete="name"
+              autoCapitalize="words"
+              enterKeyHint="next"
+              placeholder="e.g. Maria Santos"
+            />
+          </>
         )}
 
-        <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
-          {mode === 'signin' ? (
-            <p>
-              Don't have an account?{' '}
-              <button
-                onClick={() => navigate('/signup')}
-                className="font-bold text-[#3f58b2] hover:underline cursor-pointer"
-              >
-                Sign up free
-              </button>
-            </p>
-          ) : (
-            <p>
-              Already have an account?{' '}
-              <button
-                onClick={() => navigate('/signin')}
-                className="font-bold text-[#3f58b2] hover:underline cursor-pointer"
-              >
-                Sign in
-              </button>
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+        {mode === 'reset' && resetToken ? (
+          <>
+            <PasswordField
+              id="auth-password"
+              label="New password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clear('password');
+              }}
+              error={errors.password}
+              hint={<PasswordRule met={password.length >= 8} />}
+              autoComplete="new-password"
+              enterKeyHint="next"
+            />
+            <PasswordField
+              id="auth-confirm"
+              label="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                clear('confirm');
+              }}
+              error={errors.confirm}
+              autoComplete="new-password"
+              enterKeyHint="go"
+            />
+          </>
+        ) : (
+          <TextField
+            id="auth-email"
+            label="Email"
+            type="email"
+            value={emailVal}
+            onChange={(e) => {
+              setEmailVal(e.target.value);
+              clear('email');
+            }}
+            error={errors.email}
+            hint={mode === 'signup' ? 'Use your school email if you have one.' : undefined}
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint={mode === 'reset' ? 'go' : 'next'}
+            placeholder="you@school.edu.ph"
+          />
+        )}
+
+        {mode !== 'reset' && (
+          <PasswordField
+            id="auth-password"
+            label="Password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              clear('password');
+            }}
+            error={errors.password}
+            hint={mode === 'signup' ? <PasswordRule met={password.length >= 8} /> : undefined}
+            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+            enterKeyHint="go"
+          />
+        )}
+
+        {mode === 'signin' && (
+          <div className="-mt-2 flex justify-end">
+            {features.email ? (
+              <SiteLink to="/reset" className="inline-flex min-h-11 items-center">
+                Forgot password?
+              </SiteLink>
+            ) : (
+              <span className="inline-flex min-h-11 items-center gap-2 text-tx-3">
+                Forgot password?
+                <ComingSoonBadge />
+              </span>
+            )}
+          </div>
+        )}
+
+        {mode === 'signup' && (
+          <div className="field">
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={agreeLegal}
+                onChange={(e) => {
+                  setAgreeLegal(e.target.checked);
+                  clear('terms');
+                }}
+                aria-invalid={errors.terms ? true : undefined}
+                aria-describedby={errors.terms ? 'auth-terms-e' : undefined}
+              />
+              <span className="t-small">
+                I agree to the <SiteLink to="/terms">Terms of Service</SiteLink> and <SiteLink to="/privacy">Privacy Policy</SiteLink>.
+              </span>
+            </label>
+            {errors.terms ? (
+              <span className="error" id="auth-terms-e" role="alert">
+                {errors.terms}
+              </span>
+            ) : null}
+          </div>
+        )}
+
+        <button type="submit" disabled={isSubmitting} className="btn btn-brand btn-block">
+          {isSubmitting ? busy : cta}
+        </button>
+      </form>
+
+      <p className="t-small mt-6 text-center">
+        {mode === 'signin' ? (
+          <>
+            New here? <SiteLink to="/signup">Create an account</SiteLink>
+          </>
+        ) : (
+          <>
+            {mode === 'signup' ? 'Have an account?' : 'Remembered it?'} <SiteLink to="/signin">Sign in</SiteLink>
+          </>
+        )}
+      </p>
+    </Card>
   );
 };

@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { Search, Award, SlidersHorizontal, LayoutList, LayoutGrid, Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle, Search, SlidersHorizontal, UserSearch } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type CoachFilterState,
+  type CoachSort,
+  PriceSegmented,
+  SortSelect,
+  SpecialtyChips,
+} from '../../components/coaching/CoachFilters';
+import { CoachRow, Empty, Sheet, Skeleton } from '../../components/ui';
 import { useCoaches } from '../../services/queries';
-import { CoachCard } from '../../components/coaching/CoachCard';
-import { CoachFilters, CoachFilterState } from '../../components/coaching/CoachFilters';
-import { BookingDialog } from '../../components/coaching/BookingDialog';
-import { Drawer } from '../../components/common/Drawer';
-import { CoachCard as CoachCardType, CoachDetail } from '../../types/api';
+import type { CoachCard } from '../../types/api';
+import '../../components/coaching/coaching.css';
 
 interface CoachDirectoryPageProps {
   navigate: (path: string) => void;
@@ -15,232 +20,184 @@ interface CoachDirectoryPageProps {
   onFiltersChange?: (newFilters: CoachFilterState) => void;
 }
 
-export const CoachDirectoryPage: React.FC<CoachDirectoryPageProps> = ({
-  navigate,
+const MAX_CHIPS = 7;
+// The route's search schema has no 'paid' value yet, so a pushed 'paid' reads back as 'all'.
+const urlPrice = (p: CoachFilterState['price']) => p;
+
+function sortCoaches(list: CoachCard[], sort: CoachSort): CoachCard[] {
+  if (sort === 'rec') return list;
+  const key = (c: CoachCard) => (sort === 'rating' ? (c.rating_avg ?? 0) : (c.rating_count ?? 0));
+  return [...list].sort((a, b) => key(b) - key(a));
+}
+
+export function CoachDirectoryPage({
   initialQuery = '',
   initialExpertise = '',
   initialPrice = 'all',
   onFiltersChange,
-}) => {
-  const [filters, setFilters] = useState<CoachFilterState>({
-    q: initialQuery,
-    expertise: initialExpertise,
-    price: initialPrice,
-  });
+}: CoachDirectoryPageProps) {
+  const [filters, setFilters] = useState<CoachFilterState>({ q: initialQuery, expertise: initialExpertise, price: initialPrice });
+  const [qInput, setQInput] = useState(initialQuery);
+  const [sort, setSort] = useState<CoachSort>('rec');
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const pushed = useRef<CoachFilterState>({ q: initialQuery, expertise: initialExpertise, price: urlPrice(initialPrice) });
+  const firstLoad = useRef(true);
 
-  React.useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      q: initialQuery !== undefined ? initialQuery : prev.q,
-      expertise: initialExpertise !== undefined ? initialExpertise : prev.expertise,
-      price: initialPrice !== undefined ? initialPrice : prev.price,
-    }));
+  // external navigation (a link to /coaches?price=free while already here)
+  useEffect(() => {
+    const p = pushed.current;
+    if (p.q === initialQuery && p.expertise === initialExpertise && p.price === initialPrice) return;
+    pushed.current = { q: initialQuery, expertise: initialExpertise, price: initialPrice };
+    setFilters({ q: initialQuery, expertise: initialExpertise, price: initialPrice });
+    setQInput(initialQuery);
   }, [initialQuery, initialExpertise, initialPrice]);
 
-  const updateFilters = (updater: React.SetStateAction<CoachFilterState>) => {
-    setFilters((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      if (onFiltersChange) {
-        onFiltersChange(next);
-      }
-      return next;
-    });
+  const update = (patch: Partial<CoachFilterState>) => {
+    firstLoad.current = false;
+    const next = { ...filters, ...patch };
+    setFilters(next);
+    pushed.current = { q: next.q, expertise: next.expertise, price: urlPrice(next.price) };
+    onFiltersChange?.(next);
   };
 
-  const [viewMode, setViewMode] = useState<'grid' | 'row'>('grid');
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [selectedCoach, setSelectedCoach] = useState<CoachCardType | CoachDetail | null>(null);
+  // debounce typing so each keystroke is not a request
+  useEffect(() => {
+    if (qInput === filters.q) return;
+    const t = window.setTimeout(() => update({ q: qInput }), 250);
+    return () => window.clearTimeout(t);
+  }, [qInput]);
 
-  // Map filters to API params
-  const apiPriceParam = filters.price === 'all' ? undefined : filters.price;
+  const reset = () => {
+    setQInput('');
+    update({ q: '', expertise: '', price: 'all' });
+    setSort('rec');
+  };
 
-  const { data, isLoading, error } = useCoaches({
+  const all = useCoaches();
+  const { data, error, refetch } = useCoaches({
     q: filters.q || undefined,
     expertise: filters.expertise || undefined,
-    price: apiPriceParam,
+    price: filters.price === 'all' ? undefined : filters.price,
   });
+  // filter changes swap results in place: keep the last list on screen while the next one loads
+  const last = useRef<CoachCard[] | null>(null);
+  if (data) last.current = data.items;
+  const coaches = sortCoaches(data?.items ?? last.current ?? [], sort);
+  const loading = !data && !last.current && !error;
 
-  const coaches = data?.items || [];
+  const chips = useMemo(() => {
+    const freq = new Map<string, number>();
+    for (const c of all.data?.items ?? []) for (const e of c.expertise ?? []) freq.set(e, (freq.get(e) ?? 0) + 1);
+    const top = [...freq].sort((a, b) => b[1] - a[1]).map(([e]) => e).slice(0, MAX_CHIPS);
+    return filters.expertise && !top.includes(filters.expertise) ? [filters.expertise, ...top] : top;
+  }, [all.data, filters.expertise]);
 
-  const handleReset = () => {
-    updateFilters({ q: '', expertise: '', price: 'all' });
-  };
-
-  const quickExpertisePills = [
-    { label: 'All Specialties', value: '' },
-    { label: 'System Design', value: 'System Design' },
-    { label: 'Frontend & UI', value: 'Frontend & UI' },
-    { label: 'STAR Behavioral', value: 'STAR Behavioral' },
-    { label: 'ATS Resume Review', value: 'Resume Review' },
-  ];
+  const active = (filters.expertise ? 1 : 0) + (filters.price !== 'all' ? 1 : 0) + (sort !== 'rec' ? 1 : 0);
+  const count = loading ? 'Loading coaches…' : `${coaches.length} ${coaches.length === 1 ? 'coach' : 'coaches'}`;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header */}
-      <div className="bg-[#021F53] rounded-2xl p-6 sm:p-10 text-white shadow-soft relative overflow-hidden border border-[#3f58b2]/30">
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-md text-xs font-bold text-[#607ef2] uppercase tracking-wider font-accent border border-white/15">
-            <Award className="w-3.5 h-3.5 text-[#607ef2]" />
-            <span>Find a Coach Directory</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-            Book 1-on-1 Coaching with Industry Leaders
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Select an industry coach by specialization and book directly into their live availability schedule. Free intro calls and paid deep-dives hosted securely.
-          </p>
-
-          <div className="relative pt-2">
-            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+    <div className="cd">
+      <header className="cd-head wrap">
+        <h1 className="t-h1">Coaches</h1>
+        <p className="count t-body" aria-live="polite">
+          {count}
+        </p>
+        <div className="cd-bar">
+          <div className="search">
+            <Search aria-hidden="true" />
             <input
-              type="text"
-              value={filters.q}
-              onChange={(e) => updateFilters((prev) => ({ ...prev, q: e.target.value }))}
-              placeholder="Search by coach name, company (Grab, Canva, Maya), or skill..."
-              className="w-full pl-11 pr-4 py-3 bg-white text-[#021F53] font-medium text-xs sm:text-sm rounded-xl shadow-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+              type="search"
+              className="input"
+              value={qInput}
+              onChange={(e) => setQInput(e.target.value)}
+              placeholder="Search by name, title, or focus"
+              aria-label="Search coaches"
+              enterKeyHint="search"
+              autoComplete="off"
             />
           </div>
-        </div>
-      </div>
-
-      {/* Quick Specialization Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {quickExpertisePills.map((pill) => (
-          <button
-            key={pill.label}
-            onClick={() => updateFilters((prev) => ({ ...prev, expertise: pill.value }))}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              filters.expertise === pill.value
-                ? 'bg-[#021F53] text-white shadow-2xs font-bold'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            {pill.label}
+          <button type="button" className="btn btn-secondary cd-fbtn" onClick={() => setSheetOpen(true)}>
+            <SlidersHorizontal aria-hidden="true" />
+            Filters
+            {active ? <span className="cd-badge num">{active}</span> : null}
           </button>
-        ))}
-      </div>
+        </div>
+        <div className="cd-filters">
+          {chips.length ? <SpecialtyChips value={filters.expertise} options={chips} onChange={(expertise) => update({ expertise })} /> : null}
+          <PriceSegmented value={filters.price} onChange={(price) => update({ price })} />
+          <SortSelect id="cd-sort" value={sort} onChange={setSort} />
+        </div>
+      </header>
 
-      {/* Content Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-        {/* Desktop Filters */}
-        <aside className="hidden md:block md:col-span-4 lg:col-span-3">
-          <CoachFilters filters={filters} setFilters={updateFilters} onReset={handleReset} />
-        </aside>
-
-        {/* Results */}
-        <main className="md:col-span-8 lg:col-span-9 space-y-4">
-          <div className="flex items-center justify-between bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs">
-            <span className="font-bold text-xs sm:text-sm text-[#021F53]">
-              {isLoading ? 'Searching coaches...' : `${coaches.length} Available Coaches`}
-            </span>
-
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                    viewMode === 'grid'
-                      ? 'bg-white text-[#021F53] shadow-2xs font-bold'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="Grid View"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('row')}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                    viewMode === 'row'
-                      ? 'bg-white text-[#021F53] shadow-2xs font-bold'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="Stream Row View"
-                >
-                  <LayoutList className="w-4 h-4" />
-                </button>
-              </div>
-
-              <button
-                onClick={() => setIsMobileDrawerOpen(true)}
-                className="md:hidden px-3 py-1.5 bg-[#f0f7ff] text-[#3f58b2] font-bold text-xs rounded-xl border border-[#607ef2]/20 flex items-center gap-1.5 cursor-pointer"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Filters</span>
-              </button>
-            </div>
+      <div className="wrap" aria-busy={loading}>
+        {loading ? (
+          <div className="cd-list">
+            <Skeleton variant="row" count={4} />
           </div>
-
-          {isLoading ? (
-            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-2xs flex flex-col items-center justify-center space-y-3">
-              <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
-              <p className="text-xs font-semibold text-slate-500">Loading coaches from directory...</p>
-            </div>
-          ) : error ? (
-            <div className="bg-rose-50 rounded-2xl p-8 text-center border border-rose-200 space-y-3">
-              <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
-              <h3 className="text-base font-bold text-rose-900">Failed to load coaches</h3>
-              <p className="text-xs text-rose-700 max-w-md mx-auto">{(error as any).message || 'Unable to connect to server.'}</p>
-            </div>
-          ) : coaches.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-2xs space-y-4">
-              <h3 className="text-lg font-bold text-[#021F53] font-headline">
-                No coaches match your filters
-              </h3>
-              <p className="text-xs text-slate-600 max-w-md mx-auto">
-                Try selecting a different specialty or clearing price filters.
-              </p>
-              <button
-                onClick={handleReset}
-                className="px-5 py-2 bg-[#021F53] hover:bg-[#3f58b2] text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-              >
-                Reset All Filters
+        ) : error && !coaches.length ? (
+          <Empty
+            icon={AlertCircle}
+            title="Couldn’t load coaches"
+            body={error instanceof Error && error.message ? error.message : 'Check your connection and try again.'}
+            action={
+              <button type="button" className="btn btn-secondary" onClick={() => void refetch()}>
+                Try again
               </button>
-            </div>
-          ) : viewMode === 'row' ? (
-            <div className="space-y-3">
-              {coaches.map((coach) => (
-                <CoachCard
-                  key={coach.slug}
-                  coach={coach}
-                  layout="row"
-                  onSelect={() => navigate(`/coaches/${coach.slug}`)}
-                  onBook={(c) => setSelectedCoach(c)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {coaches.map((coach) => (
-                <CoachCard
-                  key={coach.slug}
-                  coach={coach}
-                  layout="grid"
-                  onSelect={() => navigate(`/coaches/${coach.slug}`)}
-                  onBook={(c) => setSelectedCoach(c)}
-                />
-              ))}
-            </div>
-          )}
-        </main>
+            }
+          />
+        ) : coaches.length === 0 ? (
+          <div className="cd-list">
+            <Empty
+              icon={UserSearch}
+              title="No coaches match"
+              body="Try another specialty, or clear the filters."
+              action={
+                <button type="button" className="btn btn-secondary" onClick={reset}>
+                  Clear filters
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          <div className="cd-list">
+            {coaches.map((c, i) => (
+              <div key={c.slug} className={firstLoad.current && i < 6 ? 'enter-rise' : undefined} style={{ ['--i' as string]: i }}>
+                <CoachRow coach={c} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Mobile Drawer */}
-      <Drawer
-        isOpen={isMobileDrawerOpen}
-        onClose={() => setIsMobileDrawerOpen(false)}
-        title="Filter Coaches"
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title="Filters"
+        footer={
+          <button type="button" className="btn btn-primary btn-block" onClick={() => setSheetOpen(false)}>
+            Show {coaches.length} {coaches.length === 1 ? 'coach' : 'coaches'}
+          </button>
+        }
       >
-        <CoachFilters filters={filters} setFilters={updateFilters} onReset={handleReset} isMobileDrawer />
-      </Drawer>
-
-      <BookingDialog
-        isOpen={!!selectedCoach}
-        onClose={() => setSelectedCoach(null)}
-        coach={selectedCoach}
-        onBookingSuccess={() => navigate('/app/bookings')}
-      />
+        <div className="cd-sheet">
+          {chips.length ? (
+            <div>
+              <h3>Specialty</h3>
+              <SpecialtyChips value={filters.expertise} options={chips} onChange={(expertise) => update({ expertise })} />
+            </div>
+          ) : null}
+          <div>
+            <h3>Price</h3>
+            <PriceSegmented value={filters.price} onChange={(price) => update({ price })} />
+          </div>
+          <SortSelect id="cd-sort-sheet" value={sort} onChange={setSort} />
+          {active ? (
+            <button type="button" className="btn btn-ghost" onClick={reset}>
+              Clear filters
+            </button>
+          ) : null}
+        </div>
+      </Sheet>
     </div>
   );
-};
+}

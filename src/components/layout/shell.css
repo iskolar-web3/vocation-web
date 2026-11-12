@@ -1,0 +1,670 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: component-scoped sections, order is intentional */
+/* App shell (S): nav pill, tab bar, footer, app frame. Plain CSS over the kit tokens in index.css.
+   Prefix sh- so it never collides with page classes. */
+
+.sh-skip {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 200;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  color: var(--tx-on-light);
+  font: 600 14px/1 var(--f-data);
+  transform: translateY(-200%);
+}
+.sh-skip:focus-visible {
+  transform: none;
+}
+
+/* ── nav: floating glass pill ─────────────────────────────── */
+.sh-nav-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) var(--gutter) 0;
+  pointer-events: none;
+}
+.sh-nav {
+  pointer-events: auto;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  height: 56px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 16px;
+  border-radius: var(--r-pill);
+}
+.sh-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  justify-self: start;
+  color: var(--tx);
+  text-decoration: none;
+}
+.sh-brand img {
+  width: 28px;
+  height: 28px;
+  filter: brightness(0) invert(1);
+}
+.sh-brand b {
+  font: 400 21px/1 var(--f-display);
+  letter-spacing: -0.01em;
+}
+.sh-brand small {
+  display: none;
+  margin-top: 4px;
+  font: 400 12.5px/1 var(--f-body);
+  color: var(--tx-3);
+}
+.sh-links {
+  display: none;
+  gap: 2px;
+}
+.sh-links a {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  color: var(--tx-2);
+  font-size: 15.5px;
+  text-decoration: none;
+  transition:
+    background-color 150ms var(--ease-out),
+    color 150ms var(--ease-out);
+}
+.sh-links a[aria-current] {
+  color: var(--tx);
+  background: rgba(160, 180, 255, 0.12);
+}
+.sh-end {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 4px;
+}
+.sh-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 10px 0 3px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--tx-2);
+  transition:
+    transform 140ms var(--ease-out),
+    background-color 150ms var(--ease-out);
+}
+.sh-avatar:active {
+  transform: scale(0.97);
+}
+.sh-avatar .disc {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+.sh-avatar > svg {
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 767.98px) {
+  .sh-md-only {
+    display: none;
+  }
+}
+.sh-nav .btn-sm {
+  height: 40px;
+}
+
+@media (min-width: 768px) {
+  .sh-nav {
+    height: 64px;
+    padding: 0 10px 0 18px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+  }
+  .sh-links {
+    display: flex;
+  }
+  .sh-sm-only {
+    display: none;
+  }
+  .sh-end {
+    gap: 6px;
+  }
+}
+@media (min-width: 1024px) {
+  .sh-brand small {
+    display: inline;
+  }
+  .sh-links a {
+    padding: 0 16px;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .sh-links a:not([aria-current]):hover {
+    color: var(--tx);
+    background: rgba(160, 180, 255, 0.08);
+  }
+  .sh-avatar:hover {
+    background: rgba(160, 180, 255, 0.08);
+  }
+}
+
+/* M14 scroll-edge: lighter and more transparent at the top, denser glass after 80px of scroll.
+   CSS scroll timeline only; the fallback is the dense glass state. */
+@supports (animation-timeline: scroll()) {
+  .sh-nav.glass {
+    animation: sh-edge linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 80px;
+  }
+  @keyframes sh-edge {
+    from {
+      background-color: rgba(18, 42, 108, 0.3);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 rgba(2, 8, 28, 0);
+    }
+    to {
+      background-color: rgba(18, 42, 108, 0.78);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 10px 30px rgba(2, 8, 28, 0.45);
+    }
+  }
+}
+
+/* menu sheet rows */
+.sh-sheet-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 12px;
+}
+.sh-sheet-who p {
+  margin: 0;
+}
+.sh-sheet-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--tx);
+  font-size: 16px;
+  text-align: left;
+  text-decoration: none;
+}
+.sh-sheet-link svg {
+  width: 20px;
+  height: 20px;
+  color: var(--tx-3);
+  flex: none;
+}
+.sh-sheet-link:active {
+  background: rgba(160, 180, 255, 0.1);
+}
+.sh-sheet-link[aria-current] {
+  background: var(--surface-2);
+}
+.sh-sheet-link[aria-current] svg {
+  color: var(--lightblue);
+}
+.sh-sheet-link[data-danger],
+.sh-sheet-link[data-danger] svg {
+  color: var(--danger);
+}
+.sh-sheet-link .count-dot {
+  margin-left: auto;
+}
+.sh-sheet-actions {
+  display: grid;
+  gap: 10px;
+}
+
+/* ── bare top bar (auth, onboarding, checkout) ────────────── */
+.sh-bare {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: calc(var(--maxw) + var(--gutter) * 2);
+  margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter) 8px;
+}
+.sh-bare-end {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tx-3);
+  font-size: 14.5px;
+}
+
+/* ── mobile tab bar (<768) ────────────────────────────────── */
+.sh-tabbar {
+  display: none;
+}
+@media (max-width: 767.98px) {
+  .sh-tabbar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 60;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding: 0 max(4px, env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px)
+      max(4px, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
+  }
+  .sh-tabbar a {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    color: var(--tx-3);
+    font: 600 11px/1 var(--f-data);
+    letter-spacing: 0.01em;
+    text-decoration: none;
+  }
+  .sh-tabbar a svg {
+    width: 22px;
+    height: 22px;
+  }
+  .sh-tabbar a[aria-current] {
+    color: var(--lightblue);
+  }
+  .sh-tabbar a:active {
+    color: var(--tx-2);
+  }
+  .sh-tabbar a[aria-current]:active {
+    color: var(--lightblue);
+  }
+  .sh-tabbar .count-dot {
+    position: absolute;
+    top: 6px;
+    left: calc(50% + 4px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 16px;
+  }
+}
+
+/* ── cookie card ──────────────────────────────────────────── */
+.sh-cookie {
+  /* Phones: in the page flow under the nav, so it never covers content, tab bars or sticky action bars. */
+  position: relative;
+  margin: 12px var(--gutter, 16px) 0;
+  --ck-from: -8px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  display: grid;
+  gap: 12px;
+  animation: sh-cookie-in 220ms var(--ease-out) backwards;
+}
+@keyframes sh-cookie-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--ck-from));
+  }
+}
+.sh-cookie p {
+  margin: 0;
+  color: var(--tx-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.sh-cookie-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+@media (min-width: 768px) {
+  .sh-cookie {
+    position: fixed;
+    z-index: 70;
+    margin: 0;
+    right: auto;
+    left: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    --ck-from: 8px;
+    width: 340px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-cookie {
+    animation-name: sh-fade;
+    animation-duration: 150ms;
+  }
+  @keyframes sh-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* ── app frame (student / coach) ──────────────────────────── */
+.sh-app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  padding-top: 20px;
+  padding-bottom: 72px;
+  align-items: start;
+}
+.sh-app-main {
+  min-width: 0;
+}
+.sh-solo {
+  padding-top: 24px;
+  padding-bottom: 72px;
+}
+.sh-side {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 4px var(--gutter);
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent);
+}
+.sh-side::-webkit-scrollbar {
+  display: none;
+}
+.sh-who {
+  display: none;
+}
+.sh-who p {
+  margin: 0;
+}
+.sh-side a {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--tx-2);
+  font-size: 15.5px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 150ms var(--ease-out),
+    color 150ms var(--ease-out);
+}
+.sh-side a svg {
+  display: none;
+  width: 19px;
+  height: 19px;
+  color: var(--tx-3);
+}
+.sh-side a[aria-current] {
+  color: var(--tx);
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+.sh-side a[aria-current] svg {
+  color: var(--lightblue);
+}
+.sh-side .count-dot {
+  margin-left: 2px;
+  background: var(--surface-3);
+  color: var(--tx-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sh-side a:not([aria-current]):hover {
+    color: var(--tx);
+    background: rgba(160, 180, 255, 0.07);
+  }
+}
+@media (min-width: 1024px) {
+  .sh-app {
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 40px;
+    padding-top: 40px;
+  }
+  .sh-side {
+    position: sticky;
+    top: 104px;
+    display: grid;
+    gap: 2px;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .sh-who {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 4px 20px;
+  }
+  .sh-side a {
+    border: 0;
+    border-radius: var(--r);
+    padding: 0 12px;
+  }
+  .sh-side a svg {
+    display: block;
+  }
+  .sh-side .count-dot {
+    margin-left: auto;
+  }
+}
+
+/* ── footer: the shared iSkolar footer ────────────────────── */
+.sh-foot {
+  position: relative;
+  overflow: hidden;
+  margin-top: 96px;
+  isolation: isolate;
+}
+.sh-foot-in {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px 20px;
+  margin-top: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 64px;
+  padding-bottom: 40px;
+}
+.sh-foot-brand {
+  grid-column: 1 / -1;
+}
+.sh-foot-brand img {
+  height: 68px;
+  width: auto;
+  margin-left: -10px;
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+}
+.sh-foot-brand p {
+  margin: 8px 0 0;
+  max-width: 240px;
+  font: 400 14px/1.625 var(--f-display);
+  color: var(--tx-2);
+}
+.sh-foot-social {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+.sh-foot-social a {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  color: var(--tx-2);
+  transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out);
+}
+.sh-foot-social svg {
+  width: 16px;
+  height: 16px;
+}
+.sh-foot h4 {
+  margin: 0 0 10px;
+  font: 400 11px/1.5 var(--f-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+.sh-foot ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.sh-foot li a,
+.sh-foot li button {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 400 14px/20px var(--f-display);
+  color: #cdd8f7;
+  text-align: left;
+  text-decoration: none;
+  transition: color 150ms var(--ease-out);
+}
+.sh-foot li a[aria-current] {
+  color: #fff;
+}
+.sh-foot li a[aria-current]::after {
+  content: "You\2019re here";
+  font: 600 11px/1 var(--f-data);
+  color: var(--canvas-deep);
+  background: var(--honey);
+  padding: 4px 7px;
+  border-radius: 99px;
+}
+.sh-foot-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px 16px;
+  padding-top: 22px;
+  padding-bottom: 24px;
+  border-top: 1px solid var(--line);
+  font: 400 14px/20px var(--f-display);
+  color: var(--tx-2);
+}
+.sh-foot-bar button {
+  padding: 0;
+  border: 0;
+  background: none;
+  min-height: 32px;
+  font: inherit;
+  color: var(--tx-3);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-strong);
+  justify-self: start;
+  text-align: left;
+}
+.sh-foot-mark {
+  position: relative;
+  height: 19.5vw;
+  pointer-events: none;
+}
+.sh-foot-mark span {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  translate: -50% 0;
+  font: 400 26vw / 0.75 var(--f-display);
+  letter-spacing: -0.025em;
+  color: rgba(160, 180, 255, 0.06);
+  white-space: nowrap;
+}
+.sh-foot-top {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 24px;
+  z-index: 2;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sh-foot-social a:hover {
+    color: var(--tx);
+    background: rgba(160, 180, 255, 0.08);
+  }
+  .sh-foot li a:hover,
+  .sh-foot li button:hover,
+  .sh-foot-bar button:hover {
+    color: #fff;
+  }
+}
+@media (min-width: 640px) {
+  .sh-foot-in {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .sh-foot-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+@media (min-width: 1024px) {
+  .sh-foot-in {
+    grid-template-columns: 1.5fr repeat(5, 1fr);
+    gap: 32px;
+    padding-bottom: 48px;
+  }
+  .sh-foot-brand {
+    grid-column: auto;
+  }
+}
+
+/* ── error / maintenance screens ──────────────────────────── */
+.sh-screen {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px var(--gutter);
+}
+.sh-screen-card {
+  width: 100%;
+  max-width: 540px;
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+}
+.sh-screen-card h1,
+.sh-screen-card p {
+  margin: 0;
+}
+.sh-screen-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 479.98px) {
+  .sh-screen-actions .btn {
+    flex: 1 1 100%;
+  }
+}

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Star, MessageSquare, Loader2, AlertCircle } from 'lucide-react';
-import { Modal } from './Modal';
+import { AlertCircle, Star } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { type BookingX } from '../student/CancelBookingDialog';
+import { Dialog, DialogClose, Disc, toast } from '../ui';
+import { cn, formatDateTime } from '../../lib/utils';
 import { BookingItem as BookingItemType } from '../../types/api';
 import { useCreateReview } from '../../services/queries';
 
@@ -8,146 +10,135 @@ interface RatingModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: BookingItemType | null;
+  /** Called after the review is posted, so a list can mark the row as rated. */
+  onRated?: (bookingId: string) => void;
 }
 
-export const RatingModal: React.FC<RatingModalProps> = ({
-  isOpen,
-  onClose,
-  booking,
-}) => {
+/** S-102: 1 to 5 stars plus an optional note. Dismissible (BR-010); shown with the first name only (BR-011). */
+export const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, booking, onRated }) => {
   const createReviewMutation = useCreateReview();
-  const [rating, setRating] = useState(5);
-  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [starError, setStarError] = useState(false);
+  const shown = useRef<BookingItemType | null>(booking);
+  if (booking) shown.current = booking;
+  const b = shown.current as BookingX | null;
 
-  if (!booking) return null;
-
-  const coachName = booking.coach_display_name || (booking as any).coach_name || '';
-  const sessionTypeName = (booking as any).session_type_name || '1-on-1 Coaching Session';
+  const close = () => {
+    setRating(0);
+    setComment('');
+    setErrorMsg(null);
+    setStarError(false);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!b) return;
     setErrorMsg(null);
-
+    if (!rating) return setStarError(true);
     try {
       await createReviewMutation.mutateAsync({
-        bookingId: booking.booking_id,
-        review: {
-          rating,
-          body: comment.trim() || undefined,
-        },
+        bookingId: b.booking_id,
+        review: { rating, body: comment.trim() || undefined },
       });
-      onClose();
+      toast.success('Review posted. It shows your first name only.');
+      onRated?.(b.booking_id);
+      close();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to submit review.');
+      setErrorMsg(err.message || 'We couldn’t post your review. Try again.');
     }
   };
 
+  const pending = createReviewMutation.isPending;
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={
-        <div className="flex items-center gap-2 text-[#021F53]">
-          <Star className="w-5 h-5 text-[#2563eb] fill-[#2563eb]" />
-          <span>Rate Your Coaching Session</span>
-        </div>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(o) => !o && close()}
+      title="Rate your session"
+      actions={
+        <>
+          <DialogClose className="btn btn-ghost">Skip</DialogClose>
+          <button type="submit" form="rate-form" className="btn btn-brand" disabled={pending}>
+            {pending ? 'Posting…' : 'Post review'}
+          </button>
+        </>
       }
-      maxWidth="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {errorMsg && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-700">
-            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-            <span>{errorMsg}</span>
+      {b ? (
+        <form id="rate-form" onSubmit={handleSubmit} noValidate className="grid gap-4">
+          <div className="flex items-center gap-3.5">
+            <Disc name={b.coach_display_name || 'Coach'} size="sm" src={b.coach_avatar_url} />
+            <div className="min-w-0">
+              <b className="block font-display text-lg leading-tight font-normal text-tx">
+                {b.session_type_name || 'Coaching session'} with {b.coach_display_name}
+              </b>
+              <p className="t-small num">{formatDateTime(b.slot_starts_at)}</p>
+            </div>
           </div>
-        )}
 
-        <div className="text-center space-y-1">
-          <p className="text-xs text-[#2c3f77] uppercase tracking-wider font-bold">
-            Completed Session with
-          </p>
-          <h4 className="text-lg font-bold text-[#021F53]">{coachName}</h4>
-          <p className="text-xs text-[#607ef2] font-medium">{sessionTypeName}</p>
-        </div>
+          <fieldset className="m-0 min-w-0 border-0 p-0">
+            <div className="flex items-center justify-between gap-3">
+              <legend className="float-left p-0 font-data text-sm font-semibold text-tx">Your rating</legend>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <label
+                    key={n}
+                    className={cn(
+                      'relative grid size-12 cursor-pointer place-items-center rounded-xl has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-lightblue',
+                      rating >= n ? 'text-honey' : 'text-tx-3'
+                    )}
+                  >
+                    <Star className={cn('size-7', rating >= n && 'fill-current')} aria-hidden="true" />
+                    <input
+                      type="radio"
+                      name="stars"
+                      value={n}
+                      checked={rating === n}
+                      onChange={() => {
+                        setRating(n);
+                        setStarError(false);
+                      }}
+                      className="absolute inset-0 m-0 cursor-pointer opacity-0"
+                    />
+                    <span className="sr-only">
+                      {n} star{n > 1 ? 's' : ''}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {starError ? (
+              <p className="error mt-1 text-[13px] text-danger" role="alert">
+                Pick a star rating first.
+              </p>
+            ) : null}
+          </fieldset>
 
-        {/* 1-5 Star Selection */}
-        <div className="flex flex-col items-center gap-2 py-3 bg-[#f0f7ff] rounded-2xl border border-[#3f58b2]/10">
-          <div className="flex items-center gap-2">
-            {[1, 2, 3, 4, 5].map((star) => {
-              const filled = (hoverRating !== null ? hoverRating : rating) >= star;
-              return (
-                <button
-                  key={star}
-                  type="button"
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(null)}
-                  onClick={() => setRating(star)}
-                  className="p-1.5 focus:outline-none transition-transform hover:scale-125 cursor-pointer"
-                  aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                >
-                  <Star
-                    className={`w-8 h-8 ${
-                      filled
-                        ? 'text-[#2563eb] fill-[#2563eb]'
-                        : 'text-slate-300'
-                    } transition-colors`}
-                  />
-                </button>
-              );
-            })}
-          </div>
-          <span className="text-xs font-bold text-[#3f58b2]">
-            {rating === 5 && '⭐️⭐️⭐️⭐️⭐️ Exceptional & Highly Recommended'}
-            {rating === 4 && '⭐️⭐️⭐️⭐️ Very Helpful & Actionable'}
-            {rating === 3 && '⭐️⭐️⭐️ Good Session'}
-            {rating === 2 && '⭐️⭐️ Needs Improvement'}
-            {rating === 1 && '⭐️ Disappointing'}
-          </span>
-        </div>
-
-        {/* Comment Box */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-[#2c3f77] flex items-center justify-between">
-            <span>Feedback &amp; Review (Optional)</span>
-            <span className="text-[11px] text-[#607ef2] font-normal">
-              Displays with student first name only
-            </span>
-          </label>
-          <div className="relative">
-            <MessageSquare className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          <div className="field">
+            <label htmlFor="rate-text">What helped?</label>
             <textarea
+              id="rate-text"
+              className="textarea"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              placeholder="How did this session help with your interview prep or resume? Share your experience..."
-              className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f58b2]/30 focus:border-[#3f58b2]"
+              placeholder="Optional. What should the next student know?"
+              aria-describedby="rate-text-h"
             />
+            <span className="hint" id="rate-text-h">
+              Shown with your first name only.
+            </span>
           </div>
-        </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#3f58b2]/10">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 text-sm font-semibold text-[#2c3f77] hover:bg-[#f0f7ff] rounded-xl transition-colors cursor-pointer"
-          >
-            Skip for now
-          </button>
-          <button
-            type="submit"
-            disabled={createReviewMutation.isPending}
-            className="tactile-btn-primary px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {createReviewMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <span>Submit Review</span>
-            )}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          {errorMsg ? (
+            <div className="note is-bad" role="alert">
+              <AlertCircle aria-hidden="true" />
+              <span>{errorMsg}</span>
+            </div>
+          ) : null}
+        </form>
+      ) : null}
+    </Dialog>
   );
 };

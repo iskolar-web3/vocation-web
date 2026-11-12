@@ -10,7 +10,7 @@ const CoachDirectoryPage = React.lazy(() =>
 
 const coachSearchSchema = z.object({
   expertise: z.string().catch('').optional().default(''),
-  price: z.enum(['all', 'free', 'under500', '500to1000', '1000plus']).catch('all').optional().default('all'),
+  price: z.enum(['all', 'free', 'paid']).catch('all').optional().default('all'),
   q: z.string().catch('').optional().default(''),
 });
 
@@ -31,11 +31,7 @@ function CoachDirectoryRoute() {
 
   return (
     <Suspense
-      fallback={
-        <div className="min-h-[60vh] flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
+      fallback={null}
     >
       <CoachDirectoryPage
         navigate={(path) => routerNavigate({ to: path })}

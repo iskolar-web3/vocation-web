@@ -1,6 +1,7 @@
 import React from 'react';
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
 import { meQueryOptions } from '../../context/AuthContext';
+import { AppFrame } from '../../components/layout/AppSidebar';
 
 export const Route = createFileRoute('/coach')({
   beforeLoad: async ({ context, location }) => {
@@ -31,5 +32,9 @@ export const Route = createFileRoute('/coach')({
       }
     }
   },
-  component: () => <Outlet />,
+  component: () => (
+    <AppFrame zone="coach">
+      <Outlet />
+    </AppFrame>
+  ),
 });

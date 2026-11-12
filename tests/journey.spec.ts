@@ -11,189 +11,163 @@ test.describe('Core Student & Coaching Journey', () => {
     request,
     baseURL,
   }) => {
-    // 1. Sign Up
+    // 1. Sign Up (the Student role is preselected)
     await page.goto('/signup');
     await expect(page).toHaveTitle(/iSkolar Vocation/i);
 
-    // Fill sign up form
-    const fullNameInput = page.locator('input[placeholder="e.g. Maria Santos"]');
-    await fullNameInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    if (await fullNameInput.isVisible()) {
-      await fullNameInput.fill(fullName);
-    }
+    await expect(page.getByRole('radio', { name: /^Student/ })).toBeChecked();
+    await page.getByLabel('Full name').fill(fullName);
+    await page.getByLabel('Email').fill(testEmail);
+    await page.getByLabel('Password', { exact: true }).fill(testPassword);
+    await page.getByRole('checkbox', { name: /Terms of Service/ }).check();
+    await page.getByRole('button', { name: 'Create account' }).click();
 
-    await page.locator('input[type="email"]').fill(testEmail);
-    await page.locator('input[type="password"]').fill(testPassword);
+    // 2. Student Onboarding (S-030): three steps, submitted once at the end
+    await expect(page).toHaveURL(/\/app\/onboarding/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Where do you study?' })).toBeVisible();
+    await page.getByLabel('University').fill('Polytechnic University of the Philippines');
+    await page.getByLabel('Course').fill('BS Computer Science');
+    await page.getByLabel('Year level').selectOption('3');
+    await page.getByRole('button', { name: 'Continue' }).click();
 
-    // Agree to legal terms
-    const legalCheckbox = page.locator('input[type="checkbox"]');
-    if (await legalCheckbox.isVisible()) {
-      await legalCheckbox.check();
-    }
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'How many OJT hours do you need?' })
+    ).toBeVisible();
+    await page.getByRole('button', { name: '486' }).click();
+    await page.getByRole('button', { name: 'Continue' }).click();
 
-    await page.locator('button[type="submit"]:has-text("Create Account")').click();
+    await expect(page.getByRole('heading', { level: 1, name: 'What can you do?' })).toBeVisible();
+    await page.getByRole('button', { name: 'React', exact: true }).click();
+    await page.getByRole('button', { name: 'Finish' }).click();
 
-    // 2. Student Onboarding (S-030)
-    // The user either automatically lands on /app/onboarding or we navigate to it
-    await page.waitForTimeout(1000);
-    const currentUrl = page.url();
-    if (!currentUrl.includes('/app/onboarding')) {
-      await page.goto('/app/onboarding');
-    }
+    // Student lands on the student dashboard
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(page.getByRole('heading', { level: 1, name: /^Hi, Juan/ })).toBeVisible();
 
-    await expect(page.locator('h1')).toContainText(/Welcome to iSkolar Vocation|Onboarding/i);
-
-    // Fill onboarding fields
-    const schoolInput = page.locator('input[placeholder*="Polytechnic University"]');
-    if (await schoolInput.isVisible()) {
-      await schoolInput.fill('Polytechnic University of the Philippines');
-    }
-
-    const courseInput = page.locator('input[placeholder*="BS Information Tech"]');
-    if (await courseInput.isVisible()) {
-      await courseInput.fill('BS Computer Science');
-    }
-
-    // Submit onboarding
-    const submitOnboardingBtn = page.locator('button[type="submit"]');
-    await submitOnboardingBtn.click();
-
-    // Verify student lands on student dashboard or internships directory
-    await page.waitForTimeout(1000);
-
-    // 3. Browse Internships (S-001)
+    // 3. Browse Internships (S-001): students (unlike coaches) can save roles
     await page.goto('/internships');
-    await expect(page.locator('h1').first()).toContainText(/Internship|Directory|Opportunities/i);
-
-    // Find and click the first internship card
-    const firstInternshipCard = page.locator('.stream-row, .tactile-card').first();
-    await expect(firstInternshipCard).toBeVisible({ timeout: 10000 });
-    await firstInternshipCard.click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Internships' })).toBeVisible();
+    const roles = page.getByRole('region', { name: 'Roles' });
+    await expect(roles.getByRole('article').first()).toBeVisible({ timeout: 10000 });
+    await expect(roles.getByRole('button', { name: /^Save / }).first()).toBeVisible();
 
     // 4. External Apply Flow (BR-001, BR-002, S-003)
-    await expect(page.locator('h1')).toBeVisible();
-    const applyButton = page.locator('button:has-text("Apply")').first();
-    if (await applyButton.isVisible()) {
-      await applyButton.click();
-      // Verify Leaving Site Modal opens (never collects student resume/application)
-      const leavingModal = page.locator('text=You are being redirected');
-      if (await leavingModal.isVisible()) {
-        await expect(leavingModal).toBeVisible();
-        // Close modal
-        const closeBtn = page.locator('button:has-text("Cancel"), button:has-text("Stay on iSkolar")').first();
-        if (await closeBtn.isVisible()) {
-          await closeBtn.click();
-        }
+    const applyRequests: string[] = [];
+    page.on('request', (req) => {
+      if (req.method() !== 'GET' && /appl/i.test(new URL(req.url()).pathname)) {
+        applyRequests.push(`${req.method()} ${req.url()}`);
       }
-    }
+    });
+    const leaving = page.getByRole('dialog', { name: /^Leaving Vocation for / });
+    const expectOutboundNotice = async () => {
+      // The leaving-site notice opens; Vocation never collects the application itself
+      await expect(leaving).toBeVisible();
+      await expect(leaving.getByText(/Vocation doesn.t see or store your application/)).toBeVisible();
+      await expect(leaving.getByRole('button', { name: /^Continue to / })).toBeVisible();
+      await expect(leaving.locator('input, textarea')).toHaveCount(0);
+      await leaving.getByRole('button', { name: 'Stay on Vocation' }).click();
+      await expect(leaving).toBeHidden();
+    };
 
-    // 5. Book Free Coaching Session (F-007, S-011)
+    // Selecting a row fills the preview pane, which carries the apply button
+    await roles.getByRole('article').first().getByRole('link').first().click();
+    const preview = page.getByRole('complementary', { name: 'Role preview' });
+    await preview.getByRole('button', { name: 'Apply on company site' }).click();
+    await expectOutboundNotice();
+
+    // The full role page offers the same outbound apply
+    await preview.getByRole('link', { name: 'Open full page' }).click();
+    await expect(page).toHaveURL(/\/internships\/[^/?]+/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page
+      .getByRole('button', { name: /^Apply on / })
+      .first()
+      .click();
+    await expectOutboundNotice();
+    expect(applyRequests).toEqual([]);
+
+    // 5. Book Free Coaching Session (F-007, S-011) in the booking panel on the coach profile
     await page.goto('/coaches');
-    const bookCoachBtn = page.locator('button:has-text("Book")').first();
-    await expect(bookCoachBtn).toBeVisible({ timeout: 10000 });
-    await bookCoachBtn.click();
+    await page.getByRole('link', { name: 'Engr. Mark Villanueva' }).first().click();
+    await expect(page).toHaveURL(/\/coaches\/engr-mark-villanueva/);
+    const panel = page.getByRole('complementary', { name: 'Book a session' });
+    await expect(panel).toBeVisible();
 
-    // Booking Dialog is open
-    const bookingDialog = page.locator('[role="dialog"], .fixed');
-    await expect(bookingDialog.first()).toBeVisible();
+    await panel.getByRole('radio', { name: /Free 15-Min Career & OJT Discovery/ }).check();
+    await panel.getByRole('button', { name: /^\w+day, \w+ \d+, \d{4}$/ }).first().click();
+    await panel.getByRole('button', { name: /^\d{1,2}:\d{2} [AP]M$/ }).first().click();
+    await panel.getByRole('button', { name: /^Book free (intro call|session)$/ }).click();
+    await expect(panel.getByRole('heading', { name: /You.re booked/ })).toBeVisible();
 
-    // Select free intro call if available
-    const freeCallOption = page.locator('text=Free 15-min Intro, text=Free Intro, text=Free').first();
-    if (await freeCallOption.isVisible()) {
-      await freeCallOption.click();
-    }
-
-    // Select time slot
-    const slotButton = page.locator('button:has-text("AM"), button:has-text("PM")').first();
-    if (await slotButton.isVisible()) {
-      await slotButton.click();
-    }
-
-    // Check refund terms checkbox
-    const refundAgreeCheckbox = page.locator('input[type="checkbox"]:near(:text("refund"))').first();
-    if (await refundAgreeCheckbox.isVisible()) {
-      await refundAgreeCheckbox.check();
-    }
-
-    // Confirm booking
-    const confirmBookingBtn = page.locator('button:has-text("Confirm Booking"), button:has-text("Book Free Session")').first();
-    if (await confirmBookingBtn.isVisible()) {
-      await confirmBookingBtn.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // 6. Book Paid Coaching Session & Signed Webhook (F-008, API-045)
-    await page.goto('/coaches');
-    const bookPaidBtn = page.locator('button:has-text("Book")').first();
-    await expect(bookPaidBtn).toBeVisible();
-    await bookPaidBtn.click();
-
-    // Select paid session
-    const paidOption = page.locator('text=Mock Technical Interview, text=Comprehensive Portfolio Review, text=₱').first();
-    if (await paidOption.isVisible()) {
-      await paidOption.click();
-    }
-
-    // Select slot
-    const paidSlot = page.locator('button:has-text("AM"), button:has-text("PM")').first();
-    if (await paidSlot.isVisible()) {
-      await paidSlot.click();
-    }
-
-    if (await refundAgreeCheckbox.isVisible()) {
-      await refundAgreeCheckbox.check();
-    }
-
-    // Submit paid booking
-    const proceedPaymentBtn = page.locator('button:has-text("Proceed to Payment"), button:has-text("Confirm Booking")').first();
-    if (await proceedPaymentBtn.isVisible()) {
-      await proceedPaymentBtn.click();
-      await page.waitForTimeout(1500);
-    }
+    // 6. Book Paid Coaching Session (F-008, API-045): checkout leaves for the gateway page
+    await page.goto('/coaches/engr-mark-villanueva');
+    const paidPanel = page.getByRole('complementary', { name: 'Book a session' });
+    await paidPanel.getByRole('radio', { name: /Full 1-on-1 Technical Mock Interview/ }).check();
+    await paidPanel.getByRole('button', { name: /^\w+day, \w+ \d+, \d{4}$/ }).first().click();
+    await paidPanel.getByRole('button', { name: /^\d{1,2}:\d{2} [AP]M$/ }).first().click();
+    const created = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && /\/bookings$/.test(new URL(r.url()).pathname)
+    );
+    await paidPanel.getByRole('button', { name: /^Pay / }).click();
+    const createdRes = await created;
+    expect(createdRes.ok()).toBeTruthy();
+    // The API's checkout_url takes the browser to the payment return page for the new booking.
+    await expect(page).toHaveURL(/\/checkout\/success\?booking_id=/);
+    const bookingId = new URL(page.url()).searchParams.get('booking_id') as string;
+    expect(bookingId).toBeTruthy();
 
     // Simulate Fake Webhook (Signed callback confirming payment per API-045)
-    const apiUrl = process.env.VITE_API_URL || baseURL || 'http://localhost:5173';
-    const callbackToken = process.env.GATEWAY_CALLBACK_TOKEN || process.env.XENDIT_CALLBACK_TOKEN || 'test-callback-token';
-    const fakeBookingId = `bkg_test_${timestamp}`;
-
-    try {
-      await request.post(`${apiUrl}/webhooks/xendit`, {
-        headers: {
-          'x-callback-token': callbackToken,
-          'Content-Type': 'application/json',
-        },
+    const apiUrl = process.env.VITE_API_URL || new URL(createdRes.url()).origin || baseURL;
+    const callbackToken =
+      process.env.GATEWAY_CALLBACK_TOKEN || process.env.XENDIT_CALLBACK_TOKEN || 'test-callback-token';
+    const webhook = await request
+      .post(`${apiUrl}/webhooks/xendit`, {
+        headers: { 'x-callback-token': callbackToken, 'Content-Type': 'application/json' },
         data: {
           id: `inv_fake_${timestamp}`,
-          external_id: fakeBookingId,
+          external_id: bookingId,
           status: 'PAID',
-          amount: 500,
-          paid_amount: 500,
+          amount: 1500,
+          paid_amount: 1500,
         },
-      });
-    } catch (_err) {
-      // In devMock / mock mode, webhook route may not exist on dev server
-    }
+      })
+      .catch(() => null);
+    // In devMock / mock mode the webhook route may not exist on the dev server.
+    const webhookAccepted = webhook?.ok() ?? false;
 
     // 7. Verify Checkout Return Pages (S-013, S-014, BR-007)
-    await page.goto(`/checkout/success?booking_id=${fakeBookingId}`);
-    await expect(page.locator('h1, h2')).toContainText(/Booking Status|Success|Confirmed|Payment/i);
+    await page.goto(`/checkout/success?booking_id=${bookingId}`);
+    if (webhookAccepted) {
+      // A verified webhook confirmed the payment: now (and only now) it reads as booked.
+      await expect(page.getByRole('heading', { level: 1, name: /You.re booked/ })).toBeVisible();
+    } else {
+      // No webhook arrived: the browser landing here proves nothing, so it must not read as booked.
+      await expect(page.getByRole('heading', { level: 1, name: 'Almost there' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /You.re booked/ })).toHaveCount(0);
+      await expect(page.getByText('Confirming payment…')).toBeVisible();
+    }
 
     // 8. Cancel Booking with Refund Outcome Preview (F-010, S-032)
     await page.goto('/app/bookings');
-    await expect(page.locator('h1, h2').first()).toContainText(/Mentorship Bookings|Bookings|Sessions/i);
-
-    const cancelButton = page.locator('button:has-text("Cancel")').first();
-    if (await cancelButton.isVisible()) {
-      await cancelButton.click();
-      // Verify refund outcome is displayed in the modal
-      await expect(page.locator('text=Refund Assessment, text=Refund Outcome, text=refund policy, text=Refund').first()).toBeVisible();
-
-      // Confirm cancellation
-      const confirmCancelBtn = page.locator('button:has-text("Confirm Cancellation"), button:has-text("Yes, Cancel")').first();
-      if (await confirmCancelBtn.isVisible()) {
-        await confirmCancelBtn.click();
-        await page.waitForTimeout(1000);
-      }
+    await expect(page.getByRole('heading', { level: 1, name: 'Bookings' })).toBeVisible();
+    // The free booking is confirmed; the unconfirmed paid one is never shown as confirmed.
+    await expect(page.getByText('Confirmed', { exact: true }).first()).toBeVisible();
+    if (!webhookAccepted) {
+      await expect(page.getByText('Waiting for payment', { exact: true })).toBeVisible();
     }
+
+    // Cancel the paid booking (the ₱1,500 mock interview).
+    await page
+      .getByRole('article')
+      .filter({ hasText: '₱1,500' })
+      .getByRole('button', { name: /^Cancel / })
+      .click();
+    const cancelDialog = page.getByRole('dialog', { name: 'Cancel this session?' });
+    await expect(cancelDialog).toBeVisible();
+    // Verify the refund outcome is displayed before confirming
+    await expect(cancelDialog.getByText(/refund/i).first()).toBeVisible();
+    await cancelDialog.getByRole('button', { name: 'Cancel session' }).click();
+    await expect(page.getByText(/^Session cancelled\./)).toBeVisible();
+    await expect(cancelDialog).toBeHidden();
   });
 });

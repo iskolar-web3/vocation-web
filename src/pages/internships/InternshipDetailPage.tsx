@@ -1,366 +1,316 @@
-import React, { useState } from 'react';
-import {
-  ArrowLeft,
-  Building,
-  MapPin,
-  Clock,
-  DollarSign,
-  Share2,
-  Bookmark,
-  ExternalLink,
-  CheckCircle2,
-  AlertCircle,
-  Briefcase,
-  Target,
-  Calendar,
-  Check,
-} from 'lucide-react';
-import { useInternship, useCoaches, useSaveInternship, useUnsaveInternship, useSavedInternships } from '../../services/queries';
-import { useAuth } from '../../context/AuthContext';
-import { formatPesos } from '../../lib/utils';
-import { LeavingSiteModal } from '../../components/common/LeavingSiteModal';
-import { BookingDialog } from '../../components/coaching/BookingDialog';
-import { DeadlineCountdown } from '../../components/internships/DeadlineCountdown';
-import { CoachCard } from '../../types/api';
-import { toast } from 'sonner';
+import { Link } from '@tanstack/react-router';
+import { ArrowLeft, ArrowRight, Check, Share2 } from 'lucide-react';
+import { useState } from 'react';
+import { useRoleSave } from '../../components/internships/hooks';
+import { ApplyNotice, BackLink, CloseLine, RoleFacts, StateCard, copyLink, toList, withPay } from '../../components/internships/shared';
+import { Disc, Mono, PostingRow, SaveButton, Skeleton, coachFromPrice, daysUntil } from '../../components/ui';
+import { ApiError } from '../../lib/api';
+import { useCoach, useCompany, useInternship, useInternships } from '../../services/queries';
+import type { InternshipDetail } from '../../types/api';
+import './discovery.css';
 
-// Safe list converter: if value is already an array, use it; if it is a string, split by newlines/bullets.
-const toList = (val: unknown): string[] => {
-  if (Array.isArray(val)) return val.filter(Boolean);
-  if (typeof val === 'string') {
-    return val
-      .split(/\r?\n|•|\*|;/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  }
-  return [];
-};
-
-interface InternshipDetailPageProps {
+interface Props {
   slug: string;
-  navigate: (path: string) => void;
+  navigate?: (path: string) => void;
 }
 
-export const InternshipDetailPage: React.FC<InternshipDetailPageProps> = ({ slug, navigate }) => {
-  const { isAuthenticated, role } = useAuth();
-  const isStudent = isAuthenticated && role === 'student';
+const firstSentence = (t?: string | null) => (t ? t.split(/(?<=\.)\s/)[0] : '');
+const domainOf = (u: string) => {
+  try {
+    return new URL(u).hostname.replace(/^www\./, '');
+  } catch {
+    return u;
+  }
+};
 
-  const { data: internship, isLoading, error } = useInternship(slug);
-  const { data: coachesData } = useCoaches();
-  const { data: savedList = [] } = useSavedInternships({ enabled: isStudent });
+export function InternshipDetailPage({ slug }: Props) {
+  const q = useInternship(slug);
+  const role = q.data;
+  const { visible: canSave, isSaved, toggle } = useRoleSave();
+  const [leaving, setLeaving] = useState(false);
 
-  const saveMutation = useSaveInternship();
-  const unsaveMutation = useUnsaveInternship();
+  // Related data. Each is optional: the page renders without any of them.
+  const company = useCompany(role?.company.slug ?? '');
+  const coach = useCoach(role?.recommended_coach_slug ?? '');
+  const sameField = useInternships({ field: role?.field, per_page: 12 });
 
-  const [isLeavingModalOpen, setIsLeavingModalOpen] = useState(false);
-  const [selectedCoachForBooking, setSelectedCoachForBooking] = useState<CoachCard | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
+  if (q.isLoading) return <RoleSkeleton />;
 
-  if (isLoading) {
+  if (q.isError && !(q.error instanceof ApiError && q.error.status === 404)) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-16 text-center">
-        <div className="w-10 h-10 border-4 border-[#3f58b2] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm font-bold text-[#021F53]">Loading internship dossier...</p>
-      </div>
+      <StateCard
+        title="Couldn’t load this role"
+        body="Check your connection, then try again."
+        actions={
+          <>
+            <button type="button" className="btn btn-primary" onClick={() => q.refetch()}>
+              Retry
+            </button>
+            <Link to="/internships" className="btn btn-ghost">
+              See open roles
+            </Link>
+          </>
+        }
+      />
     );
   }
 
-  if (error || !internship) {
+  const status = (role as { status?: string } | undefined)?.status;
+  const closed = !role || (status && status !== 'open') || (role.deadline ? daysUntil(role.deadline) < 0 : false);
+  if (!role || closed) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
-        <h2 className="text-xl font-bold text-[#021F53]">Internship Not Found</h2>
-        <p className="text-xs text-slate-500">
-          This role listing might have expired or been filled.
-        </p>
-        <button
-          onClick={() => navigate('/internships')}
-          className="px-6 py-2.5 bg-[#3f58b2] text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-[#021F53]"
-        >
-          Back to Directory
-        </button>
-      </div>
+      <StateCard
+        title={role ? 'This role is closed' : 'We couldn’t find this role'}
+        body={
+          role
+            ? 'It may have been filled or taken down by the company.'
+            : 'The link may be wrong, or the role was taken down.'
+        }
+        actions={
+          <Link to="/internships" className="btn btn-primary">
+            See open roles
+          </Link>
+        }
+      />
     );
   }
 
-  const isSaved = isStudent && savedList.some((s) => s.id === internship.id);
+  const c = company.data;
+  const more = (c?.open_internships ?? []).filter((x) => x.slug !== role.slug);
+  const similar = (sameField.data?.items ?? []).filter((x) => x.slug !== role.slug && x.company.slug !== role.company.slug).slice(0, 3);
+  const does = toList((role as InternshipDetail & { responsibilities?: unknown }).responsibilities);
+  const wants = toList(role.requirements);
+  const perks = toList(role.perks);
+  const about = c?.about ?? (c as { description?: string } | undefined)?.description;
+  const applyHost = role.external_apply_url ? domainOf(role.external_apply_url) : role.company.name;
+  const createdAt = (role as { created_at?: string | null }).created_at;
+  const coachData = coach.data;
+  const first = coachData?.display_name.replace(/^(Engr|Dr|Mr|Ms|Mrs|Atty)\.?\s+/i, '').split(' ')[0];
 
-  const handleToggleSave = () => {
-    if (!isStudent) return;
-    if (isSaved) {
-      unsaveMutation.mutate(internship.id);
-    } else {
-      saveMutation.mutate(internship.id);
-    }
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    toast.success('Link copied to clipboard!');
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
-
-  const coaches = coachesData?.items || [];
-  const recommendedCoach =
-    coaches.find((c) => c.slug === (internship as any).recommended_coach_slug) || coaches[0] || null;
-
-  const logoUrl = internship.company.logo_url || (internship.company as any).logo || '';
+  const save = (variant: 'labelled' | 'icon') =>
+    canSave ? (
+      <SaveButton label={role.title} variant={variant} saved={isSaved(role.id)} onToggle={() => toggle(role.id)} />
+    ) : null;
+  const share = (
+    <button type="button" className="icon-btn" aria-label="Copy link to this role" onClick={() => copyLink()}>
+      <Share2 aria-hidden="true" />
+    </button>
+  );
+  const apply = (cls: string) => (
+    <button type="button" className={`btn ${cls}`} onClick={() => setLeaving(true)}>
+      Apply on {applyHost}
+    </button>
+  );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
-      {/* Back Button */}
-      <button
-        onClick={() => navigate('/internships')}
-        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#3f58b2] hover:text-[#021F53] transition-colors cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to Internship Directory</span>
-      </button>
-
-      {/* Main Header Card */}
-      <div className="bg-white rounded-2xl p-6 sm:p-10 border border-[#3f58b2]/15 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-100">
-          <div className="flex items-start gap-5">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={internship.company.name}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-slate-100 shadow-xs flex-shrink-0"
-              />
-            ) : (
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#021F53] text-white font-bold flex items-center justify-center text-xl flex-shrink-0">
-                {internship.company.name.charAt(0)}
+    <div className="pg-role">
+      <div className="wrap">
+        <div style={{ paddingTop: 20 }}>
+          <BackLink to="/internships">
+            <ArrowLeft aria-hidden="true" />
+            All internships
+          </BackLink>
+        </div>
+        <header className="pg-head lit lit-left" style={{ paddingTop: 20 }}>
+          <div className="pg-rh">
+            <Mono name={role.company.name} size="lg" />
+            <div>
+              <h1 className="t-h1">{role.title}</h1>
+              <p className="pg-rco">
+                <Link to="/companies/$slug" params={{ slug: role.company.slug }}>
+                  {role.company.name}
+                </Link>
+                , {role.location}
+              </p>
+              <div className="meta pg-rmeta">
+                {role.duration_weeks ? (
+                  <span>
+                    <span className="num">{role.duration_weeks}</span> weeks
+                  </span>
+                ) : null}
+                {createdAt ? <span>Posted {postedAgo(createdAt)}</span> : null}
               </div>
-            )}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => navigate(`/companies/${internship.company.slug}`)}
-                  className="text-sm font-bold text-[#2c3f77] hover:text-[#3f58b2] transition-colors cursor-pointer"
-                >
-                  {internship.company.name}
-                </button>
-              </div>
+            </div>
+          </div>
+          <div className="pg-acts">
+            {apply('btn-primary btn-lg')}
+            {save('labelled')}
+            {share}
+          </div>
+        </header>
 
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#021F53] font-headline">
-                {internship.title}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{internship.location}</span>
+        <div className="pg-grid">
+          <div className="pg-main-col">
+            <div className="stack">
+              <RoleFacts role={role} />
+              <CloseLine date={role.deadline} />
+            </div>
+            {role.description ? (
+              <section className="measure">
+                <h2 className="pg-h2">About the role</h2>
+                <p className="t-body">{role.description}</p>
+              </section>
+            ) : null}
+            {does.length ? (
+              <section>
+                <h2 className="pg-h2">What you’ll do</h2>
+                <ul className="pg-ticks">
+                  {does.map((x) => (
+                    <li key={x}>
+                      <Check aria-hidden="true" />
+                      <span>{x}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            {wants.length ? (
+              <section>
+                <h2 className="pg-h2">Who they’re looking for</h2>
+                <ul className="pg-dots">
+                  {wants.map((x) => (
+                    <li key={x}>
+                      <span>{x}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            {perks.length ? (
+              <section>
+                <h2 className="pg-h2">Perks</h2>
+                <ul className="pg-dots">
+                  {perks.map((x) => (
+                    <li key={x}>
+                      <span>{x}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            {more.length ? (
+              <section>
+                <h2 className="pg-h2">More at {role.company.name}</h2>
+                <div className="pg-list">
+                  {more.map((x) => (
+                    <PostingRow
+                      key={x.id}
+                      internship={withPay(x)}
+                      compact
+                      headingLevel={3}
+                      save={canSave ? <SaveButton label={x.title} saved={isSaved(x.id)} onToggle={() => toggle(x.id)} /> : undefined}
+                    />
+                  ))}
                 </div>
-                <span>•</span>
-                <span className="capitalize">{internship.work_setup} Work Setup</span>
-                {internship.duration_weeks && (
-                  <>
-                    <span>•</span>
-                    <span>{internship.duration_weeks} Weeks Duration</span>
-                  </>
-                )}
-              </div>
-            </div>
+              </section>
+            ) : null}
+            {similar.length ? (
+              <section>
+                <h2 className="pg-h2">Similar roles</h2>
+                <div className="pg-list">
+                  {similar.map((x) => (
+                    <PostingRow
+                      key={x.id}
+                      internship={withPay(x)}
+                      compact
+                      headingLevel={3}
+                      save={canSave ? <SaveButton label={x.title} saved={isSaved(x.id)} onToggle={() => toggle(x.id)} /> : undefined}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
 
-          {/* Action CTAs */}
-          <div className="flex sm:flex-col items-center gap-3 w-full sm:w-auto">
-            <button
-              onClick={() => setIsLeavingModalOpen(true)}
-              className="w-full sm:w-44 py-3 bg-[#3f58b2] hover:bg-[#021F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Apply on Company Site</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="flex items-center gap-2 w-full">
-              {role !== 'coach' && (
-                <button
-                  type="button"
-                  onClick={handleToggleSave}
-                  className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    isSaved
-                      ? 'border-[#607ef2]/40 bg-[#f0f7ff] text-[#1d4ed8]'
-                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-[#2563eb] text-[#2563eb]' : ''}`} />
-                  <span>{isSaved ? 'Saved' : 'Save'}</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="py-2.5 px-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-none"
-                title="Copy share link"
-              >
-                {copiedLink ? (
-                  <Check className="w-3.5 h-3.5 text-[#2563eb]" />
-                ) : (
-                  <Share2 className="w-3.5 h-3.5" />
-                )}
-                <span className="sm:hidden text-xs">Share</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Specs Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-[#f0f7ff]/70 border border-[#607ef2]/15">
-          <div>
-            <span className="text-[10px] text-[#2c3f77] uppercase tracking-wider font-bold block">
-              Allowance &amp; Stipend
-            </span>
-            <span className="text-sm font-bold text-[#021F53] mt-0.5 block">
-              {internship.is_paid
-                ? internship.compensation_details || 'Paid Allowance'
-                : internship.compensation_details || 'Unpaid / For Credit'}
-            </span>
-          </div>
-
-          <div>
-            <span className="text-[10px] text-[#2c3f77] uppercase tracking-wider font-bold block">
-              Application Deadline
-            </span>
-            <div className="mt-0.5">
-              <DeadlineCountdown deadlineIso={internship.deadline || undefined} />
-            </div>
-          </div>
-
-          <div>
-            <span className="text-[10px] text-[#2c3f77] uppercase tracking-wider font-bold block">
-              Pillar Field
-            </span>
-            <span className="text-sm font-bold text-[#3f58b2] mt-0.5 block">
-              {internship.field}
-            </span>
-          </div>
-
-          <div>
-            <span className="text-[10px] text-[#2c3f77] uppercase tracking-wider font-bold block">
-              Work Setup
-            </span>
-            <span className="text-xs font-bold text-[#1d4ed8] bg-[#f0f7ff] border border-[#607ef2]/30 px-2.5 py-0.5 rounded-md inline-block mt-0.5 capitalize">
-              {internship.work_setup}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Role Dossier Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-8 space-y-8">
-          {/* Overview */}
-          {internship.description && (
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-3">
-              <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
-                About the Role &amp; Team
-              </h2>
-              <p className="text-xs sm:text-sm text-[#2c3f77] leading-relaxed whitespace-pre-line">
-                {internship.description}
+          <aside className="pg-aside" aria-label="Apply and coaching">
+            <section className="panel" aria-labelledby="pg-apply-h">
+              <h2 id="pg-apply-h">Before you apply</h2>
+              <CloseLine date={role.deadline} />
+              {apply('btn-primary btn-block')}
+              <p className="t-meta" style={{ marginTop: 12 }}>
+                You’ll apply on {applyHost}. Vocation never sees your application.
               </p>
-            </div>
-          )}
+            </section>
 
-          {/* Requirements (Safely parsed string via toList) */}
-          {internship.requirements && (
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-4">
-              <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
-                Candidate Requirements
-              </h2>
-              <ul className="space-y-2.5">
-                {toList(internship.requirements).map((req, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
-                    <CheckCircle2 className="w-4 h-4 text-[#3f58b2] shrink-0 mt-0.5" />
-                    <span>{req}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Perks */}
-          {internship.perks && (
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-soft space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base sm:text-lg font-bold text-[#021F53] font-headline">
-                  Perks &amp; Learning Opportunities
-                </h2>
-                <span className="text-[10px] font-bold text-[#1d4ed8] bg-[#f0f7ff] px-2.5 py-0.5 rounded-md border border-[#3f58b2]/20">
-                  {toList(internship.perks).length} Benefits
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {toList(internship.perks).map((perk, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-[#f8fbff] px-3.5 py-3 rounded-xl border border-[#dbeafe] flex items-center gap-2.5 text-xs sm:text-sm text-slate-700 shadow-2xs hover:border-[#3f58b2]/40 transition-colors"
-                  >
-                    <div className="w-5 h-5 rounded-md bg-white border border-[#3f58b2]/20 text-[#2563eb] flex items-center justify-center shrink-0 shadow-2xs">
-                      <Check className="w-3 h-3 text-[#2563eb]" />
-                    </div>
-                    <span className="font-semibold text-[#021F53] leading-snug">{perk}</span>
+            {coachData ? (
+              <section className="panel" aria-labelledby="pg-coach-h">
+                <h2 id="pg-coach-h">Nervous about the interview?</h2>
+                <div className="pg-coach">
+                  <Disc name={coachData.display_name} size="sm" />
+                  <div>
+                    <b>{coachData.display_name}</b>
+                    <p className="t-meta">{coachData.headline}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+                </div>
+                <p className="t-small">Practice with {first} before you apply.</p>
+                <p className="pg-price">{coachFromPrice(coachData)}</p>
+                <Link to="/coaches/$slug" params={{ slug: coachData.slug }} className="pg-link">
+                  See {first}’s sessions
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </section>
+            ) : null}
 
-        {/* Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Apply Card */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4 text-center">
-            <h3 className="text-sm font-bold text-[#021F53] font-headline">Interested in this Role?</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Applications are reviewed on a rolling basis. Ensure your resume and portfolio are updated before applying.
-            </p>
-            <button
-              onClick={() => setIsLeavingModalOpen(true)}
-              className="tactile-btn-primary w-full py-3.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Apply on Company Site</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Cross-sell Coach (for students only) */}
-          {role !== 'coach' && recommendedCoach && (
-            <div className="bg-[#021F53] rounded-2xl p-6 text-white shadow-xs border border-[#3f58b2]/30 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#607ef2]">
-                <Target className="w-4 h-4 text-[#607ef2]" />
-                <span>Prepare for Technical Screening</span>
-              </div>
-              <p className="text-xs text-slate-200 leading-relaxed">
-                Book a 1-on-1 mock interview with <strong>{recommendedCoach.display_name}</strong> ({recommendedCoach.headline}) to practice coding and behavioral questions before applying.
-              </p>
-              <button
-                type="button"
-                onClick={() => setSelectedCoachForBooking(recommendedCoach)}
-                className="tactile-btn-white w-full py-2.5 text-[#021F53] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-              >
-                <Calendar className="w-3.5 h-3.5 text-[#021F53]" />
-                <span>Book 1-on-1 Practice</span>
-              </button>
-            </div>
-          )}
+            {c ? (
+              <section className="panel" aria-labelledby="pg-about-h">
+                <div className="pg-cmini">
+                  <Mono name={c.name} size="sm" />
+                  <h2 id="pg-about-h">About {c.name}</h2>
+                </div>
+                <p className="t-meta">{[c.industry, c.size, c.location].filter(Boolean).join(', ')}</p>
+                {about ? (
+                  <p className="t-small" style={{ marginTop: 10 }}>
+                    {firstSentence(about)}
+                  </p>
+                ) : null}
+                <Link to="/companies/$slug" params={{ slug: c.slug }} className="pg-link">
+                  See company page
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </section>
+            ) : null}
+          </aside>
         </div>
       </div>
 
-      <LeavingSiteModal
-        isOpen={isLeavingModalOpen}
-        onClose={() => setIsLeavingModalOpen(false)}
-        internship={internship}
-        referrerSurface="detail"
-      />
-
-      <BookingDialog
-        isOpen={!!selectedCoachForBooking}
-        onClose={() => setSelectedCoachForBooking(null)}
-        coach={selectedCoachForBooking as any}
-      />
+      <div className="pg-sbar">
+        {apply('btn-primary')}
+        {save('icon')}
+        {share}
+      </div>
+      <ApplyNotice role={role} open={leaving} onOpenChange={setLeaving} surface="detail" />
     </div>
   );
-};
+}
+
+function postingAgo(days: number) {
+  return days <= 0 ? 'today' : days === 1 ? '1 day ago' : `${days} days ago`;
+}
+function postedAgo(iso: string) {
+  return postingAgo(-daysUntil(iso));
+}
+
+function RoleSkeleton() {
+  return (
+    <div className="pg-role">
+      <div className="wrap" aria-busy="true">
+        <div className="pg-head" style={{ paddingTop: 64 }}>
+          <div className="pg-rh">
+            <Skeleton variant="block" width={64} height={64} />
+            <div style={{ flex: 1, display: 'grid', gap: 12 }}>
+              <Skeleton variant="line" height={36} width="60%" />
+              <Skeleton variant="line" height={18} width="35%" />
+            </div>
+          </div>
+        </div>
+        <div className="pg-grid">
+          <div style={{ display: 'grid', gap: 16 }}>
+            <Skeleton variant="block" height={88} />
+            <Skeleton variant="line" count={4} />
+          </div>
+          <Skeleton variant="block" height={180} />
+        </div>
+      </div>
+    </div>
+  );
+}

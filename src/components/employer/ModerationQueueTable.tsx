@@ -1,158 +1,195 @@
-import React, { useState } from 'react';
-import {
-  CheckCircle2,
-  XCircle,
-  Eye,
-  Ban,
-  Clock,
-  Loader2,
-  Building,
-  MapPin,
-  ExternalLink,
-} from 'lucide-react';
-import { ListingStatus, AdminInternshipCard } from '../../types/api';
+import React, { useMemo, useState } from 'react';
+import { List, Search } from 'lucide-react';
+import type { AdminInternshipCard, ListingStatus } from '../../types/api';
 import { useAdminInternships, useAdminWithdrawInternship } from '../../services/queries';
-import { Modal } from '../common/Modal';
+import { Dialog, DialogClose, Empty, Money, Segmented, Skeleton, Status, toast } from '../ui';
+import './moderation.css';
 
-interface ModerationQueueTableProps {
-  onEditPosting?: (internship: AdminInternshipCard) => void;
-  onViewPosting?: (internship: AdminInternshipCard) => void;
+type Filter = 'all' | ListingStatus;
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'open', label: 'Open' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'withdrawn', label: 'Withdrawn' },
+];
+
+const setupLabel = (s?: string | null) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+
+function ListingStatusPill({ status }: { status: ListingStatus }) {
+  if (status === 'pending') return <span className="status status-wait">Pending review</span>;
+  if (status === 'rejected') return <span className="status status-bad">Needs revision</span>;
+  return <Status status={status} />;
 }
 
-export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
-  onViewPosting,
-}) => {
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [withdrawModalItem, setWithdrawModalItem] = useState<AdminInternshipCard | null>(null);
+interface ModerationQueueTableProps {
+  navigate?: (path: string) => void;
+}
 
-  const { data: internships = [], isLoading } = useAdminInternships(
-    filterStatus !== 'all' ? filterStatus : undefined
-  );
+export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({ navigate }) => {
+  const [filter, setFilter] = useState<Filter>('all');
+  const [query, setQuery] = useState('');
+  const [withdrawItem, setWithdrawItem] = useState<AdminInternshipCard | null>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+
+  // One fetch of every status: counts, filter and search are all derived client-side.
+  const { data: all = [], isLoading, isError, refetch } = useAdminInternships();
   const withdrawMutation = useAdminWithdrawInternship();
 
-  const getStatusBadge = (status: ListingStatus) => {
-    switch (status) {
-      case 'open':
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#1d4ed8] border border-[#607ef2]/30">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#2563eb]" />
-            <span>Open (Public)</span>
-          </span>
-        );
-      case 'pending':
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#f0f7ff] text-[#021F53] border border-[#607ef2]/20">
-            <Clock className="w-3.5 h-3.5 text-[#2563eb]" />
-            <span>Pending Review</span>
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200">
-            <XCircle className="w-3.5 h-3.5" />
-            <span>Needs Revision</span>
-          </span>
-        );
-      case 'withdrawn':
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-            <Ban className="w-3.5 h-3.5 text-slate-500" />
-            <span>Withdrawn</span>
-          </span>
-        );
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: all.length };
+    for (const i of all) c[i.status] = (c[i.status] ?? 0) + 1;
+    return c;
+  }, [all]);
+
+  const q = query.trim().toLowerCase();
+  const rows = all.filter(
+    (i) =>
+      (filter === 'all' || i.status === filter) &&
+      (!q || `${i.title} ${i.company?.name ?? ''} ${i.field}`.toLowerCase().includes(q))
+  );
+
+  const confirmWithdraw = async () => {
+    if (!withdrawItem) return;
+    setWithdrawError(null);
+    try {
+      await withdrawMutation.mutateAsync(withdrawItem.id);
+      toast.success(`Withdrawn. ${withdrawItem.title} is off the directory.`);
+      setWithdrawItem(null);
+    } catch (err: unknown) {
+      setWithdrawError(err instanceof Error && err.message ? err.message : 'Could not withdraw this listing.');
     }
   };
 
-  const handleConfirmWithdraw = async () => {
-    if (withdrawModalItem) {
-      await withdrawMutation.mutateAsync(withdrawModalItem.id);
-      setWithdrawModalItem(null);
-    }
+  const clear = () => {
+    setFilter('all');
+    setQuery('');
   };
 
   return (
-    <div className="space-y-4">
-      {/* Top Status Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200">
-        <div className="flex flex-wrap gap-1.5">
-          {['all', 'open', 'pending', 'rejected', 'withdrawn'].map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setFilterStatus(status)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
-                filterStatus === status
-                  ? 'bg-[#021F53] text-white shadow-2xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-              }`}
-            >
-              {status === 'all' ? 'All Roles' : status}
-            </button>
-          ))}
+    <div className="cm">
+      <div className="cm-bar">
+        <div className="cm-seg">
+          <Segmented
+            label="Filter by status"
+            value={filter}
+            onValueChange={setFilter}
+            options={FILTERS.map((f) => ({
+              value: f.value,
+              label: (
+                <>
+                  {f.label}
+                  <span className="num">{counts[f.value] ?? 0}</span>
+                </>
+              ),
+            }))}
+          />
+        </div>
+        <div className="search">
+          <label className="sr-only" htmlFor="adm-q">
+            Search listings
+          </label>
+          <Search aria-hidden="true" />
+          <input
+            id="adm-q"
+            className="input"
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            placeholder="Search role or company"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center p-16 bg-white rounded-2xl border border-slate-200">
-          <Loader2 className="w-8 h-8 animate-spin text-[#3f58b2]" />
+        <div className="grid gap-3" aria-busy="true" aria-label="Loading listings">
+          <Skeleton variant="block" height={72} count={5} />
         </div>
-      ) : internships.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
-          <p className="text-sm font-bold text-[#021F53]">No internships found in this view.</p>
+      ) : isError ? (
+        <div className="note is-bad flex-wrap items-center justify-between" role="alert">
+          <p>We couldn't load the listings.</p>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => refetch()}>
+            Try again
+          </button>
         </div>
+      ) : all.length === 0 ? (
+        <Empty icon={List} title="No listings yet" body="Listings appear here once they are added." />
+      ) : rows.length === 0 ? (
+        <Empty
+          icon={Search}
+          title="No listings match"
+          body="Try another word, or show every status."
+          action={
+            <button type="button" className="btn btn-secondary" onClick={clear}>
+              Clear filters
+            </button>
+          }
+        />
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#f0f7ff] text-[#2c3f77] font-bold uppercase tracking-wider border-b border-slate-200">
+        <div className="panel" style={{ overflow: 'hidden' }}>
+          <div className="table-wrap">
+            <table className="table">
+              <caption className="sr-only">Listings, {rows.length} shown</caption>
+              <thead>
                 <tr>
-                  <th className="px-5 py-3.5">Opportunity</th>
-                  <th className="px-5 py-3.5">Company</th>
-                  <th className="px-5 py-3.5">Compensation</th>
-                  <th className="px-5 py-3.5">Status</th>
-                  <th className="px-5 py-3.5 text-right">Actions</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Field</th>
+                  <th scope="col">Setup, City</th>
+                  <th scope="col">Pay</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {internships.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-sm text-[#021F53]">{item.title}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        {item.field}
-                        {item.duration_weeks != null && ` · ${item.duration_weeks} wks`}
-                        {item.work_setup && ` · ${item.work_setup.charAt(0).toUpperCase()}${item.work_setup.slice(1)}`}
-                      </div>
+              <tbody>
+                {rows.map((item) => (
+                  <tr key={item.id}>
+                    <td className="role" data-l="Role">
+                      <b className="cm-t">{item.title}</b>
+                      <span className="t-meta">{item.company?.name}</span>
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="font-semibold text-slate-800">{item.company?.name}</div>
-                      <div className="text-[11px] text-slate-500">{item.location}</div>
+                    <td data-l="Field">
+                      {item.field}
+                      {item.duration_weeks != null && <span className="t-meta">{item.duration_weeks} weeks</span>}
                     </td>
-                    <td className="px-5 py-4">
-                      {item.is_paid ? (
-                        <span className="font-bold text-emerald-700">Paid</span>
-                      ) : (
-                        <span className="text-slate-400">Unpaid / Credit</span>
-                      )}
+                    <td data-l="Setup, City">
+                      {[setupLabel(item.work_setup), item.location].filter(Boolean).join(', ')}
                     </td>
-                    <td className="px-5 py-4">{getStatusBadge(item.status)}</td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {onViewPosting && (
-                          <button
-                            type="button"
-                            onClick={() => onViewPosting(item)}
-                            className="p-1.5 text-slate-500 hover:text-[#3f58b2] hover:bg-[#f0f7ff] rounded-lg transition-colors cursor-pointer"
-                            title="Preview Listing"
+                    <td data-l="Pay">
+                      <Money paid={item.is_paid} unpaid={!item.is_paid} />
+                    </td>
+                    <td className="st" data-l="Status">
+                      <ListingStatusPill status={item.status} />
+                    </td>
+                    <td className="act" data-l="Actions">
+                      <div className="cm-act">
+                        {item.status === 'open' && (
+                          <a
+                            href={`/internships/${item.slug}`}
+                            className="btn btn-secondary btn-sm"
+                            aria-label={`Preview ${item.title}`}
+                            onClick={(e) => {
+                              if (!navigate || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                              e.preventDefault();
+                              navigate(`/internships/${item.slug}`);
+                            }}
                           >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                            Preview
+                          </a>
                         )}
                         {item.status === 'open' && (
                           <button
                             type="button"
-                            onClick={() => setWithdrawModalItem(item)}
-                            className="px-3 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg border border-rose-200 hover:bg-rose-100 text-[11px] cursor-pointer"
+                            className="btn btn-danger btn-sm"
+                            aria-label={`Withdraw ${item.title}`}
+                            onClick={() => {
+                              setWithdrawError(null);
+                              setWithdrawItem(item);
+                            }}
                           >
                             Withdraw
                           </button>
@@ -167,36 +204,32 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
         </div>
       )}
 
-      {/* Withdraw Modal */}
-      <Modal
-        isOpen={!!withdrawModalItem}
-        onClose={() => setWithdrawModalItem(null)}
-        title="Withdraw Listing from Directory"
-        maxWidth="md"
-      >
-        <div className="space-y-4">
-          <p className="text-xs text-slate-600">
-            Are you sure you want to withdraw <strong>{withdrawModalItem?.title}</strong>? It will immediately be removed from the public directory.
-          </p>
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+      {/* S-107 withdraw confirm (BR-006: removed from public view immediately) */}
+      <Dialog
+        open={!!withdrawItem}
+        onOpenChange={(o) => !o && setWithdrawItem(null)}
+        title={`Withdraw ${withdrawItem?.title ?? 'listing'}?`}
+        description="It's removed from public view immediately."
+        actions={
+          <>
+            <DialogClose className="btn btn-ghost">Keep it open</DialogClose>
             <button
               type="button"
-              onClick={() => setWithdrawModalItem(null)}
-              className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmWithdraw}
+              className="btn btn-danger"
+              onClick={confirmWithdraw}
               disabled={withdrawMutation.isPending}
-              className="px-5 py-2 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 cursor-pointer"
             >
-              Confirm Withdraw
+              {withdrawMutation.isPending ? 'Withdrawing…' : 'Withdraw'}
             </button>
-          </div>
-        </div>
-      </Modal>
+          </>
+        }
+      >
+        {withdrawError && (
+          <p className="note is-bad" role="alert">
+            {withdrawError}
+          </p>
+        )}
+      </Dialog>
     </div>
   );
 };
