@@ -98,7 +98,10 @@ export function CoachDirectoryPage({
   return (
     <div className="cd">
       <header className="cd-head wrap">
-        <h1 className="t-h1">Coaches</h1>
+        <h1 className="t-h1">1-on-1 Career Coaches</h1>
+        <p className="t-lede" style={{ margin: '8px 0 16px', color: 'var(--tx-2)', fontSize: 16 }}>
+          Book 1-on-1 mentorship, mock interviews, and resume reviews with industry professionals in the Philippines.
+        </p>
         <p className="count t-body" aria-live="polite">
           {count}
         </p>

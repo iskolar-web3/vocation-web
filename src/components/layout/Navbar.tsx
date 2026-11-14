@@ -16,10 +16,9 @@ const ADMIN_LINKS: ZoneLink[] = [{ label: 'Listings', to: '/admin/listings', ico
 
 function Brand() {
   return (
-    <SiteLink to="/" className="sh-brand" aria-label="Vocation by iSkolar, home">
+    <SiteLink to="/" className="sh-brand" aria-label="Vocation, home">
       <img src="/vocation-logo.svg" alt="" width={28} height={28} />
       <b>Vocation</b>
-      <small>by iSkolar</small>
     </SiteLink>
   );
 }

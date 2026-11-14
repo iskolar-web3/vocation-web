@@ -35,9 +35,14 @@ export function CoachingSection({ coaches, loading }: { coaches: CoachCard[]; lo
   return (
     <>
       <div className="co-top">
-        <h2 className="t-h2" id="co-h">
-          Rehearse the interview with a coach
-        </h2>
+        <div>
+          <h2 className="t-h2" id="co-h">
+            Rehearse the interview with a 1-on-1 coach
+          </h2>
+          <p className="t-small" style={{ marginTop: 4, color: 'var(--tx-2)' }}>
+            1-on-1 mock interviews, resume clinics, and career guidance from working professionals in the Philippines.
+          </p>
+        </div>
         <Link to="/coaches" className="link-btn">
           Browse all coaches <ArrowRight aria-hidden="true" />
         </Link>

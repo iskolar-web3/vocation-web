@@ -3,7 +3,6 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { prefersReducedMotion } from '../../lib/motion';
 import { useInternship } from '../../services/queries';
 import type { InternshipCard } from '../../types/api';
-import { Mono } from '../ui';
 import { FigmaCursor, type Pt, cursorKit, dist, travelFor } from './figmaCursor';
 
 const STACK = '(max-width: 899px)';
@@ -203,9 +202,9 @@ export function ApplySection({ role }: { role?: InternshipCard }) {
   );
   const name = host ?? 'their site';
   return (
-    <>
+    <div className="af-root">
       <div className="sh">
-        <h2 className="t-h2" id="af-h">
+        <h2 className="t-h2 af-main-h" id="af-h">
           You apply on their site, not ours
         </h2>
       </div>
@@ -213,48 +212,56 @@ export function ApplySection({ role }: { role?: InternshipCard }) {
         <div className="af-steps">
           <div className="panel af-step" data-af-el="step">
             <span className="af-n">1</span>
-            <h3>Find a role on Vocation</h3>
+            <h3 className="af-title">Find a role on Vocation</h3>
             <div className="af-mini" data-af-el="card">
-              <Mono name={role?.company.name ?? 'Company'} size="sm" />
-              <div>
+              <span className="af-mono" aria-hidden="true">
+                {(role?.company.name ?? 'Company').slice(0, 2).toUpperCase()}
+              </span>
+              <div className="af-mini-body">
                 <p className="ttl">{title}</p>
                 <p className="t-meta">{company}</p>
               </div>
               <span className="af-ov af-edge" data-af-el="edge" />
               <span className="af-ov af-wave" data-af-el="wave" />
             </div>
+            <p className="af-note">Curated student roles with upfront details.</p>
           </div>
           {conn}
           <div className="panel af-step" data-af-el="step">
             <span className="af-ov af-edge" data-af-el="focus" />
             <span className="af-n">2</span>
-            <h3>We show you where you’re going</h3>
+            <h3 className="af-title">We show you where you’re going</h3>
             <div className="af-mini">
-              <Mono name={role?.company.name ?? 'Company'} size="sm" />
-              <div>
-                <p className="t-meta">You’re heading to</p>
+              <span className="af-mono" aria-hidden="true">
+                {(role?.company.name ?? 'Company').slice(0, 2).toUpperCase()}
+              </span>
+              <div className="af-mini-body">
+                <p className="t-meta">Direct link to</p>
                 <p className="dom" data-af-el="dom">
                   {where}
                 </p>
                 <span className="af-bar" data-af-el="bar" />
               </div>
             </div>
+            <p className="af-note">Direct verification before you leave.</p>
           </div>
           {conn}
           <div className="panel af-step" data-af-el="step">
             <span className="af-n">3</span>
-            <h3>Apply on {name}</h3>
-            <div className="af-act">
-              <span className="af-pill" data-af-el="pill" aria-hidden="true">
-                <span className="af-ov af-pedge" data-af-el="pedge" />
-                Apply on {name} <ArrowUpRight data-af-el="icon" />
-              </span>
-              <span className="af-chip" data-af-el="chip" aria-hidden="true">
-                <ExternalLink />
-                Opened {name} in a new tab
-              </span>
+            <h3 className="af-title">Apply on {name}</h3>
+            <div className="af-mini af-mini-act">
+              <div className="af-act">
+                <span className="af-pill" data-af-el="pill" aria-hidden="true">
+                  <span className="af-ov af-pedge" data-af-el="pedge" />
+                  Apply on {name} <ArrowUpRight data-af-el="icon" />
+                </span>
+                <span className="af-chip" data-af-el="chip" aria-hidden="true">
+                  <ExternalLink />
+                  Opened {name} in a new tab
+                </span>
+              </div>
             </div>
-            <p className="t-small">Their form, their inbox, their follow-up.</p>
+            <p className="af-note">Their form, their inbox, their follow-up.</p>
           </div>
         </div>
         <span className="af-rp" data-af-el="rp" aria-hidden="true">
@@ -280,6 +287,6 @@ export function ApplySection({ role }: { role?: InternshipCard }) {
           </button>
         )}
       </div>
-    </>
+    </div>
   );
 }

@@ -22,6 +22,43 @@
   justify-content: center;
   margin-top: 28px;
 }
+.hub-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 24px;
+}
+.hub-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--tx-2);
+  font: 500 13px/1.2 var(--f-data);
+}
+.hub-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.tag-free {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--ok-wash);
+  color: var(--ok);
+  font: 600 11px/1.2 var(--f-data);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  margin-left: 8px;
+}
 .hub-blk {
   padding-block: 48px;
 }

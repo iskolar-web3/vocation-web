@@ -13,36 +13,72 @@ interface CoachingHubPageProps {
 const TRACKS = [
   {
     id: 'technical',
-    label: 'Technical',
-    match: /technical|system design|coding|data structures|sql|backend|frontend/i,
-    points: ['Live problem solving, talked through out loud', 'Follow-up questions like the real round', 'Notes on what to practice next'],
+    label: 'Software & Tech',
+    match: /software|developer|technical|system design|coding|backend|frontend|web|engineering/i,
+    points: [
+      'Live technical problem solving and algorithm walkthroughs',
+      'System design fundamentals and codebase architecture discussions',
+      'Follow-up questions matching real tech interview rounds',
+    ],
+  },
+  {
+    id: 'product-design',
+    label: 'Product & Design',
+    match: /product|ui|ux|design|figma|case stud/i,
+    points: [
+      'Portfolio walkthrough and design critique for junior designers',
+      'Product thinking, user problem definition, and prioritization',
+      'Actionable advice on presenting design challenges effectively',
+    ],
+  },
+  {
+    id: 'data',
+    label: 'Data & Analytics',
+    match: /data|sql|analytics|python|machine learning|bi\b/i,
+    points: [
+      'SQL querying and analytical case problem solving',
+      'Walk-through of data visualization, insights, and metrics storytelling',
+      'Guidance on data internship expectations in Philippine tech',
+    ],
   },
   {
     id: 'resume',
     label: 'Resume & portfolio',
-    match: /resume|portfolio|case stud/i,
-    points: ['Line-by-line feedback on your resume or portfolio', 'What to cut and what to lead with', 'A version you can send this week'],
+    match: /resume|portfolio|case stud|cv/i,
+    points: [
+      'Line-by-line feedback on your student resume and ATS formatting',
+      'What to cut, what to lead with, and quantifying student project impact',
+      'A polished, ready-to-send draft you can submit this week',
+    ],
   },
   {
     id: 'behavioral',
     label: 'Behavioral (STAR)',
-    match: /behavioral|\bstar\b|hr /i,
-    points: ['Stories for the questions every panel asks', 'Structure with the STAR method', 'Feedback on how you come across'],
+    match: /behavioral|\bstar\b|hr |culture/i,
+    points: [
+      'Structuring answers with the STAR method (Situation, Task, Action, Result)',
+      'Practicing stories for common panel and HR interview questions',
+      'Constructive feedback on tone, delivery, and professional presence',
+    ],
   },
   {
     id: 'ojt',
     label: 'OJT readiness',
-    match: /ojt|practicum|workplace/i,
-    points: ['What a practicum interview looks like in your field', 'Questions about hours, schedule, and school requirements', 'What to ask the company back'],
+    match: /ojt|practicum|workplace|intern/i,
+    points: [
+      'What practicum and internship interviews actually look like',
+      'Handling course hours, school MOAs, and schedule coordination',
+      'Thoughtful reverse questions to ask the employer during the interview',
+    ],
   },
 ] as const;
 type TrackId = (typeof TRACKS)[number]['id'];
 
 const STEPS = [
-  { t: 'Pick a coach', d: 'Read their bio and what students said about them.' },
-  { t: 'Choose a time', d: 'Open times show in Manila time.' },
-  { t: 'Pay or confirm', d: 'Free intro calls confirm right away. Paid sessions are confirmed once the payment provider confirms.' },
-  { t: 'Meet on video', d: 'The meeting link appears in My bookings once your session is confirmed.' },
+  { t: 'Pick a coach', d: 'Read their bio, current company role, and student reviews.' },
+  { t: 'Choose a time', d: 'Open times show conveniently in Manila time (PHT).' },
+  { t: 'Confirm your session', d: 'Free intro calls confirm right away. Paid sessions confirm via secure payment.' },
+  { t: 'Meet 1-on-1 on video', d: 'Join Google Meet directly from your bookings for personalized guidance.' },
 ] as const;
 
 export function CoachingHubPage(_props: CoachingHubPageProps) {
@@ -67,9 +103,9 @@ export function CoachingHubPage(_props: CoachingHubPageProps) {
   return (
     <div className="hub">
       <header className="hub-head wrap">
-        <h1 className="t-hero">Practice before the real round</h1>
+        <h1 className="t-hero">1-on-1 Career Coaching & Mentorship</h1>
         <p className="t-lede">
-          Mock interviews, resume reviews, and portfolio feedback from working professionals. Some coaches offer a free intro call.
+          Mock interviews, resume reviews, and career guidance from working professionals in the Philippines. Free 1-on-1 calls available for students.
         </p>
         <div className="hub-ctas">
           <Link to="/coaches" className="btn btn-primary btn-lg">
@@ -79,6 +115,7 @@ export function CoachingHubPage(_props: CoachingHubPageProps) {
             Free intro calls
           </Link>
         </div>
+
       </header>
 
       <section className="wrap hub-blk" aria-labelledby="hub-track-h">

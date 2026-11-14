@@ -49,6 +49,7 @@ export function CoachRow({ coach, mode = 'full', headingLevel = 3, className }: 
           <Link to="/coaches/$slug" params={{ slug: coach.slug }}>
             {coach.display_name}
           </Link>
+          {coach.price_type === 'free' ? <span className="tag-free">Free 1-on-1</span> : null}
         </H>
         <p className="sub">
           {coach.headline} <Stars coach={coach} />

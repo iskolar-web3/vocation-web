@@ -94,9 +94,7 @@ export function LandingPage(_props: { navigate?: (path: string) => void }) {
               </span>
             </h1>
             <p className="h-sub hx" style={{ '--i': 2 } as React.CSSProperties}>
-              Find the internship.
-              <br />
-              Rehearse the interview.
+              Find the internship. Rehearse the interview.
             </p>
             <div className="h-cta hx" style={{ '--i': 3 } as React.CSSProperties}>
               <Link to="/internships" className="btn btn-primary btn-lg">
