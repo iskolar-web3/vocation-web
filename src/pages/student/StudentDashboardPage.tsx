@@ -71,7 +71,7 @@ export const StudentDashboardPage: React.FC<StudentDashboardPageProps> = ({ navi
   const done = profile?.completed_ojt_hours ?? 0;
   const remaining = target ? Math.max(0, target - done) : 0;
   const ojtPct = target ? (done / target) * 100 : 0;
-  const firstName = user?.full_name?.replace(/^(engr|dr|atty|arch|prof|mr|ms|mrs)\.?\s+/i, '').split(' ')[0] || 'there';
+  const firstName = (user?.full_name || '').replace(/^(engr|dr|atty|arch|prof|mr|ms|mrs)\.?\s+/i, '').split(' ')[0] || 'there';
 
   const finishPaying = async (bookingId: string) => {
     try {

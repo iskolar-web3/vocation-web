@@ -79,7 +79,7 @@ export function WeekStack({ coach, role }: Props) {
   const refocus = useRef(false);
   const swallow = useRef(false);
 
-  const firstName = coach ? coach.display_name.replace(/^(Engr|Dr|Atty|Prof|Mr|Ms|Mrs)\.?\s+/i, '').split(' ')[0] : '';
+  const firstName = coach?.display_name ? coach.display_name.replace(/^(Engr|Dr|Atty|Prof|Mr|Ms|Mrs)\.?\s+/i, '').split(' ')[0] : '';
 
   /* ── rendering: transform from continuous depth, z from depth, dim from depth ── */
   const paint = (k: Key) => {

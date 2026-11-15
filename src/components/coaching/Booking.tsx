@@ -117,7 +117,7 @@ export function useBooking(coach: CoachDetail) {
         coach_slug: coach.slug,
         session_type_id: session.id,
         slot_starts_at: slot.starts_at,
-        notes: notes.trim() || undefined,
+        notes: (notes || '').trim() || undefined,
       });
       if (isFree) {
         analytics.bookingConfirmed(true, 'none');

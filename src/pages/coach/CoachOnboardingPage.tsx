@@ -26,8 +26,8 @@ const STEPS = [
   { h: 'Pricing and agreement', l: 'Last step. Choose how you charge, then agree to the terms.' },
 ];
 
-const slugify = (s: string) =>
-  s
+const slugify = (s?: string | null) =>
+  (s || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
@@ -74,22 +74,22 @@ export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ naviga
     setSkills((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
 
   const handleAddSkill = () => {
-    const trimmed = newSkill.trim();
+    const trimmed = (newSkill || '').trim();
     if (trimmed.length < 2) return;
     if (!skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())) setSkills([...skills, trimmed]);
     setNewSkill('');
     setErrors((e) => ({ ...e, skills: undefined }));
   };
 
-  const finalSlug = () => (slug.trim() || slugify(displayName)).toLowerCase();
+  const finalSlug = () => ((slug || '').trim() || slugify(displayName)).toLowerCase();
 
   const validate = (s: number): Errors => {
     const e: Errors = {};
     if (s === 1) {
-      if (!displayName.trim()) e.name = 'Add the name students will see, like Maria Santos.';
+      if (!(displayName || '').trim()) e.name = 'Add the name students will see, like Maria Santos.';
       if (!finalSlug()) e.slug = 'Add a profile link, like maria-santos.';
-      if (!headline.trim()) e.headline = 'Add a headline, like "Senior Software Engineer".';
-      if (!bio.trim()) e.bio = 'Tell students what to expect from your sessions.';
+      if (!(headline || '').trim()) e.headline = 'Add a headline, like "Senior Software Engineer".';
+      if (!(bio || '').trim()) e.bio = 'Tell students what to expect from your sessions.';
     }
     if (s === 2 && skills.length === 0) e.skills = 'Pick at least one focus area.';
     if (s === 3 && !acceptedAgreement) e.agree = 'You must review and agree to the Coach Agreement before onboarding.';
@@ -112,9 +112,9 @@ export const CoachOnboardingPage: React.FC<CoachOnboardingPageProps> = ({ naviga
     }
     try {
       await createCoachMutation.mutateAsync({
-        display_name: displayName.trim(),
-        headline: headline.trim(),
-        bio: bio.trim(),
+        display_name: (displayName || '').trim(),
+        headline: (headline || '').trim(),
+        bio: (bio || '').trim(),
         languages: ['English', 'Filipino'],
         slug: finalSlug(),
         price_type: priceType,

@@ -36,7 +36,7 @@ export function CompaniesPage(_props: Props) {
   if (query.data) last.current = query.data.items;
   const all = query.data?.items ?? last.current;
   // The API searches too; filtering here keeps the swap instant and the result exact.
-  const needle = text.trim().toLowerCase();
+  const needle = (text || '').trim().toLowerCase();
   const items = all?.filter(
     (c) =>
       (!industry || c.industry === industry) &&

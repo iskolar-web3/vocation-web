@@ -515,7 +515,7 @@ export async function handleDevMockRequest<T>(
   body?: any,
   params?: Record<string, any>
 ): Promise<ApiFetchResult<T> | null> {
-  const cleanPath = endpoint.split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
+  const cleanPath = (endpoint || '').split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
   const methodUpper = method.toUpperCase();
 
   // Feature flags (API-082) — every optional integration is on in local dev
@@ -745,7 +745,7 @@ export async function handleDevMockRequest<T>(
       slug,
       headline: newProfile.headline,
       avatar_url: newProfile.avatar_url,
-      current_role: newProfile.headline.split(/ [·,] /)[0].trim(),
+      current_role: (newProfile.headline || '').split(/ [·,] /)[0]?.trim() || '',
       company: 'Independent Coach',
       location: 'Metro Manila / Remote',
       bio: newProfile.bio,

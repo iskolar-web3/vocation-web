@@ -43,7 +43,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({ navi
     return c;
   }, [all]);
 
-  const q = query.trim().toLowerCase();
+  const q = (query || '').trim().toLowerCase();
   const rows = all.filter(
     (i) =>
       (filter === 'all' || i.status === filter) &&

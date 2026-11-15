@@ -58,7 +58,7 @@ export function InternshipDirectoryPage(_props: DirectoryProps) {
     }
   }, [search.q]);
   useEffect(() => {
-    const q = qText.trim();
+    const q = (qText || '').trim();
     if (q === lastPushed.current) return;
     const t = setTimeout(() => {
       lastPushed.current = q;

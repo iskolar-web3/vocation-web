@@ -125,14 +125,14 @@ function ProfileForm() {
     if (Object.keys(errs).length) return focusFirstInvalid(formRef.current);
     try {
       await update.mutateAsync({
-        full_name: fullName.trim(),
-        school: school.trim(),
-        course: course.trim(),
+        full_name: (fullName || '').trim(),
+        school: (school || '').trim(),
+        course: (course || '').trim(),
         year_level: Number(year),
-        bio: bio.trim(),
+        bio: (bio || '').trim(),
         skills,
-        ...(target.trim() ? { target_ojt_hours: Number(target) } : {}),
-        ...(completed.trim() ? { completed_ojt_hours: Number(completed) } : {}),
+        ...((target || '').trim() ? { target_ojt_hours: Number(target) } : {}),
+        ...((completed || '').trim() ? { completed_ojt_hours: Number(completed) } : {}),
       });
       await refetchUser();
       toast.success('Profile saved');

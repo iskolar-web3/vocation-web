@@ -15,9 +15,11 @@ interface Props {
 }
 
 const firstSentence = (t?: string | null) => (t ? t.split(/(?<=\.)\s/)[0] : '');
-const domainOf = (u: string) => {
+const domainOf = (u?: string | null) => {
+  if (!u) return '';
   try {
-    return new URL(u).hostname.replace(/^www\./, '');
+    const h = new URL(u).hostname;
+    return h ? h.replace(/^www\./, '') : u;
   } catch {
     return u;
   }
@@ -85,7 +87,7 @@ export function InternshipDetailPage({ slug }: Props) {
   const applyHost = role.external_apply_url ? domainOf(role.external_apply_url) : role.company.name;
   const createdAt = (role as { created_at?: string | null }).created_at;
   const coachData = coach.data;
-  const first = coachData?.display_name.replace(/^(Engr|Dr|Mr|Ms|Mrs|Atty)\.?\s+/i, '').split(' ')[0];
+  const first = coachData?.display_name ? coachData.display_name.replace(/^(Engr|Dr|Mr|Ms|Mrs|Atty)\.?\s+/i, '').split(' ')[0] : '';
 
   const save = (variant: 'labelled' | 'icon') =>
     canSave ? (

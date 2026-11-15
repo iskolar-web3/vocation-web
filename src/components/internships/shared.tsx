@@ -17,7 +17,7 @@ export function toList(v: unknown): string[] {
   if (typeof v === 'string') {
     return v
       .split(/\r?\n|•/)
-      .map((s) => s.replace(/^[-*]\s*/, '').trim())
+      .map((s) => (s || '').replace(/^[-*]\s*/, '').trim())
       .filter(Boolean);
   }
   return [];

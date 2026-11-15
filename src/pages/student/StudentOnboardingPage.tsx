@@ -67,12 +67,12 @@ export const StudentOnboardingPage: React.FC<StudentOnboardingPageProps> = ({ na
 
     try {
       await createProfileMutation.mutateAsync({
-        full_name: fullName.trim(),
-        school: school.trim(),
-        course: course.trim(),
+        full_name: (fullName || '').trim(),
+        school: (school || '').trim(),
+        course: (course || '').trim(),
         year_level: Number(yearLevel),
         skills,
-        ...(hours.trim() ? { target_ojt_hours: Number(hours) } : {}),
+        ...((hours || '').trim() ? { target_ojt_hours: Number(hours) } : {}),
       });
       // Refetch the session so AuthContext reflects is_onboarded: true before the guard runs.
       await refetchUser();

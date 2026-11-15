@@ -12,9 +12,11 @@ interface Props {
   navigate?: (path: string) => void;
 }
 
-const domainOf = (u: string) => {
+const domainOf = (u?: string | null) => {
+  if (!u) return '';
   try {
-    return new URL(u).hostname.replace(/^www\./, '');
+    const h = new URL(u).hostname;
+    return h ? h.replace(/^www\./, '') : u;
   } catch {
     return u;
   }

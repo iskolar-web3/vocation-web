@@ -36,7 +36,7 @@ async function tryDevMock<T>(
   body?: any,
   params?: Record<string, string | number | boolean | undefined | null>
 ): Promise<ApiFetchResult<T> | null> {
-  const cleanEndpoint = endpoint.split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
+  const cleanEndpoint = (endpoint || '').split('?')[0].replace(/^\/v1/, '').replace(/^\//, '');
 
   // Directly connect to real backend: avoid mock data in internships & companies
   if (

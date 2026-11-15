@@ -7,9 +7,11 @@ import { Dialog, DialogClose } from './dialog';
    (stroke-dashoffset through a mask, 500ms; CSS .leave-draw). */
 
 const isHttp = (u: string) => /^https?:\/\//i.test(u);
-const domainOf = (u: string): string => {
+const domainOf = (u?: string | null): string => {
+  if (!u) return '';
   try {
-    return new URL(u).hostname.replace(/^www\./, '');
+    const h = new URL(u).hostname;
+    return h ? h.replace(/^www\./, '') : u;
   } catch {
     return u;
   }
@@ -37,7 +39,8 @@ export function LeavingSiteNotice({
   loading,
   onContinue,
 }: LeavingSiteNoticeProps) {
-  const mask = `leave-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const id = useId();
+  const mask = `leave-${(id || '').replace(/[^a-zA-Z0-9]/g, '')}`;
   const domain = url ? domainOf(url) : companyName;
 
   const go = () => {

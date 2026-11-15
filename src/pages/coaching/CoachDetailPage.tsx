@@ -20,7 +20,7 @@ interface CoachDetailPageProps {
   navigate: (path: string) => void;
 }
 
-const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? '';
+const firstName = (name?: string | null) => (name || '').trim().split(/\s+/)[0] ?? '';
 
 export function CoachDetailPage({ slug, navigate }: CoachDetailPageProps) {
   const { data: coach, isLoading } = useCoach(slug);

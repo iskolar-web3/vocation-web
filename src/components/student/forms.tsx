@@ -164,7 +164,7 @@ export function SkillsInput({
   const input = useRef<HTMLInputElement>(null);
   const has = (v: string) => value.findIndex((s) => s.toLowerCase() === v.toLowerCase());
   const add = (raw: string) => {
-    const v = raw.trim().slice(0, 30);
+    const v = (raw || '').trim().slice(0, 30);
     if (!v || value.length >= max || has(v) >= 0) return;
     onChange([...value, v]);
   };
@@ -222,7 +222,7 @@ export function SkillsInput({
           onChange={(e) => setText(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && text.trim()) {
+            if (e.key === 'Enter' && (text || '').trim()) {
               e.preventDefault();
               commit();
             } else if (e.key === ',') {

@@ -4,22 +4,25 @@ import { cn, formatPesos } from '../../lib/utils';
 
 /* ── Mono: company monogram tile, 5 brand tints picked by a stable hash ───────────── */
 
-export const initialsOf = (name: string): string => {
-  const words = name.trim().split(/\s+/).filter(Boolean);
+export const initialsOf = (name?: string | null): string => {
+  const safeName = (name || '').trim();
+  const words = safeName.split(/\s+/).filter(Boolean);
   const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '').slice(0, 2);
   return letters.toUpperCase();
 };
 
-export const tintOf = (name: string): number => {
+export const tintOf = (name?: string | null): number => {
+  const safeName = (name || '').trim();
   let h = 5381;
-  for (const ch of name.trim().toLowerCase()) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;
+  for (const ch of safeName.toLowerCase()) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;
   return h % 5;
 };
 
-export function Mono({ name, size = 'md', className }: { name: string; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+export function Mono({ name = '', size = 'md', className }: { name?: string | null; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+  const safe = name || '';
   return (
-    <span className={cn('mono', `mono-${tintOf(name)}`, size === 'sm' && 'sm', size === 'lg' && 'lg', className)} aria-hidden="true">
-      {initialsOf(name)}
+    <span className={cn('mono', `mono-${tintOf(safe)}`, size === 'sm' && 'sm', size === 'lg' && 'lg', className)} aria-hidden="true">
+      {initialsOf(safe)}
     </span>
   );
 }
@@ -27,20 +30,21 @@ export function Mono({ name, size = 'md', className }: { name: string; size?: 's
 /* ── Disc: halftone portrait (initials by default; `src` adds a photo under the halftone) ── */
 
 export function Disc({
-  name,
+  name = '',
   size = 'md',
   src,
   className,
 }: {
-  name: string;
+  name?: string | null;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   src?: string | null;
   className?: string;
 }) {
+  const safe = name || '';
   const [broken, setBroken] = useState(false);
   return (
     <span className={cn('disc', size !== 'md' && size, className)} aria-hidden="true">
-      <span>{initialsOf(name)}</span>
+      <span>{initialsOf(safe)}</span>
       {src && !broken ? <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} /> : null}
     </span>
   );

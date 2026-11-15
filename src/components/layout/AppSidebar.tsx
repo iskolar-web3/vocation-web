@@ -57,7 +57,7 @@ export function AppSidebar({ zone }: { zone: 'student' | 'coach' }) {
   const rowRef = useRef<HTMLElement>(null);
   const { data: saved } = useSavedInternships({ enabled: zone === 'student' });
   const links = zone === 'student' ? STUDENT_LINKS : COACH_LINKS;
-  const first = userName.replace(/^(engr|dr|atty|arch|prof|mr|ms|mrs)\.?\s+/i, '').split(' ')[0] || (zone === 'student' ? 'Student' : 'Coach');
+  const first = (userName || '').replace(/^(engr|dr|atty|arch|prof|mr|ms|mrs)\.?\s+/i, '').split(' ')[0] || (zone === 'student' ? 'Student' : 'Coach');
 
   // Horizontal pill row (<1024): keep the current item in view.
   useEffect(() => {
