@@ -20,8 +20,23 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const apiUrl = env.VITE_API_URL || process.env.VITE_API_URL;
 
-  if (command === 'build' && mode === 'production' && !apiUrl) {
-    throw new Error('Build failed: VITE_API_URL environment variable is required in production.');
+  if (command === 'build' && mode === 'production') {
+    if (!apiUrl) {
+      throw new Error('Build failed: VITE_API_URL environment variable is required in production.');
+    }
+    const httpsError = new Error(
+      `Build failed: VITE_API_URL must be an https URL in production (got ${apiUrl}).`,
+    );
+    let parsed: URL;
+    try {
+      parsed = new URL(apiUrl);
+    } catch {
+      throw httpsError;
+    }
+    const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+    if (parsed.protocol !== 'https:' && !isLocal) {
+      throw httpsError;
+    }
   }
 
   return {
