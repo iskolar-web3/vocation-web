@@ -16,6 +16,22 @@ function backendServerPlugin() {
   };
 }
 
+// The CSP meta tag in index.html cannot know the API host, so the build adds the
+// VITE_API_URL origin to connect-src. Otherwise the browser blocks every API call.
+function cspApiOriginPlugin(apiUrl: string | undefined) {
+  const directive = "connect-src 'self'";
+  return {
+    name: 'csp-api-origin',
+    transformIndexHtml(html: string) {
+      if (!apiUrl) return html;
+      if (!html.includes(directive)) {
+        throw new Error(`index.html CSP is missing "${directive}"; cannot add the API origin.`);
+      }
+      return html.replace(directive, `${directive} ${new URL(apiUrl).origin}`);
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const apiUrl = env.VITE_API_URL || process.env.VITE_API_URL;
@@ -49,6 +65,7 @@ export default defineConfig(({ command, mode }) => {
       react(),
       tailwindcss(),
       backendServerPlugin(),
+      cspApiOriginPlugin(apiUrl),
     ],
     resolve: {
       alias: {
